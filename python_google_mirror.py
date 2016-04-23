@@ -27,6 +27,7 @@ external_domains = (
     'encrypted-tbn3.gstatic.com',
     'accounts.google.com',
 )
+# 'ALL' for all, 'NONE' for none, ('foo.com','bar.com','www.blah.com') for custom
 force_https_domains = 'ALL'
 
 requests_proxies = dict(http="http://127.0.0.1:8123",
@@ -115,8 +116,10 @@ def response_text_rewrite(resp_text):  # TODO: rewrite external domain resource'
         resp_text = re.sub(
             r'(https?:)?//' + domain.replace('.', r'\.'),
             '{0}{1}/extdomains/{2}{3}'.format(my_host_scheme, my_host_name,
-                                              ('https-' if ('ALL' == force_https_domains) or (
-                                                  domain in force_https_domains) else ''), domain),
+                                              ('https-' if ('NONE' != force_https_domains) and (
+                                                  ('ALL' == force_https_domains) or (
+                                                      domain in force_https_domains)
+                                              ) else ''), domain),
             resp_text, flags=re.IGNORECASE
         )
         # rewrite "foo.domain.tld" and 'foo.domain.tld'
@@ -180,7 +183,13 @@ def extract_url_path_and_query(full_url):
 
 
 def send_request(url, method='get', headers=None, param_get=None):
-    r = requests.get(rewrite_client_requests_text(url),
+    final_url = rewrite_client_requests_text(url)
+    final_hostname = urlsplit(final_url).hostname
+    # Only external in-zone domains are allowed (SSRF check layer 2)
+    if (final_hostname not in external_domains) and (final_hostname != target_domain):
+        raise ConnectionAbortedError('Tried to access an OUT-OF-ZONE domain:', final_hostname)
+
+    r = requests.get(final_url,
                      params=param_get, headers=headers, proxies=requests_proxies,
                      allow_redirects=False)
     # print(r.request.headers, r.headers)
@@ -209,6 +218,10 @@ def copy_response(requests_response_obj, content=b''):
     return resp
 
 
+def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=400):
+    return make_response(errormsg, error_code)
+
+
 @app.route('/extdomains/<path:hostname>')
 @app.route('/extdomains/<path:hostname>/<path:extpath>')
 def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in external domains
@@ -217,12 +230,18 @@ def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in exter
         hostname = hostname[6:]
     else:
         scheme = 'http://'
-
+    # Only external in-zone domains are allowed (SSRF check layer 1)
+    if hostname not in external_domains:
+        return generate_error_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
     client_header = extract_client_header(request)
     actual_get_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
-    r = send_request(actual_get_url, headers=client_header)
-
-    return copy_response(r, response_content_rewrite(r))
+    try:
+        r = send_request(actual_get_url, headers=client_header)
+    except Exception as e:
+        errprint(e)
+        return generate_error_page()
+    else:
+        return copy_response(r, response_content_rewrite(r))
 
 
 @app.route('/')
@@ -231,9 +250,13 @@ def hello_world(input_path='/'):  # TODO: Add POST support in main domain
     dbgprint('Client Request Url: ', request.url)
     actual_get_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
     client_header = extract_client_header(request)
-    r = send_request(actual_get_url, headers=client_header)
-
-    return copy_response(r, response_content_rewrite(r))
+    try:
+        r = send_request(actual_get_url, headers=client_header)
+    except Exception as e:
+        errprint(e)
+        return generate_error_page()
+    else:
+        return copy_response(r, response_content_rewrite(r))
 
 
 if __name__ == '__main__':
