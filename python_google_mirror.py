@@ -5,36 +5,16 @@ from urllib.parse import urljoin, urlsplit
 import re
 from ColorfulPyPrint import *
 from _func import is_mime_represents_text
+from config import *
 
-ColorfulPyPrint_set_verbose_level(4)
+__VERSION__ = '0.7.1'
 
-
-my_host_name = 'g.zju.tools'
-my_host_scheme = 'http://'
-target_domain = 'www.google.com'
-target_scheme = 'https://'
-external_domains = (
-    'scholar.google.com',
-
-    'ssl.gstatic.com',
-    'www.gstatic.com',
-    'apis.google.com',
-    'encrypted-tbn0.gstatic.com',
-    'encrypted-tbn1.gstatic.com',
-    'encrypted-tbn2.gstatic.com',
-    'encrypted-tbn3.gstatic.com',
-    'accounts.google.com',
-    'accounts.youtube.com',
-)
-# 'ALL' for all, 'NONE' for none, ('foo.com','bar.com','www.blah.com') for custom
-force_https_domains = 'ALL'
-
-requests_proxies = dict(http="http://127.0.0.1:8123",
-                        https="https://127.0.0.1:8123",
-                        )
-__VERSION__ = '0.7.0'
-app = Flask(__name__)
+ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
+if not is_use_proxy:
+    requests_proxies = None
+
+app = Flask(__name__)
 
 
 # ###################### Functional Tests ####################### #
