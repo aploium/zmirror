@@ -1,15 +1,13 @@
 # coding=utf-8
 from flask import Flask, request, make_response
-from werkzeug.routing import BaseConverter
 import requests
-from pprint import pprint
 from urllib.parse import urljoin, urlsplit
 import re
 from ColorfulPyPrint import *
+from _func import is_mime_represents_text
 
 ColorfulPyPrint_set_verbose_level(4)
 
-from _func import is_mime_represents_text
 
 my_host_name = 'g.zju.tools'
 my_host_scheme = 'http://'
@@ -26,6 +24,7 @@ external_domains = (
     'encrypted-tbn2.gstatic.com',
     'encrypted-tbn3.gstatic.com',
     'accounts.google.com',
+    'accounts.youtube.com',
 )
 # 'ALL' for all, 'NONE' for none, ('foo.com','bar.com','www.blah.com') for custom
 force_https_domains = 'ALL'
@@ -33,7 +32,7 @@ force_https_domains = 'ALL'
 requests_proxies = dict(http="http://127.0.0.1:8123",
                         https="https://127.0.0.1:8123",
                         )
-
+__VERSION__ = '0.7.0'
 app = Flask(__name__)
 myurl_prefix = my_host_scheme + my_host_name
 
@@ -102,7 +101,7 @@ def response_text_rewrite(resp_text):  # TODO: rewrite external domain resource'
     # Main Domain Rewrite
     assert isinstance(resp_text, str)
     resp_text = re.sub(
-        r'(https?:)?//(www\.)?google.com/',  # TODO: Auto generate this
+        r'(https?:)?//' + target_domain.replace('.', r'\.') + '/',  # TODO: Auto generate this
         my_host_scheme + my_host_name + '/',
         resp_text, flags=re.IGNORECASE
     )
@@ -136,12 +135,14 @@ def response_cookie_rewrite(cookie_string):
 
 def extract_client_header(income_request):
     outgoing_head = {}
+    dbgprint('ClientRequestHeaders:', income_request.headers)
     for head_name, head_value in income_request.headers:
-        if head_name not in ('Host', 'host', 'Cookie', 'Content-Length', 'Content-Type'):
+        if head_name not in ('Host', 'Content-Length'):
             outgoing_head[head_name] = head_value
 
+    # rewrite referer head if we have
     if 'Referer' in outgoing_head:
-        outgoing_head['Referer'] = outgoing_head['Referer'].replace(my_host_name, target_domain)
+        outgoing_head['Referer'] = rewrite_client_requests_text(outgoing_head['Referer'])
     return outgoing_head
 
 
@@ -182,21 +183,33 @@ def extract_url_path_and_query(full_url):
     return result
 
 
-def send_request(url, method='get', headers=None, param_get=None):
+def send_request(url, method='GET', headers=None, param_get=None, data=None):
     final_url = rewrite_client_requests_text(url)
     final_hostname = urlsplit(final_url).hostname
     # Only external in-zone domains are allowed (SSRF check layer 2)
     if (final_hostname not in external_domains) and (final_hostname != target_domain):
         raise ConnectionAbortedError('Tried to access an OUT-OF-ZONE domain:', final_hostname)
 
-    r = requests.get(final_url,
-                     params=param_get, headers=headers, proxies=requests_proxies,
-                     allow_redirects=False)
-    # print(r.request.headers, r.headers)
+    # set zero data to None instead of b''
+    if not data:
+        data = None
 
-    dbgprint("RemoteUrl:", r.url, "\nRemote Response Len: ", len(r.content), "\nRem Resp Stat: ", r.status_code)
+    # Send real requests
+    r = requests.request(
+        method, final_url,
+        params=param_get, headers=headers, data=data,
+        proxies=requests_proxies, allow_redirects=False
+    )
+
+    # Some debug output
+    # print(r.request.headers, r.headers)
+    dbgprint(r.request.method, "RemoteUrl:", r.url, "\nRemote Response Len: ", len(r.content),
+             "\nRem Resp Stat: ", r.status_code)
     dbgprint("RemoteRequestHeaders: ", r.request.headers)
+    if data:
+        dbgprint('RemoteRequestRawData: ', r.request.body)
     dbgprint("RemoteResponseHeaders: ", r.headers)
+
     return r
 
 
@@ -222,8 +235,8 @@ def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=400):
     return make_response(errormsg, error_code)
 
 
-@app.route('/extdomains/<path:hostname>')
-@app.route('/extdomains/<path:hostname>/<path:extpath>')
+@app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
+@app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in external domains
     if hostname[0:6] == 'https-':
         scheme = 'https://'
@@ -236,7 +249,7 @@ def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in exter
     client_header = extract_client_header(request)
     actual_get_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
     try:
-        r = send_request(actual_get_url, headers=client_header)
+        r = send_request(actual_get_url, method=request.method, headers=client_header, data=request.get_data())
     except Exception as e:
         errprint(e)
         return generate_error_page()
@@ -244,14 +257,14 @@ def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in exter
         return copy_response(r, response_content_rewrite(r))
 
 
-@app.route('/')
-@app.route('/<path:input_path>')
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/<path:input_path>', methods=['GET', 'POST'])
 def hello_world(input_path='/'):  # TODO: Add POST support in main domain
     dbgprint('Client Request Url: ', request.url)
     actual_get_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
     client_header = extract_client_header(request)
     try:
-        r = send_request(actual_get_url, headers=client_header)
+        r = send_request(actual_get_url, method=request.method, headers=client_header, data=request.get_data())
     except Exception as e:
         errprint(e)
         return generate_error_page()
