@@ -7,8 +7,12 @@ from ColorfulPyPrint import *
 from _func import is_mime_represents_text
 from config import *
 
-__VERSION__ = '0.7.1'
-
+__VERSION__ = '0.7.2'
+# if is_log_to_file:
+#     from ColorfulPyPrint.extra_output_destination.file_logger import FileLogger
+#
+#     file_logger = FileLogger(log_file_path)
+#     add_extra_output_destination(file_logger)
 ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
 if not is_use_proxy:
@@ -199,13 +203,14 @@ def copy_response(requests_response_obj, content=b''):
     for header_key in requests_response_obj.headers:
         # Add necessary response headers from the origin site, drop other headers
         if header_key in (  # TODO: (Maybe) Add More Valid Response Headers
-                'Content-Type', 'Date', 'Expires', 'Cache-Control', 'Last-Modified', 'Server'):
+                'Content-Type', 'Date', 'Expires', 'Cache-Control', 'Last-Modified', 'Server',
+                'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server'):
             resp.headers[header_key] = requests_response_obj.headers[header_key]
         # Rewrite the redirection header if we got one, rewrite in-zone domains to our domain
-        if 'Location' == header_key:
+        if header_key in ('Location','location'):
             resp.headers[header_key] = response_text_rewrite(requests_response_obj.headers[header_key])
         # Rewrite The Set-Cookie Header, change the cookie domain to our domain
-        if 'Set-Cookie' == header_key:
+        if header_key in ('Set-Cookie','set-cookie'):
             resp.headers[header_key] = response_cookie_rewrite(requests_response_obj.headers[header_key])
     dbgprint('RESPONSE HEADERS: \n', resp.headers)
     return resp
@@ -224,7 +229,7 @@ def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in exter
     else:
         scheme = 'http://'
     # Only external in-zone domains are allowed (SSRF check layer 1)
-    if hostname not in external_domains:
+    if hostname.rstrip('/') not in external_domains:
         return generate_error_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
     client_header = extract_client_header(request)
     actual_get_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)

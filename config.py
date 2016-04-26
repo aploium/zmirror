@@ -42,4 +42,7 @@ requests_proxies = dict(
 
 # ############## Output Settings ##############
 # Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 2
-verbose_level = 2
+verbose_level = 3
+# Is print an extra log copy to file (stdout will remain the same)
+# is_log_to_file = True
+# log_file_path = r'c:\google_mirror.log'
