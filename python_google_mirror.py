@@ -3,11 +3,11 @@ from flask import Flask, request, make_response
 import requests
 from urllib.parse import urljoin, urlsplit
 import re
+from werkzeug.wrappers import BaseResponse
 from ColorfulPyPrint import *
-from _func import is_mime_represents_text
 from config import *
 
-__VERSION__ = '0.7.2'
+__VERSION__ = '0.8.0'
 # if is_log_to_file:
 #     from ColorfulPyPrint.extra_output_destination.file_logger import FileLogger
 #
@@ -67,6 +67,75 @@ app = Flask(__name__)
 #    6.3 page 2,3 [OK]
 #
 
+# ########## Begin Utils #############
+def is_mime_represents_text(input_mime):
+    """
+    Determine whether an mime is text (eg: text/html: True, image/png: False)
+    :param input_mime: str
+    :return: bool
+    """
+    for text_word in ('text', 'json', 'javascript', 'xml'):
+        if text_word in input_mime:
+            return True
+    return False
+
+
+def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=400):
+    return make_response(errormsg, error_code)
+
+
+# ########## End utils ###############
+
+
+# ################# Begin Server Response Handler #################
+def copy_response(requests_response_obj, content=b''):
+    resp = make_response(content, requests_response_obj.status_code)
+    assert isinstance(resp, BaseResponse)
+    for header_key in requests_response_obj.headers:
+        # Add necessary response headers from the origin site, drop other headers
+        if header_key.lower() in (  # TODO: (Maybe) Add More Valid Response Headers
+                'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server'):
+            resp.headers[header_key] = requests_response_obj.headers[header_key]
+        # Rewrite the redirection header if we got one, rewrite in-zone domains to our domain
+        if header_key.lower() == 'location':
+            resp.headers[header_key] = response_text_rewrite(requests_response_obj.headers[header_key])
+        # Rewrite The Set-Cookie Header, change the cookie domain to our domain
+        if header_key.lower() == 'set-cookie':
+            # cookie_header_str = dump_cookie_jars_to_header_string_dict(requests_response_obj.cookies)
+            for cookie_string in response_cookies_deep_copy(requests_response_obj):
+                resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
+                # resp.headers[header_key] = response_cookie_rewrite(requests_response_obj.headers[header_key])
+    dbgprint('RESPONSE HEADERS: \n', resp.headers)
+
+    return resp
+
+
+def response_cookies_deep_copy(req_obj):
+    """
+    It's a BAD hack to get RAW cookies headers, but so far, we don't have better way.
+    We'd go DEEP inside the urllib's private method.
+
+    raw_headers example:
+    [('Cache-Control', 'private'),
+    ('Content-Length', '48234'),
+    ('Content-Type', 'text/html; Charset=utf-8'),
+    ('Server', 'Microsoft-IIS/8.5'),
+    ('Set-Cookie','BoardList=BoardID=Show; expires=Mon, 02-May-2016 16:00:00 GMT; path=/'),
+    ('Set-Cookie','aspsky=abcefgh; expires=Sun, 24-Apr-2016 16:00:00 GMT; path=/; HttpOnly'),
+    ('Set-Cookie', 'ASPSESSIONIDSCSSDSSQ=OGKMLAHDHBFDJCDMGBOAGOMJ; path=/'),
+    ('X-Powered-By', 'ASP.NET'),
+    ('Date', 'Tue, 26 Apr 2016 12:32:40 GMT')]
+
+    :type req_obj: requests.models.Response
+    """
+    raw_headers = req_obj.raw._original_response.headers._headers
+    header_cookies_string_list = []
+    for name, value in raw_headers:
+        if name.lower() == 'set-cookie':
+            header_cookies_string_list.append(value)
+    return header_cookies_string_list
+
+
 def response_content_rewrite(request_response_obj):
     """
     Rewrite requests response's content's url. Auto skip binary (based on MIME).
@@ -75,9 +144,16 @@ def response_content_rewrite(request_response_obj):
     :return: byte
     """
     # Skip if response is binary
-    if is_mime_represents_text(request_response_obj.headers.get('Content-Type', '')):
+    content_mime = request_response_obj.headers.get('content-type', '')
+    if not content_mime:
+        content_mime = request_response_obj.headers.get('Content-Type', '')
+
+    if content_mime and is_mime_represents_text(content_mime):
+        dbgprint('Texture', content_mime, request_response_obj.text[:15], request_response_obj.content[:15])
+
         return response_text_rewrite(request_response_obj.text).encode(encoding='utf-8')
     else:
+        dbgprint('Binary', content_mime)
         return request_response_obj.content
 
 
@@ -117,16 +193,22 @@ def response_cookie_rewrite(cookie_string):
     return cookie_string
 
 
+# ################# End Server Response Handler #################
+
+
+# ################# Begin Client Request Handler #################
 def extract_client_header(income_request):
     outgoing_head = {}
     dbgprint('ClientRequestHeaders:', income_request.headers)
     for head_name, head_value in income_request.headers:
-        if head_name not in ('Host', 'Content-Length'):
+        if (head_name.lower() not in ('host', 'content-length', 'content-type')) \
+                or (head_name.lower() == 'content-type' and head_value != ''):
             outgoing_head[head_name] = head_value
 
     # rewrite referer head if we have
     if 'Referer' in outgoing_head:
         outgoing_head['Referer'] = rewrite_client_requests_text(outgoing_head['Referer'])
+    dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
 
 
@@ -167,6 +249,10 @@ def extract_url_path_and_query(full_url):
     return result
 
 
+# ################# End Client Request Handler #################
+
+
+# ################# Begin Middle Functions #################
 def send_request(url, method='GET', headers=None, param_get=None, data=None):
     final_url = rewrite_client_requests_text(url)
     final_hostname = urlsplit(final_url).hostname
@@ -197,29 +283,10 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     return r
 
 
-def copy_response(requests_response_obj, content=b''):
-    resp = make_response(content, requests_response_obj.status_code)
-
-    for header_key in requests_response_obj.headers:
-        # Add necessary response headers from the origin site, drop other headers
-        if header_key in (  # TODO: (Maybe) Add More Valid Response Headers
-                'Content-Type', 'Date', 'Expires', 'Cache-Control', 'Last-Modified', 'Server',
-                'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server'):
-            resp.headers[header_key] = requests_response_obj.headers[header_key]
-        # Rewrite the redirection header if we got one, rewrite in-zone domains to our domain
-        if header_key in ('Location','location'):
-            resp.headers[header_key] = response_text_rewrite(requests_response_obj.headers[header_key])
-        # Rewrite The Set-Cookie Header, change the cookie domain to our domain
-        if header_key in ('Set-Cookie','set-cookie'):
-            resp.headers[header_key] = response_cookie_rewrite(requests_response_obj.headers[header_key])
-    dbgprint('RESPONSE HEADERS: \n', resp.headers)
-    return resp
+# ################# End Middle Functions #################
 
 
-def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=400):
-    return make_response(errormsg, error_code)
-
-
+# ################# Begin Flask #################
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in external domains
