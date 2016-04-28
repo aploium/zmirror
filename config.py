@@ -46,3 +46,7 @@ verbose_level = 3
 # Is print an extra log copy to file (stdout will remain the same)
 # is_log_to_file = True
 # log_file_path = r'c:\google_mirror.log'
+
+# ############## Cache Settings ##############
+# Global option
+cache_enable = True

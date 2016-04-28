@@ -1,13 +1,17 @@
 # coding=utf-8
-from flask import Flask, request, make_response
+from flask import Flask, request, make_response, Response
 import requests
 from urllib.parse import urljoin, urlsplit
 import re
-from werkzeug.wrappers import BaseResponse
 from ColorfulPyPrint import *
 from config import *
 
-__VERSION__ = '0.8.0'
+if cache_enable:
+    from cache_system import FileCache, get_expire_from_mime
+
+    cache = FileCache()
+
+__VERSION__ = '0.8.5'
 # if is_log_to_file:
 #     from ColorfulPyPrint.extra_output_destination.file_logger import FileLogger
 #
@@ -84,13 +88,60 @@ def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=400):
     return make_response(errormsg, error_code)
 
 
+def generate_304_response(last_modified=None, content_type=None, is_cache_hit=None):
+    r = Response(content_type=content_type, status=304)
+    if last_modified:
+        r.headers.add('Last-Modified', last_modified)
+    if is_cache_hit:
+        r.headers.add('X-Cache', 'FileHit-304')
+    return r
+
+
+def put_response_to_cache(url, our_resp, req, remote_resp):
+    if cache_enable and req.method == 'GET' and remote_resp.status_code == 200:
+        content_type = remote_resp.headers.get('content-type', '') or remote_resp.headers.get('Content-Type', '')
+        last_modified = remote_resp.headers.get('last-modified', None) or remote_resp.headers.get('Last-Modified', None)
+        cache.put_obj(
+            url,
+            our_resp,
+            expires=get_expire_from_mime(content_type[:content_type.find(';')]),
+            obj_size=len(remote_resp.content),
+            last_modified=last_modified,
+            info_dict={'content-type': content_type,
+                       'last-modified': last_modified
+                       },
+        )
+
+
+def try_get_cached_response(url, client_header):
+    """
+
+    :type client_header: dict
+    """
+    if cache_enable and request.method == 'GET' and cache.is_cached(url):
+        if 'if-modified-since' in client_header and \
+                cache.is_unchanged(url, client_header.get('if-modified-since', None)):
+            cached_info = cache.get_info(url)
+            dbgprint('FileCacheHit-304', cached_info, url)
+            return generate_304_response(last_modified=cached_info.get('last_modified'),
+                                         content_type=cached_info.get('content_type'))
+        else:
+            dbgprint('FileCacheHit-200')
+            resp = cache.get_obj(url)
+            assert isinstance(resp, Response)
+            resp.headers.add('X-Cache', 'FileHit')
+            return resp
+    else:
+        return None
+
+
 # ########## End utils ###############
 
 
 # ################# Begin Server Response Handler #################
 def copy_response(requests_response_obj, content=b''):
     resp = make_response(content, requests_response_obj.status_code)
-    assert isinstance(resp, BaseResponse)
+    assert isinstance(resp, Response)
     for header_key in requests_response_obj.headers:
         # Add necessary response headers from the origin site, drop other headers
         if header_key.lower() in (  # TODO: (Maybe) Add More Valid Response Headers
@@ -201,13 +252,14 @@ def extract_client_header(income_request):
     outgoing_head = {}
     dbgprint('ClientRequestHeaders:', income_request.headers)
     for head_name, head_value in income_request.headers:
-        if (head_name.lower() not in ('host', 'content-length', 'content-type')) \
-                or (head_name.lower() == 'content-type' and head_value != ''):
-            outgoing_head[head_name] = head_value
+        head_name_l = head_name.lower()
+        if (head_name_l not in ('host', 'content-length', 'content-type')) \
+                or (head_name_l == 'content-type' and head_value != ''):
+            outgoing_head[head_name_l] = head_value
 
     # rewrite referer head if we have
-    if 'Referer' in outgoing_head:
-        outgoing_head['Referer'] = rewrite_client_requests_text(outgoing_head['Referer'])
+    if 'referer' in outgoing_head:
+        outgoing_head['referer'] = rewrite_client_requests_text(outgoing_head['referer'])
     dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
 
@@ -289,39 +341,65 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 # ################# Begin Flask #################
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
-def get_external_site(hostname, extpath='/'):  # TODO: Add POST support in external domains
+def get_external_site(hostname, extpath='/'):
     if hostname[0:6] == 'https-':
         scheme = 'https://'
         hostname = hostname[6:]
     else:
         scheme = 'http://'
+
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if hostname.rstrip('/') not in external_domains:
         return generate_error_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
-    client_header = extract_client_header(request)
+
     actual_get_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
+    client_header = extract_client_header(request)
+
+    if cache_enable:
+        resp = try_get_cached_response(actual_get_url, client_header)
+        if resp is not None:
+            return resp
+
     try:
         r = send_request(actual_get_url, method=request.method, headers=client_header, data=request.get_data())
     except Exception as e:
         errprint(e)
         return generate_error_page()
     else:
-        return copy_response(r, response_content_rewrite(r))
+        resp = copy_response(r, response_content_rewrite(r))
+
+        if cache_enable:
+            put_response_to_cache(actual_get_url, resp, request, r)
+
+    return resp
 
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
-def hello_world(input_path='/'):  # TODO: Add POST support in main domain
+def hello_world(input_path='/'):
     dbgprint('Client Request Url: ', request.url)
+
     actual_get_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
     client_header = extract_client_header(request)
+
+    if cache_enable:
+        resp = try_get_cached_response(actual_get_url, client_header)
+        if resp is not None:
+            dbgprint('CacheHit,Return')
+            return resp
+
     try:
         r = send_request(actual_get_url, method=request.method, headers=client_header, data=request.get_data())
     except Exception as e:
         errprint(e)
         return generate_error_page()
     else:
-        return copy_response(r, response_content_rewrite(r))
+        resp = copy_response(r, response_content_rewrite(r))
+
+        if cache_enable:
+            put_response_to_cache(actual_get_url, resp, request, r)
+
+    return resp
 
 
 if __name__ == '__main__':
