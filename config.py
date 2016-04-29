@@ -50,3 +50,8 @@ verbose_level = 3
 # ############## Cache Settings ##############
 # Global option
 cache_enable = True
+
+# ############## Custom Text Filter Functions ##############
+# Global option
+custom_text_rewriter_enable = False
+

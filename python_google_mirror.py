@@ -2,14 +2,19 @@
 from flask import Flask, request, make_response, Response
 import requests
 from urllib.parse import urljoin, urlsplit
-import re
 from ColorfulPyPrint import *
+
+try:
+    from custom_func import *
+except:
+    custom_text_filter_enable = False
+    pass
 from config import *
 
 if cache_enable:
     from cache_system import FileCache, get_expire_from_mime
 
-    cache = FileCache()
+    cache = FileCache(max_size_kb=8192)
 
 __VERSION__ = '0.8.5'
 # if is_log_to_file:
@@ -84,7 +89,7 @@ def is_mime_represents_text(input_mime):
     return False
 
 
-def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=400):
+def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=500):
     return make_response(errormsg, error_code)
 
 
@@ -187,25 +192,31 @@ def response_cookies_deep_copy(req_obj):
     return header_cookies_string_list
 
 
-def response_content_rewrite(request_response_obj):
+def response_content_rewrite(remote_resp_obj):
     """
     Rewrite requests response's content's url. Auto skip binary (based on MIME).
-    :type request_response_obj: requests.models.Response
-    :param request_response_obj: requests response object
+    :type remote_resp_obj: requests.models.Response
+    :param remote_resp_obj: requests response object
     :return: byte
     """
     # Skip if response is binary
-    content_mime = request_response_obj.headers.get('content-type', '')
-    if not content_mime:
-        content_mime = request_response_obj.headers.get('Content-Type', '')
+    content_mime = remote_resp_obj.headers.get('content-type', '') or remote_resp_obj.headers.get('Content-Type', '')
+    content_mime = content_mime[:content_mime.find(';')]
 
     if content_mime and is_mime_represents_text(content_mime):
-        dbgprint('Texture', content_mime, request_response_obj.text[:15], request_response_obj.content[:15])
+        dbgprint('Texture', content_mime, remote_resp_obj.text[:15], remote_resp_obj.content[:15])
+        resp_text = response_text_rewrite(remote_resp_obj.text)
+        try:
+            if custom_text_rewriter_enable and content_mime == 'text/html':
+                resp_text2 = custom_response_html_rewriter(resp_text)
+                resp_text = resp_text2
+        except Exception as e:
+            errprint('Custom Rewrite Function "custom_response_html_rewriter(text)" in custom_func.py ERROR', e)
 
-        return response_text_rewrite(request_response_obj.text).encode(encoding='utf-8')
+        return resp_text.encode(encoding='utf-8')
     else:
         dbgprint('Binary', content_mime)
-        return request_response_obj.content
+        return remote_resp_obj.content
 
 
 def response_text_rewrite(resp_text):  # TODO: rewrite external domain resource's "/foo/bar/blah" to "foo/bar/blah"
