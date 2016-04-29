@@ -52,4 +52,10 @@ Notice: program will apply your rewriter before it's normal rewriter. So, what y
 
 You can see an example rewriter in th `custom_func.sample.py`, rename it to `custom_func.py` to apply.  
 It will rewrite UBB image mark to html img tag  
-`[upload=jpg]http://foo.bar/blah.jpg[/upload]` --> `<img src="http://foo.bar/blah.jpg"></img>`  
+`[upload=jpg]http://foo.bar/blah.jpg[/upload]` --> `<img src="http://foo.bar/blah.jpg"></img>` 
+
+## Deploy To Server
+(From flask offical)  
+    You can use the builtin server during development, but you should use a full deployment option for production applications. (Do not use the builtin development server in production.)  
+Please see flask's deploy guide: [http://flask.pocoo.org/docs/0.10/deploying/](http://flask.pocoo.org/docs/0.10/deploying/)  
+
