@@ -1,4 +1,6 @@
 # coding=utf-8
+# This is the sample config, please copy or rename it to 'config.py'
+# DO NOT delete or commit following settings
 
 # ############## Local Domain Settings ##############
 # Your domain name, eg: 'blah.foobar.com'

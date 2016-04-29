@@ -3,6 +3,7 @@ from flask import Flask, request, make_response, Response
 import requests
 from urllib.parse import urljoin, urlsplit
 from ColorfulPyPrint import *
+import re
 
 try:
     from custom_func import *
@@ -140,6 +141,35 @@ def try_get_cached_response(url, client_header):
         return None
 
 
+def regex_url_rewrite(match_obj):
+    def get_group(name):
+        obj = match_obj.group(name)
+        if obj is not None:
+            return obj
+        else:
+            return ''
+
+    # print(match_obj.string)
+    # print(match_obj.groups(), '\n')
+    path = urljoin(request.path, get_group('path'))
+    domain = get_group('domain')
+    if domain != '' and domain != target_domain and domain not in external_domains:
+        return match_obj.group()  # return raw, do not change
+
+    if domain in external_domains:
+        path = urljoin('/extdomains/' + domain + '/', path.lstrip('/'))
+
+    result = get_group('prefix') \
+             + get_group('quote_left') \
+             + my_host_scheme + CDN_domain.rstrip('/') \
+             + path \
+             + get_group('quote_right')
+    # print(result, '\n')
+    # print('\n', '\n')
+
+    return result
+
+
 # ########## End utils ###############
 
 
@@ -223,7 +253,20 @@ def response_text_rewrite(resp_text):  # TODO: rewrite external domain resource'
     # Main Domain Rewrite
     assert isinstance(resp_text, str)
     resp_text = re.sub(
-        r'(https?:)?//' + target_domain.replace('.', r'\.') + '/',  # TODO: Auto generate this
+        r"""(?P<prefix>href\s*=|src\s*=|url\s*\(|\s*:)""" +
+        r"""(?P<quote_left>\s*["'])?""" +
+        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[a-z]+)+?)/)?""" +
+        r"""(?P<path>[^\s?#'"]*?""" +
+        r"""\.(?P<ext>gif|jpe?g|png|js|css|ico|svg|webp|bmp|tif|woff|swf|mp3|wmv|wav)""" +
+        r"""(?P<query_string>\?[^\s'"]*?)?)""" +
+        r"""(?P<quote_right>["'\)])""",
+        regex_url_rewrite,
+        resp_text,
+        flags=re.IGNORECASE
+    )
+
+    resp_text = re.sub(
+        r'(https?:)?//' + target_domain.replace('.', r'\.') + '/',
         my_host_scheme + my_host_name + '/',
         resp_text, flags=re.IGNORECASE
     )
