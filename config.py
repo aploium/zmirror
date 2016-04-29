@@ -25,6 +25,7 @@ external_domains = (
     'encrypted-tbn3.gstatic.com',
     'accounts.google.com',
     'accounts.youtube.com',
+    'file.cc98.org',
 )
 # 'ALL' for all, 'NONE' for none, ('foo.com','bar.com','www.blah.com') for custom
 force_https_domains = 'ALL'
@@ -49,7 +50,7 @@ verbose_level = 3
 
 # ############## Cache Settings ##############
 # Global option
-cache_enable = True
+local_cache_enable = True
 
 # ############## Custom Text Filter Functions ##############
 # Global option
@@ -65,6 +66,4 @@ custom_text_rewriter_enable = False
 enable_static_resource_CDN = True
 # Your CDN domain, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
 # the scheme would be the same as `my_host_scheme` front
-CDN_domain = 'cdn.zju.tools'
-
-
+CDN_domains = ('cdn.zju.tools', 'cdn1.zju.tools', 'cdn2.zju.tools')
