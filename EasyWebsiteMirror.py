@@ -22,7 +22,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.9.0'
+__VERSION__ = '0.9.1'
 __author__ = 'Aploium <i@z.codes>'
 
 ColorfulPyPrint_set_verbose_level(verbose_level)
@@ -300,18 +300,19 @@ def response_text_rewrite(resp_text):
     # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
     # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
     # https://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.com/css/main.css
-    resp_text = re.sub(
-        r"""(?P<prefix>href\s*=|src\s*=|url\s*\(|\s*:)""" +  # prefix, eg: src=
-        r"""(?P<quote_left>\s*["'])?""" +  # quote  "'
-        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
-        r"""(?P<path>[^\s?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
-        r"""\.(?P<ext>gif|jpe?g|png|js|css|ico|svg|webp|bmp|tif|woff|swf|mp3|wmv|wav)""" +  # file ext
-        r"""(?P<query_string>\?[^\s'"]*?)?)""" +  # query string  ?love=luciaZ
-        r"""(?P<quote_right>["'\)])""",  # right quote  "'
-        cdn_regex_url_reassemble,  # It's a function! see above.
-        resp_text,
-        flags=re.IGNORECASE
-    )
+    if enable_static_resource_CDN:
+        resp_text = re.sub(
+            r"""(?P<prefix>href\s*=|src\s*=|url\s*\(|\s*:)""" +  # prefix, eg: src=
+            r"""(?P<quote_left>\s*["'])?""" +  # quote  "'
+            r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
+            r"""(?P<path>[^\s?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+            r"""\.(?P<ext>gif|jpe?g|png|js|css|ico|svg|webp|bmp|tif|woff|swf|mp3|wmv|wav)""" +  # file ext
+            r"""(?P<query_string>\?[^\s'"]*?)?)""" +  # query string  ?love=luciaZ
+            r"""(?P<quote_right>["'\)])""",  # right quote  "'
+            cdn_regex_url_reassemble,  # It's a function! see above.
+            resp_text,
+            flags=re.IGNORECASE
+        )
 
     # TODO: use the former regex to rewrite normal urls
     # normal url rewrite, rewrite the main site's url
