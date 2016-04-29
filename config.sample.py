@@ -2,6 +2,8 @@
 # This is the sample config, please copy or rename it to 'config.py'
 # DO NOT delete or commit following settings
 
+# Github: https://github.com/Aploium/EasyWebsiteMirror
+
 # ############## Explain to the default config ##############
 #     The default config is an site mirror to `example.com` along with `www.iana.org`
 # you can just rename or copy this file to 'config.py' and then execute `python3 EasyWebsiteMirror.py`,
@@ -18,16 +20,18 @@
 # ############## Local Domain Settings ##############
 # Your domain name, eg: 'blah.foobar.com'
 my_host_name = 'localhost'
-# Your domain's scheme, 'http://' or 'https://'
+# Your domain's scheme, 'http://' or 'https://', it affects the user.
 my_host_scheme = 'http://'
 
 # ############## Target Domain Settings ##############
 # Target main domain
 #  Notice: ONLY the main domain and external domains are ALLOWED to cross this proxy
 target_domain = 'example.com'
-# Target domain's scheme, 'http://' or 'https://'
+# Target domain's scheme, 'http://' or 'https://', it affects the server only.
 target_scheme = 'http://'
-# domain also included in the proxy zone, mostly are the main domain's static file domains
+# domain(s) also included in the proxy zone, mostly are the main domain's static file domains or sub domains
+#     tips: you can find a website's external domains by using the developer tools of your browser,
+# it will log all network traffics for you
 external_domains = (
     'www.example.com',
     'www.iana.org',
@@ -45,12 +49,12 @@ is_use_proxy = False
 # If is_use_proxy = False, the following setting would NOT have any effect
 # DO NOT support socks4/5 proxy. If you want to use socks proxy, please use Privoxy to convert them to http(s) proxy.
 requests_proxies = dict(
-    http="http://127.0.0.1:8123",
-    https="https://127.0.0.1:8123",
+    http='http://127.0.0.1:8123',
+    https='https://127.0.0.1:8123',
 )
 
 # ############## Output Settings ##############
-# Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 2
+# Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 3 (for first time runner)
 verbose_level = 3
 
 # ############## Cache Settings ##############
@@ -58,7 +62,8 @@ verbose_level = 3
 # an 304 response support is implanted inside
 local_cache_enable = True
 
-# ############## Custom Text Filter Functions ##############
+# ############## Custom Text Rewriter Function ##############
+# Please see https://github.com/Aploium/EasyWebsiteMirror#custom-rewriter-advanced-function for more information
 custom_text_rewriter_enable = False
 
 # ############## CDN Settings ##############
@@ -66,11 +71,14 @@ custom_text_rewriter_enable = False
 # CDN will dramatically increase your clients' access speed if you have many of them
 # HowTo:
 #   Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name)
-# And then add the CDN domain in the follow. Currently we only support ONE CDN domain.
+# And then add the CDN domain in the follow.
+# Please see https://github.com/Aploium/EasyWebsiteMirror#cdn-support for more information
 enable_static_resource_CDN = False
 
 # Your CDN domains, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
-# Please turn off local cache if you use CDN
+#     If your CDN storge your file permanently (like qiniu), you can disable local cache to save space,
+# but if your CDN is temporarily storge (like cloudflare), please keep local cache enabled.
+#
 # example: ('cdn1.example.com','cdn2.example.com','cdn3.example.com')
 CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 
