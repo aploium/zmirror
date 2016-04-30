@@ -484,6 +484,11 @@ def request_remote_site_and_parse(actual_request_url):
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
+    ua = str(request.user_agent).lower()
+    if is_deny_spiders_by_403 and ('spider' in ua or 'bot' in ua):
+        infoprint('An Spider/Bot was denied, UA is:', request.user_agent)
+        return generate_error_page(b'Spiders Are Not Allowed To This Site', 403)
+
     dbgprint('Client Request Url(external): ', request.url)
     # if /extdomains/https-**** means server should use https method to request the remote site.
     if hostname[0:6] == 'https-':
@@ -503,8 +508,12 @@ def get_external_site(hostname, extpath='/'):
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
-    dbgprint('Client Request Url: ', request.url)
+    ua = str(request.user_agent).lower()
+    if is_deny_spiders_by_403 and ('spider' in ua or 'bot' in ua):
+        infoprint('An Spider/Bot was denied, UA is:', request.user_agent)
+        return generate_error_page(b'Spiders Are Not Allowed To This Site', 403)
 
+    dbgprint('Client Request Url: ', request.url)
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
     return request_remote_site_and_parse(actual_request_url)

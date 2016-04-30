@@ -82,6 +82,10 @@ enable_static_resource_CDN = False
 # example: ('cdn1.example.com','cdn2.example.com','cdn3.example.com')
 CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 
+# ############## Search Engine Deny ##############
+# If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'
+# And, don't worry, no browser's user-agent contains these two words.
+is_deny_spiders_by_403 = True
 
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror
