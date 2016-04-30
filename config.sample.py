@@ -37,7 +37,7 @@ external_domains = (
     'www.iana.org',
     'iana.org',
 )
-# 'ALL' for all, 'NONE' for none, ('foo.com','bar.com','www.blah.com') for custom
+# 'ALL' for all, 'NONE' for none(case sensitive), ('foo.com','bar.com','www.blah.com') for custom
 force_https_domains = 'NONE'
 
 # ############## Proxy Settings ##############
@@ -85,7 +85,18 @@ CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 # ############## Search Engine Deny ##############
 # If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'
 # And, don't worry, no browser's user-agent contains these two words.
-is_deny_spiders_by_403 = True
+# default: False
+is_deny_spiders_by_403 = False
+
+# However, if spider's ua contains one of these strings, it will be allowed
+# Because some CDN provider's resource fetcher's UA contains spider string. You can let them access
+# the example 'qiniu' is the cdn fetcher of qiniu(七牛, China)
+# Tips: How to find out your CDN provider's UA if it was denied.
+#     Set the verbose_level to 3, let the bot access(and denied), then see the log file(or stdout),
+# you will find string like:   "A Spider/Bot was denied, UA is: qiniu-imgstg-spider-1.0"
+# choose key word(s) from it and add it(them) to the white list.
+# default: ('qiniu', 'cdn')
+spider_ua_white_list = ('qiniu', 'cdn')
 
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror

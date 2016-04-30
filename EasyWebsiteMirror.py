@@ -195,6 +195,19 @@ def cdn_regex_url_reassemble(match_obj):
     return reassembled
 
 
+def is_denied_because_of_spider(ua):
+    ua_str = str(ua).lower()
+    if 'spider' in ua_str or 'bot' in ua_str:
+        for allowed_ua in spider_ua_white_list:
+            if allowed_ua in ua_str:
+                dbgprint('A Spider/Bot', ua_str, ' was permitted because of white list:', allowed_ua)
+                return False
+        dbgprint('A Spider/Bot was denied, UA is:', ua_str)
+        return True
+    else:
+        return False
+
+
 # ########## End utils ###############
 
 
@@ -484,9 +497,7 @@ def request_remote_site_and_parse(actual_request_url):
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
-    ua = str(request.user_agent).lower()
-    if is_deny_spiders_by_403 and ('spider' in ua or 'bot' in ua):
-        infoprint('An Spider/Bot was denied, UA is:', request.user_agent)
+    if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
         return generate_error_page(b'Spiders Are Not Allowed To This Site', 403)
 
     dbgprint('Client Request Url(external): ', request.url)
@@ -508,9 +519,7 @@ def get_external_site(hostname, extpath='/'):
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
-    ua = str(request.user_agent).lower()
-    if is_deny_spiders_by_403 and ('spider' in ua or 'bot' in ua):
-        infoprint('An Spider/Bot was denied, UA is:', request.user_agent)
+    if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
         return generate_error_page(b'Spiders Are Not Allowed To This Site', 403)
 
     dbgprint('Client Request Url: ', request.url)
