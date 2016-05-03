@@ -74,24 +74,24 @@ def _printr(output, other_inputs, print_type=PRINT_TYPE_INFO, timelevel=O_TIME_L
         section_type = ''
 
     # Finally Print
-    print(section_color + section_time + section_type, end='')
+    print_str = section_color + section_time + section_type
     if suitable_extra_dest:
         buffer = _ExternalPrintBuffer()
         buffer.replace_stdout()
+    print_str += str(output)
+    if other_inputs:
+        for item in other_inputs:
+            print_str += ' ' + str(item)
+    print_str += Fore.RESET
     try:
-        print(output, end='')
-        if other_inputs:
-            for item in other_inputs:
-                print(' ', end='')
-                print(item, end='')
+        print(print_str)
     except Exception as e:
         if suitable_extra_dest:
             buffer.reset()
-        print(Fore.RED + 'PRINT ERROR: ', e)
+        print(Fore.RED + 'PRINT ERROR: ', e, Fore.RESET)
     finally:
         if suitable_extra_dest:
             buffer.reset()
-    print(Fore.RESET)
     if is_beep:
         try:
             beep()

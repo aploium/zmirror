@@ -2,6 +2,7 @@
 # coding=utf-8
 from flask import Flask, request, make_response, Response
 import requests
+import traceback
 from urllib.parse import urljoin, urlsplit
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 import re
@@ -22,9 +23,13 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.9.1'
+__VERSION__ = '0.9.2-Dev'
 __author__ = 'Aploium <i@z.codes>'
 
+static_file_extensions_list = set(static_file_extensions_list)
+external_domains_set = set(external_domains or [])
+allowed_domains_set = external_domains_set.copy()
+allowed_domains_set.add(target_domain)
 ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
 cdn_domains_number = len(CDN_domains)
@@ -81,6 +86,7 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+
 def is_mime_represents_text(input_mime):
     """
     Determine whether an mime is text (eg: text/html: True, image/png: False)
@@ -155,7 +161,7 @@ def try_get_cached_response(url, client_header):
         return None
 
 
-def cdn_regex_url_reassemble(match_obj):
+def regex_url_reassemble(match_obj):
     """
     Reassemble url parts split by the regex.
     :param match_obj: match object of stdlib re
@@ -169,27 +175,53 @@ def cdn_regex_url_reassemble(match_obj):
         else:
             return ''
 
-    domain = get_group('domain')
+    remote_path = request.path
+    if request.path[:11] == '/extdomains':
+        remote_path_raw = request.path[12:]
+        find_pos = remote_path_raw.find('/')
+        remote_path = remote_path_raw[find_pos:]
+        remote_domain = remote_path_raw[:find_pos]
+        if remote_domain[:6] == 'https-':
+            remote_domain = remote_domain[6:]
+    else:
+        remote_domain = target_domain
+    dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain)
+
+    domain = get_group('domain') or remote_domain
+    dbgprint('rewrite match_obj:', match_obj, 'domain:', domain)
     # skip if the domain are not in our proxy list
-    if domain != '' and domain != target_domain and domain not in external_domains:
+    if domain not in allowed_domains_set:
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
-    path = urljoin(request.path, get_group('path'))
-
+    path = urljoin(remote_path, get_group('path'))
+    dbgprint('middle path', path)
     # add extdomains prefix in path if need
-    if domain in external_domains:
-        path = urljoin('/extdomains/' + domain + '/', path.lstrip('/'))
+    if domain in external_domains_set:
+        if force_https_domains != 'NONE' and (force_https_domains == 'ALL' or domain in force_https_domains):
+            scheme_prefix = 'https-'
+        else:
+            scheme_prefix = ''
+        path = urljoin('/extdomains/' + scheme_prefix + domain + '/', path.lstrip('/'))
+    dbgprint('final_path', path)
+    if enable_static_resource_CDN and get_group('ext') in static_file_extensions_list:
+        # pick an cdn domain due to the length of url path
+        # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
 
-    # pick an cdn domain due to the length of url path
-    # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
-    cdn_domain = CDN_domains[len(path) % cdn_domains_number]
+        # CDN rewrite, rewrite static resources to cdn domains.
+        # A lot of cases included, the followings are just the most typical examples.
+        # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
+        # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
+        # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
+        replaced_domain = CDN_domains[len(path) % cdn_domains_number]
+    else:
+        replaced_domain = my_host_name
 
     # reassemble!
     # prefix: src=  quote_left: "
     # path: /extdomains/target.com/foo/bar.js?love=luciaZ
     reassembled = get_group('prefix') + get_group('quote_left') \
-                  + urljoin(my_host_scheme + cdn_domain, path) \
+                  + urljoin(my_host_scheme + replaced_domain, path) \
                   + get_group('quote_right')
 
     return reassembled
@@ -293,7 +325,10 @@ def response_content_rewrite(remote_resp_obj):
             errprint('Custom Rewrite Function "custom_response_html_rewriter(text)" in custom_func.py ERROR', e)
 
         # then do the normal rewrites
-        resp_text = response_text_rewrite(resp_text)
+        try:
+            resp_text = response_text_rewrite(resp_text)
+        except:
+            traceback.print_exc()
 
         return resp_text.encode(encoding='utf-8')  # return bytes
     else:
@@ -308,26 +343,20 @@ def response_text_rewrite(resp_text):
     :type resp_text: str
     """
 
-    # CDN rewrite, rewrite static resources to cdn domains.
-    # A lot of cases included, the followings are just the most typical examples.
-    # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
-    # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
-    # https://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.com/css/main.css
-    if enable_static_resource_CDN:
-        resp_text = re.sub(
-            r"""(?P<prefix>href\s*=|src\s*=|url\s*\(|\s*:)""" +  # prefix, eg: src=
-            r"""(?P<quote_left>\s*["'])?""" +  # quote  "'
-            r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
-            r"""(?P<path>[^\s?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
-            r"""\.(?P<ext>gif|jpe?g|png|js|css|ico|svg|webp|bmp|tif|woff|swf|mp3|wmv|wav)""" +  # file ext
-            r"""(?P<query_string>\?[^\s'"]*?)?)""" +  # query string  ?love=luciaZ
-            r"""(?P<quote_right>["'\)])""",  # right quote  "'
-            cdn_regex_url_reassemble,  # It's a function! see above.
-            resp_text,
-            flags=re.IGNORECASE
-        )
+    # v0.9.2: advanced url rewrite engine (based on previously CDN rewriter)
+    resp_text = re.sub(
+        r"""(?P<prefix>ref\s*=|src\s*=|url\s*\()\s*""" +  # prefix, eg: src=
+        r"""(?P<quote_left>["'])?""" +  # quote  "'
+        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
+        r"""(?P<path>[^\s?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+        r"""(\.(?P<ext>\w+?))?""" +  # file ext
+        r"""(?P<query_string>\?[^\s'"]*?)?)""" +  # query string  ?love=luciaZ
+        r"""(?P<quote_right>["'\)])""",  # right quote  "'
+        regex_url_reassemble,  # It's a function! see above.
+        resp_text,
+        flags=re.IGNORECASE
+    )
 
-    # TODO: use the former regex to rewrite normal urls
     # normal url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
     resp_text = re.sub(
