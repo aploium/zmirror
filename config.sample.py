@@ -122,7 +122,7 @@ human_ip_verification_default_whitelist_networks = (
 human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
 human_ip_verification_whitelist_log = 'ip_whitelist.log'
 human_ip_verification_questions = (
-    ('QSC手机app左边菜单栏中, \"其他\"一栏的第一个项目是什么(三个汉字,第一个字是\"水\")', '水朝夕'),
+    ('QSC手机app左边菜单栏中, \"其他\"一栏的第一个项目是什么(三个汉字,第一个字是\"水\")', '水[后面两个字不告诉你]'),
 )
 human_ip_verification_identity_record = (
     ("请输入您的学号或工号", "student_id"),
