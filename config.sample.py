@@ -105,6 +105,29 @@ is_deny_spiders_by_403 = False
 # default: ('qiniu', 'cdn')
 spider_ua_white_list = ('qiniu', 'cdn')
 
+# ############## Human/IP verification ##############
+# we could disallow Chinese GFW by asking users some questions which only your people knew the answer
+human_ip_verification_enabled = True
+human_ip_verification_default_whitelist_networks = (
+    '127.0.0.1',  # localhost
+
+    '183.157.0.0/16',  # Zhejiang University
+
+    # Zhejiang China Mobile
+    '211.140.0.0/16',
+    '218.205.0.0/16',
+    '211.138.112.0/19',
+
+)
+human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
+human_ip_verification_whitelist_log = 'ip_whitelist.log'
+human_ip_verification_questions = (
+    ('QSC手机app左边菜单栏中, \"其他\"一栏的第一个项目是什么(三个汉字,第一个字是\"水\")', '水朝夕'),
+)
+human_ip_verification_identity_record = (
+    ("请输入您的学号或工号", "student_id"),
+)
+
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror
 # and then don't forget to set up the proxy if your machine is within the China mainland (GFW Zone)

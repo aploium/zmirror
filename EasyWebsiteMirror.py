@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # coding=utf-8
-from flask import Flask, request, make_response, Response
+import os
+
+os.chdir(os.path.dirname(__file__))
+from flask import Flask, request, make_response, Response, redirect
 import requests
 import traceback
+from datetime import datetime
 from urllib.parse import urljoin, urlsplit
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 import re
@@ -35,6 +39,13 @@ myurl_prefix = my_host_scheme + my_host_name
 cdn_domains_number = len(CDN_domains)
 if not is_use_proxy:
     requests_proxies = None
+if human_ip_verification_enabled:
+    import ipaddress
+
+    buff = []
+    for network in human_ip_verification_default_whitelist_networks:
+        buff.append(ipaddress.ip_network(network, strict=False))
+    human_ip_verification_default_whitelist_networks = tuple(buff)
 
 app = Flask(__name__)
 
@@ -99,7 +110,7 @@ def is_mime_represents_text(input_mime):
     return False
 
 
-def generate_error_page(errormsg=b'We Got An Unknown Error', error_code=500):
+def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=500):
     return make_response(errormsg, error_code)
 
 
@@ -185,17 +196,17 @@ def regex_url_reassemble(match_obj):
             remote_domain = remote_domain[6:]
     else:
         remote_domain = target_domain
-    dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain)
+    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain)
 
     domain = get_group('domain') or remote_domain
-    dbgprint('rewrite match_obj:', match_obj, 'domain:', domain)
+    # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain)
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
     path = urljoin(remote_path, get_group('path'))
-    dbgprint('middle path', path)
+    # dbgprint('middle path', path)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
         if force_https_domains != 'NONE' and (force_https_domains == 'ALL' or domain in force_https_domains):
@@ -203,7 +214,7 @@ def regex_url_reassemble(match_obj):
         else:
             scheme_prefix = ''
         path = urljoin('/extdomains/' + scheme_prefix + domain + '/', path.lstrip('/'))
-    dbgprint('final_path', path)
+    # dbgprint('final_path', path)
     if enable_static_resource_CDN and get_group('ext') in static_file_extensions_list:
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
@@ -238,6 +249,40 @@ def is_denied_because_of_spider(ua):
         return True
     else:
         return False
+
+
+def load_ip_whitelist_file():
+    set_buff = set([])
+    if os.path.exists(human_ip_verification_whitelist_file_path):
+        with open(human_ip_verification_whitelist_file_path, 'r', encoding='utf-8') as fp:
+            set_buff.add(fp.readline())
+    return set_buff
+
+
+def append_ip_whitelist_file(ip_to_allow):
+    with open(human_ip_verification_whitelist_file_path, 'a', encoding='utf-8') as fp:
+        fp.write(ip_to_allow + '\n')
+
+
+def ip_whitelist_add(ip_to_allow, info_record_dict=None):
+    dbgprint('ip white added', ip_to_allow, 'info:', info_record_dict)
+    single_ip_allowed_set.add(ip_to_allow)
+    append_ip_whitelist_file(ip_to_allow)
+    # dbgprint(single_ip_allowed_set)
+    with open(human_ip_verification_whitelist_log, 'a', encoding='utf-8') as fp:
+        fp.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + ip_to_allow
+                 + " " + str(request.user_agent)
+                 + " " + repr(info_record_dict) + "\n")
+
+
+def is_ip_not_in_allow_range(ip_address):
+    if ip_address in single_ip_allowed_set:
+        return False
+    ip_address_obj = ipaddress.ip_address(ip_address)
+    for allowed_network in human_ip_verification_default_whitelist_networks:
+        if ip_address_obj in allowed_network:
+            return False
+    return True
 
 
 # ########## End utils ###############
@@ -508,7 +553,7 @@ def request_remote_site_and_parse(actual_request_url):
         r = send_request(actual_request_url, method=request.method, headers=client_header, data=request.get_data())
     except Exception as e:
         errprint(e)
-        return generate_error_page()
+        return generate_simple_resp_page()
     else:
         # copy and parse remote response
         resp = copy_response(r, response_content_rewrite(r))
@@ -523,11 +568,55 @@ def request_remote_site_and_parse(actual_request_url):
 
 
 # ################# Begin Flask #################
+@app.route('/ip_ban_verify_page', methods=['GET', 'POST'])
+def ip_ban_verify_page():
+    if request.method == 'GET':
+        form_body = ''
+        for q_id, question in enumerate(human_ip_verification_questions):
+            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (question[0], q_id)
+
+        for rec_explain_string, rec_name in human_ip_verification_identity_record:
+            form_body += r"""%s <input type="text" name="%s" /><br/>""" % (rec_explain_string, rec_name)
+
+        return r"""<!doctype html>
+        <html lang="zh-CN">
+        <head>
+        <meta charset="UTF-8">
+        <title>需要简单验证您是人类 | Human Verification Required</title>
+        </head>
+        <body>
+          <h1>非常抱歉, 为了让您能继续访问, 我们需要验证您是人类访问者</h1>
+          <h2>My apologize, but we have to verify that you are a human</h2>
+          <p>这样的验证只会出现一次，您的IP会被加入白名单，之后相同IP访问不会再需要验证。</p>
+          <p>提示: 由于手机和宽带IP经常会发生改变，您可能会多次看到这一页面。</p>
+          <p>请填写以下问题并递交</p>
+          <form method='post'>%s<button type='submit'>递交</button></form>
+        </body>
+        </html>""" % form_body
+    elif request.method == 'POST':
+
+        for q_id, question in enumerate(human_ip_verification_questions):
+            if request.form.get(str(q_id)) != question[1]:
+                return generate_simple_resp_page(b'You Got An Error In ' + question[0].encode(), 200)
+
+        record_dict = {}
+        for rec_explain_string, rec_name in human_ip_verification_identity_record:
+            if rec_name not in request.form:
+                return generate_simple_resp_page(b'Param Missing: ' + rec_explain_string.encode(), 200)
+            else:
+                record_dict[rec_name] = request.form.get(rec_name)
+        ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
+        return redirect("/", code=302)
+
+
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
     if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
-        return generate_error_page(b'Spiders Are Not Allowed To This Site', 403)
+        return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
+
+    if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
+        return redirect("/ip_ban_verify_page", code=302)
 
     dbgprint('Client Request Url(external): ', request.url)
     # if /extdomains/https-**** means server should use https method to request the remote site.
@@ -539,7 +628,7 @@ def get_external_site(hostname, extpath='/'):
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if hostname.rstrip('/') not in external_domains:
-        return generate_error_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
+        return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
 
     return request_remote_site_and_parse(actual_request_url)
@@ -549,7 +638,10 @@ def get_external_site(hostname, extpath='/'):
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
     if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
-        return generate_error_page(b'Spiders Are Not Allowed To This Site', 403)
+        return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
+
+    if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
+        return redirect("/ip_ban_verify_page", code=302)
 
     dbgprint('Client Request Url: ', request.url)
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
@@ -558,6 +650,8 @@ def get_main_site(input_path='/'):
 
 
 # ################# End Flask #################
-
+# ################# Begin Post Auto Exec Section #################
+single_ip_allowed_set = load_ip_whitelist_file()
+# ################# End Post Auto Exec Section #################
 if __name__ == '__main__':
     app.run(debug=True, port=80, threaded=True)
