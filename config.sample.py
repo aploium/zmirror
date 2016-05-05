@@ -127,6 +127,7 @@ human_ip_verification_default_whitelist_networks = (
 
 )
 # Please make sure you have write permission.
+human_ip_verification_title = '本网站只有内部人员才可以访问'
 human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
 human_ip_verification_whitelist_log = 'ip_whitelist.log'
 # questions and answer that users from non-permitted ip should answer. Can have several questions

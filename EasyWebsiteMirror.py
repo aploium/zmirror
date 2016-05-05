@@ -7,9 +7,11 @@ from flask import Flask, request, make_response, Response, redirect
 import requests
 import traceback
 from datetime import datetime
+import re
+import base64
+from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
-import re
 
 try:
     from custom_func import *
@@ -595,7 +597,10 @@ def filter_client_request():
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
     if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
-        return redirect("/ip_ban_verify_page", code=302)
+        return redirect(
+            "/ip_ban_verify_page?origin="
+            + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode()
+            , code=302)
 
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
@@ -622,26 +627,33 @@ def ip_ban_verify_page():
         dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
         for q_id, question in enumerate(human_ip_verification_questions):
-            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (question[0], q_id)
+            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (html_escape(question[0]), q_id)
 
         for rec_explain_string, rec_name in human_ip_verification_identity_record:
-            form_body += r"""%s <input type="text" name="%s" /><br/>""" % (rec_explain_string, rec_name)
+            form_body += r"""%s <input type="text" name="%s" /><br/>""" % (
+                html_escape(rec_explain_string), html_escape(rec_name))
+
+        if 'origin' in request.args:
+            form_body += r"""<input type="hidden" name="origin" value="%s" />""" % html_escape(
+                request.args.get('origin'))
 
         return r"""<!doctype html>
         <html lang="zh-CN">
         <head>
         <meta charset="UTF-8">
-        <title>需要简单验证您是人类 | Human Verification Required</title>
+        <title>%s</title>
         </head>
         <body>
-          <h1>非常抱歉, 为了让您能继续访问, 我们需要验证您是人类访问者</h1>
-          <h2>My apologize, but we have to verify that you are a human</h2>
-          <p>这样的验证只会出现一次，您的IP会被加入白名单，之后相同IP访问不会再需要验证。<br/>
+          <h1>%s</h1>
+          <p>这样的验证只会出现一次，通过后您会被加入白名单，之后相同设备的访问不会再需要验证。<br/>
           提示: 由于手机和宽带IP经常会发生改变，您可能会多次看到这一页面。</p>
           <pre style="border: 1px dashed;">%s</pre>
-          <form method='post'>%s<button type='submit'>递交</button></form>
+          <form method='post'>%s<button type='submit'>递交</button>
+          </form>
         </body>
-        </html>""" % (human_ip_verification_description, form_body)
+        </html>""" % (
+            html_escape(human_ip_verification_title), html_escape(human_ip_verification_title),
+            html_escape(human_ip_verification_description), form_body)
     elif request.method == 'POST':
 
         for q_id, question in enumerate(human_ip_verification_questions):
@@ -655,7 +667,18 @@ def ip_ban_verify_page():
             else:
                 record_dict[rec_name] = request.form.get(rec_name)
         ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
-        return redirect("/", code=302)
+        origin = '/'
+        if 'origin' in request.form:
+            try:
+                origin = base64.urlsafe_b64decode(request.form.get('origin')).decode(encoding='utf-8')
+            except:
+                pass
+            else:
+                netloc = urlsplit(origin).netloc
+                if not netloc and netloc != my_host_name:
+                    origin = '/'
+
+        return redirect(origin, code=302)
 
 
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
