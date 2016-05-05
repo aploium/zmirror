@@ -107,7 +107,11 @@ spider_ua_white_list = ('qiniu', 'cdn')
 
 # ############## Human/IP verification ##############
 # we could disallow Chinese GFW by asking users some questions which only your people knew the answer
-human_ip_verification_enabled = True
+human_ip_verification_enabled = False
+# can be html
+human_ip_verification_description = r"""本站仅允许浙江大学师生访问.如果您也来自浙江大学, 请您回答以下问题
+This site ONLY allow people from Zhejiang University to access, please answer the following question(s).
+"""
 human_ip_verification_default_whitelist_networks = (
     '127.0.0.1',  # localhost
 
@@ -119,24 +123,32 @@ human_ip_verification_default_whitelist_networks = (
     '211.138.112.0/19',
 
 )
+# Please make sure you have write permission.
 human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
 human_ip_verification_whitelist_log = 'ip_whitelist.log'
+# questions and answer that users from non-permitted ip should answer. Can have several questions
 human_ip_verification_questions = (
-    ('QSC手机app左边菜单栏中, \"其他\"一栏的第一个项目是什么(三个汉字,第一个字是\"水\")', '水[后面两个字不告诉你]'),
+    ('Please write your question here', 'CorrectAnswer'),
+    # ('Another question', 'AnotherAnswer'),
+    # ('可以是一些只有内部人员才知道答案的问题, 比如说 \"bg在三墩职业技术学院是什么意思\"', '嘿嘿嘿嘿你猜啊'),
 )
+# user's identity information that should given. Would be logged in to log file.
 human_ip_verification_identity_record = (
-    ("请输入您的学号或工号", "student_id"),
+    ("Please input your student/teacher ID number", "student_id"),
+    # ("请输入您的学号或工号", "student_id"),
 )
 
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror
 # and then don't forget to set up the proxy if your machine is within the China mainland (GFW Zone)
 
-# target_domain = 'www.google.com'
+# target_domain = 'www.google.com.hk'
 # target_scheme = 'https://'
 # external_domains = (
 #     'scholar.google.com',
+#     'scholar.google.com.hk',
 #
+#     'www.google.com',
 #     'ssl.gstatic.com',
 #     'www.gstatic.com',
 #     'apis.google.com',
@@ -148,3 +160,6 @@ human_ip_verification_identity_record = (
 #     'accounts.youtube.com',
 # )
 # force_https_domains = 'ALL'
+# is_deny_spiders_by_403 = True
+#
+# human_ip_verification_enabled = True # Optional, if set to True, you should modify other settings of that section

@@ -260,8 +260,11 @@ def load_ip_whitelist_file():
 
 
 def append_ip_whitelist_file(ip_to_allow):
-    with open(human_ip_verification_whitelist_file_path, 'a', encoding='utf-8') as fp:
-        fp.write(ip_to_allow + '\n')
+    try:
+        with open(human_ip_verification_whitelist_file_path, 'a', encoding='utf-8') as fp:
+            fp.write(ip_to_allow + '\n')
+    except:
+        errprint('Unable to write whitelist file')
 
 
 def ip_whitelist_add(ip_to_allow, info_record_dict=None):
@@ -269,10 +272,14 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
     single_ip_allowed_set.add(ip_to_allow)
     append_ip_whitelist_file(ip_to_allow)
     # dbgprint(single_ip_allowed_set)
-    with open(human_ip_verification_whitelist_log, 'a', encoding='utf-8') as fp:
-        fp.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + ip_to_allow
-                 + " " + str(request.user_agent)
-                 + " " + repr(info_record_dict) + "\n")
+    try:
+        with open(human_ip_verification_whitelist_log, 'a', encoding='utf-8') as fp:
+            fp.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + ip_to_allow
+                     + " " + str(request.user_agent)
+                     + " " + repr(info_record_dict) + "\n")
+    except:
+        errprint('Unable to write log file', os.path.abspath(human_ip_verification_whitelist_log))
+        traceback.print_exc()
 
 
 def is_ip_not_in_allow_range(ip_address):
@@ -514,7 +521,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     final_url = rewrite_client_requests_text(url)
     final_hostname = urlsplit(final_url).hostname
     # Only external in-zone domains are allowed (SSRF check layer 2)
-    if (final_hostname not in external_domains) and (final_hostname != target_domain):
+    if final_hostname not in allowed_domains_set:
         raise ConnectionAbortedError('Tried to access an OUT-OF-ZONE domain:', final_hostname)
 
     # set zero data to None instead of b''
@@ -571,6 +578,7 @@ def request_remote_site_and_parse(actual_request_url):
 @app.route('/ip_ban_verify_page', methods=['GET', 'POST'])
 def ip_ban_verify_page():
     if request.method == 'GET':
+        dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
         for q_id, question in enumerate(human_ip_verification_questions):
             form_body += r"""%s <input type="text" name="%d" /><br/>""" % (question[0], q_id)
@@ -589,10 +597,10 @@ def ip_ban_verify_page():
           <h2>My apologize, but we have to verify that you are a human</h2>
           <p>这样的验证只会出现一次，您的IP会被加入白名单，之后相同IP访问不会再需要验证。</p>
           <p>提示: 由于手机和宽带IP经常会发生改变，您可能会多次看到这一页面。</p>
-          <p>请填写以下问题并递交</p>
+          <pre>%s</pre>
           <form method='post'>%s<button type='submit'>递交</button></form>
         </body>
-        </html>""" % form_body
+        </html>""" % (human_ip_verification_description, form_body)
     elif request.method == 'POST':
 
         for q_id, question in enumerate(human_ip_verification_questions):
@@ -627,7 +635,7 @@ def get_external_site(hostname, extpath='/'):
         scheme = 'http://'
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
-    if hostname.rstrip('/') not in external_domains:
+    if hostname.rstrip('/') not in allowed_domains_set:
         return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
 
@@ -650,8 +658,11 @@ def get_main_site(input_path='/'):
 
 
 # ################# End Flask #################
+
 # ################# Begin Post Auto Exec Section #################
-single_ip_allowed_set = load_ip_whitelist_file()
+if human_ip_verification_enabled:
+    single_ip_allowed_set = load_ip_whitelist_file()
 # ################# End Post Auto Exec Section #################
+
 if __name__ == '__main__':
     app.run(debug=True, port=80, threaded=True)
