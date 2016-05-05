@@ -159,6 +159,8 @@ url_custom_redirect_enable = False
 url_custom_redirect_list = {
     # This example is to fix search bugs(in wiki) when you put google together with zh.wikipedia.org in one mirror.
     '/w/load.php': '/extdomains/https-zh.wikipedia.org/w/load.php',
+    '/w/index.php': '/extdomains/https-zh.wikipedia.org/w/index.php',
+    '/w/api.php': '/extdomains/https-zh.wikipedia.org/w/api.php',
 
     # This example acts as an tinyurl program
     '/wiki': '/extdomains/https-zh.wikipedia.org/',

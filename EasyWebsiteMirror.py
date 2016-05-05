@@ -189,9 +189,11 @@ def regex_url_reassemble(match_obj):
     prefix = get_group('prefix')
     quote_left = get_group('quote_left')
     quote_right = get_group('quote_right')
+    path = get_group('path')
     # path must be not blank
-    if ('src' in prefix or 'href' in prefix) \
-            and (not quote_left or quote_right == ')'):  # url after src and href must be ' or " quoted
+    if not path \
+            or ('src' in prefix or 'href' in prefix) \
+                    and (not quote_left or quote_right == ')'):  # url after src and href must be ' or " quoted
         return match_obj.group()
 
     remote_path = request.path
@@ -213,7 +215,7 @@ def regex_url_reassemble(match_obj):
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
-    path = urljoin(remote_path, get_group('path'))
+    path = urljoin(remote_path, path)
     # dbgprint('middle path', path)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
@@ -405,13 +407,13 @@ def response_text_rewrite(resp_text):
 
     # v0.9.2: advanced url rewrite engine (based on previously CDN rewriter)
     resp_text = re.sub(
-        r"""(?P<prefix>href\s*=|src\s*=|url\s*\(|@import\s*)\s*""" +  # prefix, eg: src=
+        r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*))\s*""" +  # prefix, eg: src=
         r"""(?P<quote_left>["'])?""" +  # quote  "'
-        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#'";]+?(\.[-a-z0-9]+)+?))?""" +  # domain and scheme
-        r"""(?P<path>/[^\s;?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#'";]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
+        r"""(?P<path>[^\s;?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
         r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
         r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
-        r"""(?P<quote_right>["'\)])""",  # right quote  "'
+        r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
         regex_url_reassemble,  # It's a function! see above.
         resp_text,
         flags=re.IGNORECASE
