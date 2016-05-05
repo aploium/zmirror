@@ -186,6 +186,14 @@ def regex_url_reassemble(match_obj):
         else:
             return ''
 
+    prefix = get_group('prefix')
+    quote_left = get_group('quote_left')
+    quote_right = get_group('quote_right')
+    # path must be not blank
+    if ('src' in prefix or 'href' in prefix) \
+                    and (not quote_left or quote_right == ')'):  # url after src and href must be ' or " quoted
+        return match_obj.group()
+
     remote_path = request.path
     if request.path[:11] == '/extdomains':
         remote_path_raw = request.path[12:]
@@ -231,9 +239,9 @@ def regex_url_reassemble(match_obj):
     # reassemble!
     # prefix: src=  quote_left: "
     # path: /extdomains/target.com/foo/bar.js?love=luciaZ
-    reassembled = get_group('prefix') + get_group('quote_left') \
+    reassembled = prefix + quote_left \
                   + urljoin(replace_to_scheme_domain, path) \
-                  + get_group('quote_right')
+                  + quote_right
 
     return reassembled
 
@@ -397,12 +405,12 @@ def response_text_rewrite(resp_text):
 
     # v0.9.2: advanced url rewrite engine (based on previously CDN rewriter)
     resp_text = re.sub(
-        r"""(?P<prefix>ref\s*=|src\s*=|url\s*\(|@import\s*)\s*""" +  # prefix, eg: src=
+        r"""(?P<prefix>href\s*=|src\s*=|url\s*\(|@import\s*)\s*""" +  # prefix, eg: src=
         r"""(?P<quote_left>["'])?""" +  # quote  "'
-        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
-        r"""(?P<path>[^\s?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
-        r"""(\.(?P<ext>\w+?))?""" +  # file ext
-        r"""(?P<query_string>\?[^\s'"]*?)?)""" +  # query string  ?love=luciaZ
+        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#'";]+?(\.[-a-z0-9]+)+?))?""" +  # domain and scheme
+        r"""(?P<path>/[^\s;?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+        r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
+        r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
         r"""(?P<quote_right>["'\)])""",  # right quote  "'
         regex_url_reassemble,  # It's a function! see above.
         resp_text,
@@ -436,8 +444,8 @@ def response_text_rewrite(resp_text):
         )
 
         # rewrite "foo.domain.tld" and 'foo.domain.tld'
-        resp_text = resp_text.replace('"%s"' % domain, my_host_name + '/extdomains/' + domain)
-        resp_text = resp_text.replace("'%s'" % domain, my_host_name + '/extdomains/' + domain)
+        resp_text = resp_text.replace('"%s"' % domain, '\"' + my_host_name + '/extdomains/' + domain + '\"')
+        resp_text = resp_text.replace("'%s'" % domain, "\'" + my_host_name + '/extdomains/' + domain + "\'")
 
     return resp_text
 

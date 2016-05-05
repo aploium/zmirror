@@ -158,6 +158,18 @@ human_ip_verification_identity_record = (
 #     'encrypted-tbn3.gstatic.com',
 #     'accounts.google.com',
 #     'accounts.youtube.com',
+#
+#     'books.google.com',
+#
+#     # For Google Map
+#     'maps.google.com',
+#     'fonts.gstatic.com',
+#     'maps.gstatic.com',
+#     'lh1.googleusercontent.com',
+#     'lh2.googleusercontent.com',
+#     'lh3.googleusercontent.com',
+#     'lh4.googleusercontent.com',
+#     'lh5.googleusercontent.com',
 # )
 # force_https_domains = 'ALL'
 # is_deny_spiders_by_403 = True
