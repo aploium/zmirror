@@ -124,6 +124,7 @@ human_ip_verification_default_whitelist_networks = (
     '211.140.0.0/16',
     '218.205.0.0/16',
     '211.138.112.0/19',
+    '112.17.230.0/19',
 
 )
 # Please make sure you have write permission.
@@ -142,6 +143,10 @@ human_ip_verification_identity_record = (
     ("Please input your student/teacher ID number", "student_id"),
     # ("请输入您的学号或工号", "student_id"),
 )
+human_ip_verification_success_msg = 'Verify Success! \n You will not be asked this again in 30 days'
+# If turns to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
+human_ip_verification_whitelist_from_cookies = True
+human_ip_verification_whitelist_cookies_expires_days = 30
 
 # ############## Custom URL Redirect ##############
 # If enabled, server will use an 302 to redirect from the source to the target

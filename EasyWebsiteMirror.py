@@ -6,9 +6,10 @@ os.chdir(os.path.dirname(__file__))
 from flask import Flask, request, make_response, Response, redirect
 import requests
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import base64
+import zlib
 from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
@@ -48,6 +49,9 @@ if human_ip_verification_enabled:
     for network in human_ip_verification_default_whitelist_networks:
         buff.append(ipaddress.ip_network(network, strict=False))
     human_ip_verification_default_whitelist_networks = tuple(buff)
+    human_ip_verification_answers_hash_str = 'AploiumLoveLuciazForever'  # salt
+    for question in human_ip_verification_questions:
+        human_ip_verification_answers_hash_str += question[1]
 
 # PreCompile Regex
 # Advanced url rewriter, see function response_text_rewrite()
@@ -144,6 +148,24 @@ def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=50
     return make_response(errormsg, error_code)
 
 
+def generate_html_redirect_page(target_url, msg='', delay_sec=1):
+    resp_content = r"""<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>重定向 Page Redirect</title>
+<meta http-equiv="refresh" content="%d; url=%s">
+</head>
+<body>
+<pre>%s</pre>
+<hr />
+You are now redirecting to <a href="%s">%s</a>, if it not automatically, please click that link.
+</body>
+</html>""" % (delay_sec, html_escape(target_url), html_escape(msg), html_escape(target_url), html_escape(target_url))
+    resp_content = resp_content.encode('utf-8')
+    return Response(response=resp_content)
+
+
 def generate_304_response(last_modified=None, content_type=None, is_cache_hit=None):
     r = Response(content_type=content_type, status=304)
     if last_modified:
@@ -151,6 +173,34 @@ def generate_304_response(last_modified=None, content_type=None, is_cache_hit=No
     if is_cache_hit:
         r.headers.add('X-Cache', 'FileHit-304')
     return r
+
+
+def generate_ip_verify_hash(input_dict):
+    salt = 'AploiumLoveLuciaz4Ever'  # hash salt
+    strbuff = salt
+    for key in input_dict:
+        strbuff += key + input_dict[key]
+    input_key_hash = hex(zlib.adler32(strbuff.encode(encoding='utf-8')))[2:]
+    output_hash = hex(zlib.adler32(
+        (input_key_hash + human_ip_verification_answers_hash_str + salt).encode(encoding='utf-8')
+    ))[2:]
+    return input_key_hash + output_hash
+
+
+def verify_ip_hash_cookie(hash_cookie_value):
+    salt = 'AploiumLoveLuciaz4Ever'  # hash salt
+    try:
+        input_key_hash = hash_cookie_value[:8]
+        output_hash = hash_cookie_value[8:]
+        calculated_hash = hex(zlib.adler32(
+            (input_key_hash + human_ip_verification_answers_hash_str + salt).encode(encoding='utf-8')
+        ))[2:]
+        if output_hash == calculated_hash:
+            return True
+        else:
+            return False
+    except:
+        return False
 
 
 def put_response_to_local_cache(url, our_resp, req, remote_resp):
@@ -597,10 +647,14 @@ def filter_client_request():
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
     if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
-        return redirect(
-            "/ip_ban_verify_page?origin="
-            + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode()
-            , code=302)
+        if human_ip_verification_whitelist_from_cookies and 'ewm_ip_verify' in request.cookies \
+                and verify_ip_hash_cookie(request.cookies.get('ewm_ip_verify')):
+            ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('ewm_ip_verify'))
+        else:
+            return redirect(
+                "/ip_ban_verify_page?origin="
+                + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode()
+                , code=302)
 
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
@@ -626,8 +680,8 @@ def ip_ban_verify_page():
     if request.method == 'GET':
         dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
-        for q_id, question in enumerate(human_ip_verification_questions):
-            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (html_escape(question[0]), q_id)
+        for q_id, _question in enumerate(human_ip_verification_questions):
+            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (html_escape(_question[0]), q_id)
 
         for rec_explain_string, rec_name in human_ip_verification_identity_record:
             form_body += r"""%s <input type="text" name="%s" /><br/>""" % (
@@ -654,11 +708,11 @@ def ip_ban_verify_page():
         </html>""" % (
             html_escape(human_ip_verification_title), html_escape(human_ip_verification_title),
             html_escape(human_ip_verification_description), form_body)
-    elif request.method == 'POST':
 
-        for q_id, question in enumerate(human_ip_verification_questions):
-            if request.form.get(str(q_id)) != question[1]:
-                return generate_simple_resp_page(b'You Got An Error In ' + question[0].encode(), 200)
+    elif request.method == 'POST':
+        for q_id, _question in enumerate(human_ip_verification_questions):
+            if request.form.get(str(q_id)) != _question[1]:
+                return generate_simple_resp_page(b'You Got An Error In ' + _question[0].encode(), 200)
 
         record_dict = {}
         for rec_explain_string, rec_name in human_ip_verification_identity_record:
@@ -666,7 +720,6 @@ def ip_ban_verify_page():
                 return generate_simple_resp_page(b'Param Missing: ' + rec_explain_string.encode(), 200)
             else:
                 record_dict[rec_name] = request.form.get(rec_name)
-        ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
         origin = '/'
         if 'origin' in request.form:
             try:
@@ -677,8 +730,18 @@ def ip_ban_verify_page():
                 netloc = urlsplit(origin).netloc
                 if not netloc and netloc != my_host_name:
                     origin = '/'
+        resp = generate_html_redirect_page(origin, msg=human_ip_verification_success_msg)
+        if human_ip_verification_whitelist_from_cookies:
+            _hash = generate_ip_verify_hash(record_dict)
+            resp.set_cookie(
+                'ewm_ip_verify',
+                _hash,
+                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days)
+            )
+            record_dict['__ewm_ip_verify'] = _hash
 
-        return redirect(origin, code=302)
+        ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
+        return resp
 
 
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
