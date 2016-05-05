@@ -224,15 +224,15 @@ def regex_url_reassemble(match_obj):
         # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
         # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
         # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
-        replaced_domain = CDN_domains[len(path) % cdn_domains_number]
+        replace_to_scheme_domain = my_host_scheme + CDN_domains[len(path) % cdn_domains_number]
     else:
-        replaced_domain = my_host_name
+        replace_to_scheme_domain = 'my_host_name'
 
     # reassemble!
     # prefix: src=  quote_left: "
     # path: /extdomains/target.com/foo/bar.js?love=luciaZ
     reassembled = get_group('prefix') + get_group('quote_left') \
-                  + urljoin(my_host_scheme + replaced_domain, path) \
+                  + urljoin(replace_to_scheme_domain, path) \
                   + get_group('quote_right')
 
     return reassembled
@@ -397,7 +397,7 @@ def response_text_rewrite(resp_text):
 
     # v0.9.2: advanced url rewrite engine (based on previously CDN rewriter)
     resp_text = re.sub(
-        r"""(?P<prefix>ref\s*=|src\s*=|url\s*\()\s*""" +  # prefix, eg: src=
+        r"""(?P<prefix>ref\s*=|src\s*=|url\s*\(|@import\s*)\s*""" +  # prefix, eg: src=
         r"""(?P<quote_left>["'])?""" +  # quote  "'
         r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
         r"""(?P<path>[^\s?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
@@ -595,9 +595,9 @@ def ip_ban_verify_page():
         <body>
           <h1>非常抱歉, 为了让您能继续访问, 我们需要验证您是人类访问者</h1>
           <h2>My apologize, but we have to verify that you are a human</h2>
-          <p>这样的验证只会出现一次，您的IP会被加入白名单，之后相同IP访问不会再需要验证。</p>
-          <p>提示: 由于手机和宽带IP经常会发生改变，您可能会多次看到这一页面。</p>
-          <pre>%s</pre>
+          <p>这样的验证只会出现一次，您的IP会被加入白名单，之后相同IP访问不会再需要验证。<br/>
+          提示: 由于手机和宽带IP经常会发生改变，您可能会多次看到这一页面。</p>
+          <pre style="border: 1px dashed;">%s</pre>
           <form method='post'>%s<button type='submit'>递交</button></form>
         </body>
         </html>""" % (human_ip_verification_description, form_body)
