@@ -155,6 +155,7 @@ human_ip_verification_identity_record = (
 url_custom_redirect_enable = False
 
 # Only applies to url PATH, other parts remains untouched
+# It's an plain text list. Less function but higher performance, have higher priority than regex rules
 # eg: "http://foo.com/im/path.php?q=a#mark" , in this url, "/im/path.php" this is PATH
 url_custom_redirect_list = {
     # This example is to fix search bugs(in wiki) when you put google together with zh.wikipedia.org in one mirror.
@@ -165,6 +166,17 @@ url_custom_redirect_list = {
     # This example acts as an tinyurl program
     '/wiki': '/extdomains/https-zh.wikipedia.org/',
 }
+
+# If you want more complicated regex redirect, please add then in this dict.
+# If url FULLY MATCH the first regex, the second regex for re.sub  will be applied
+# Same as above, only the url PATH will be applied (maybe change in later version)
+# Please see https://docs.python.org/3.5/library/re.html#re.sub for more rules
+url_custom_redirect_regex = (
+    # This example fix mobile wikipedia's search bug
+    # will redirect /wiki/Some_wiki_page to /extdomains/https-zh.m.wikipedia.org/wiki/Some_wiki_page
+    (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
+    # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
+)
 
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror
