@@ -571,6 +571,17 @@ def request_remote_site_and_parse(actual_request_url):
     return resp
 
 
+def filter_client_request():
+    dbgprint('Client Request Url: ', request.url)
+    if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
+        return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
+
+    if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
+        return redirect("/ip_ban_verify_page", code=302)
+
+    return None
+
+
 # ################# End Middle Functions #################
 
 
@@ -620,13 +631,11 @@ def ip_ban_verify_page():
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
-    if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
-        return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
+    # pre-filter client's request.
+    filter_result = filter_client_request()
+    if filter_result is not None:
+        return filter_result  # Ban or redirect if need
 
-    if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
-        return redirect("/ip_ban_verify_page", code=302)
-
-    dbgprint('Client Request Url(external): ', request.url)
     # if /extdomains/https-**** means server should use https method to request the remote site.
     if hostname[0:6] == 'https-':
         scheme = 'https://'
@@ -645,13 +654,11 @@ def get_external_site(hostname, extpath='/'):
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
-    if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
-        return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
+    # pre-filter client's request.
+    filter_result = filter_client_request()
+    if filter_result is not None:
+        return filter_result  # Ban or redirect if need
 
-    if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
-        return redirect("/ip_ban_verify_page", code=302)
-
-    dbgprint('Client Request Url: ', request.url)
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
     return request_remote_site_and_parse(actual_request_url)
