@@ -27,7 +27,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.9.2-Dev'
+__VERSION__ = '0.10.0-Dev'
 __author__ = 'Aploium <i@z.codes>'
 
 static_file_extensions_list = set(static_file_extensions_list)
@@ -46,6 +46,34 @@ if human_ip_verification_enabled:
     for network in human_ip_verification_default_whitelist_networks:
         buff.append(ipaddress.ip_network(network, strict=False))
     human_ip_verification_default_whitelist_networks = tuple(buff)
+
+# PreCompile Regex
+# Advanced url rewriter, see function response_text_rewrite()
+regex_adv_url_rewriter = re.compile(
+    r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*))\s*""" +  # prefix, eg: src=
+    r"""(?P<quote_left>["'])?""" +  # quote  "'
+    r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#'";]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
+    r"""(?P<path>[^\s;?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+    r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
+    r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
+    r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
+    flags=re.IGNORECASE
+)
+# Basic url rewriter for target main site, see function response_text_rewrite()
+regex_basic_main_url_rewriter = re.compile(
+    r'(https?:)?//' + re.escape(target_domain) + '/',
+    flags=re.IGNORECASE
+)
+# Basic url rewriter for external sites, see function response_text_rewrite()
+regex_basic_ext_url_rewriter = {}
+for _domain in external_domains:
+    regex_basic_ext_url_rewriter[_domain] = re.compile(r'(https?:)?//' + re.escape(_domain), flags=re.IGNORECASE)
+# Response Cookies Rewriter, see response_cookie_rewrite()
+regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b')
+# Request Domains Rewriter, see rewrite_client_requests_text()
+regex_request_rewriter = re.compile(
+    re.escape(my_host_name) + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
+    flags=re.IGNORECASE)
 
 app = Flask(__name__)
 
@@ -405,27 +433,12 @@ def response_text_rewrite(resp_text):
     :type resp_text: str
     """
 
-    # v0.9.2: advanced url rewrite engine (based on previously CDN rewriter)
-    resp_text = re.sub(
-        r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*))\s*""" +  # prefix, eg: src=
-        r"""(?P<quote_left>["'])?""" +  # quote  "'
-        r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#'";]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
-        r"""(?P<path>[^\s;?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
-        r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
-        r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
-        r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
-        regex_url_reassemble,  # It's a function! see above.
-        resp_text,
-        flags=re.IGNORECASE
-    )
+    # v0.9.2+: advanced url rewrite engine (based on previously CDN rewriter)
+    resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
 
-    # normal url rewrite, rewrite the main site's url
+    # basic url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-    resp_text = re.sub(
-        r'(https?:)?//' + target_domain.replace('.', r'\.') + '/',
-        my_host_scheme + my_host_name + '/',
-        resp_text, flags=re.IGNORECASE
-    )
+    resp_text = regex_basic_main_url_rewriter.sub(myurl_prefix + '/', resp_text)
 
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
@@ -435,14 +448,13 @@ def response_text_rewrite(resp_text):
         resp_text = resp_text.replace('https://' + domain,
                                       myurl_prefix + '/extdomains/' + 'https-' + domain)
         # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-        resp_text = re.sub(
-            r'(https?:)?//' + domain.replace('.', r'\.'),
+        resp_text = regex_basic_ext_url_rewriter[domain].sub(
             '{0}{1}/extdomains/{2}{3}'.format(my_host_scheme, my_host_name,
                                               ('https-' if ('NONE' != force_https_domains) and (
                                                   ('ALL' == force_https_domains) or (
                                                       domain in force_https_domains)
                                               ) else ''), domain),
-            resp_text, flags=re.IGNORECASE
+            resp_text
         )
 
         # rewrite "foo.domain.tld" and 'foo.domain.tld'
@@ -457,7 +469,7 @@ def response_cookie_rewrite(cookie_string):
     rewrite response cookie string's domain to `my_host_name`
     :type cookie_string: str
     """
-    cookie_string = re.sub(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', 'domain=' + my_host_name, cookie_string)
+    cookie_string = regex_cookie_rewriter.sub('domain=' + my_host_name, cookie_string)
     return cookie_string
 
 
@@ -497,11 +509,7 @@ def rewrite_client_requests_text(raw_text):
     eg3. http%3a%2f%2fg.zju.tools%2fextdomains%2Fhttps-accounts.google.com%2f233
             to http%3a%2f%2faccounts.google.com%2f233
     """
-    replaced = re.sub(
-        my_host_name.replace('.', r'\.')
-        + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
-        '\g<origin_domain>',
-        raw_text, flags=re.IGNORECASE)
+    replaced = regex_request_rewriter.sub('\g<origin_domain>', raw_text)
     replaced = replaced.replace(my_host_name, target_domain)
     if raw_text != replaced:
         dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
