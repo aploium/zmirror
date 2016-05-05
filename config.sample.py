@@ -106,7 +106,10 @@ is_deny_spiders_by_403 = False
 spider_ua_white_list = ('qiniu', 'cdn')
 
 # ############## Human/IP verification ##############
-# we could disallow Chinese GFW by asking users some questions which only your people knew the answer
+# We could disallow untrusted IP's access by asking users some questions which only your people knew the answer
+# Of course, this can also deny Chinese GFW's access
+# If an user passed this verification, then his/her IP would be added to whitelist
+# You can also acquire some identity information from users.
 human_ip_verification_enabled = False
 # can be html
 human_ip_verification_description = r"""本站仅允许浙江大学师生访问.如果您也来自浙江大学, 请您回答以下问题
@@ -130,13 +133,36 @@ human_ip_verification_whitelist_log = 'ip_whitelist.log'
 human_ip_verification_questions = (
     ('Please write your question here', 'CorrectAnswer'),
     # ('Another question', 'AnotherAnswer'),
-    # ('可以是一些只有内部人员才知道答案的问题, 比如说 \"bg在三墩职业技术学院是什么意思\"', '嘿嘿嘿嘿你猜啊'),
+    # ('最好是一些只有内部人员才知道答案的问题, 比如说 \"bg在三墩职业技术学院是什么意思\"', '嘿嘿嘿嘿你猜啊'),
+    # ('能被轻易百度到答案的问题是很不好的,比如:浙江大学城市学院的校长是谁', '我也不知道'),
 )
 # user's identity information that should given. Would be logged in to log file.
 human_ip_verification_identity_record = (
     ("Please input your student/teacher ID number", "student_id"),
     # ("请输入您的学号或工号", "student_id"),
 )
+
+# ############## Custom URL Redirect ##############
+# If enabled, server will use an 302 to redirect from the source to the target
+#
+# 1.It's quite useful when some url's that normal rewrite can't handle perfectly.
+#   (script may not rewrite all urls perfectly when you tries to put several individual sites to one mirror,
+#      eg: if you put google and wikipedia together, you can't search in wikipedia, this can fix)
+#
+# 2.It can also do url shorten jobs, but because it only rewrite url PATH, you cannot change the url's domain.
+#     eg1: http://foo.com/wiki  --->  http://foo.com/extdomains/zh.wikipedia.org/
+#     eg2: http://foo.com/scholar  --->  http://foo.com/extdomains/https-scholar.google.com/
+url_custom_redirect_enable = False
+
+# Only applies to url PATH, other parts remains untouched
+# eg: "http://foo.com/im/path.php?q=a#mark" , in this url, "/im/path.php" this is PATH
+url_custom_redirect_list = {
+    # This example is to fix search bugs(in wiki) when you put google together with zh.wikipedia.org in one mirror.
+    '/w/load.php': '/extdomains/https-zh.wikipedia.org/w/load.php',
+
+    # This example acts as an tinyurl program
+    '/wiki': '/extdomains/https-zh.wikipedia.org/',
+}
 
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror

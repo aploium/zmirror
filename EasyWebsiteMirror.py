@@ -191,7 +191,7 @@ def regex_url_reassemble(match_obj):
     quote_right = get_group('quote_right')
     # path must be not blank
     if ('src' in prefix or 'href' in prefix) \
-                    and (not quote_left or quote_right == ')'):  # url after src and href must be ' or " quoted
+            and (not quote_left or quote_right == ')'):  # url after src and href must be ' or " quoted
         return match_obj.group()
 
     remote_path = request.path
@@ -586,6 +586,12 @@ def filter_client_request():
 
     if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
         return redirect("/ip_ban_verify_page", code=302)
+
+    if url_custom_redirect_enable and request.path in url_custom_redirect_list:
+        redirect_from = request.url
+        redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path])
+        dbgprint('Redirect from', redirect_from, 'to', redirect_to)
+        return redirect(redirect_to, code=302)
 
     return None
 
