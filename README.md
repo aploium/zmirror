@@ -2,6 +2,7 @@
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持 比如国内可以访问的Google镜像(config.sample.py配置文件中有用于Google镜像的例子)  
 
+`这篇Readme很老了....新添加的功能请看config.sample.py中的注释`
 ## Install and Usage
 It only support python3  
 first install python3  
