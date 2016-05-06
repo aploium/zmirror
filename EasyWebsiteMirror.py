@@ -15,6 +15,15 @@ from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
 try:
+    from fastcache import lru_cache
+
+    infoprint('lur_cache loaded from fastcache')
+except:
+    from functools import lru_cache
+
+    warnprint('package fastcache not found, fallback to stdlib lru_cache.  '
+              'Considering install it using "pip3 install fastcache"')
+try:
     from custom_func import *
 except:
     custom_text_filter_enable = False
@@ -30,7 +39,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.10.0-Dev'
+__VERSION__ = '0.11.0-Dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -135,6 +144,15 @@ def set_request_for_debug(dummy_request):
     request = dummy_request
 
 
+def strx(*args, sep=' '):
+    output = ''
+    for arg in args:
+        output += str(arg) + sep
+    output.rstrip(sep)
+    return output
+
+
+@lru_cache(maxsize=128)
 def is_mime_represents_text(input_mime):
     """
     Determine whether an mime is text (eg: text/html: True, image/png: False)
@@ -169,12 +187,10 @@ You are now redirecting to <a href="%s">%s</a>, if it not automatically, please 
     return Response(response=resp_content)
 
 
-def generate_304_response(last_modified=None, content_type=None, is_cache_hit=None):
+@lru_cache(maxsize=32)
+def generate_304_response(content_type=None):
     r = Response(content_type=content_type, status=304)
-    if last_modified:
-        r.headers.add('Last-Modified', last_modified)
-    if is_cache_hit:
-        r.headers.add('X-Cache', 'FileHit-304')
+    r.headers.add('X-Cache', 'FileHit-304')
     return r
 
 
@@ -190,7 +206,12 @@ def generate_ip_verify_hash(input_dict):
     return input_key_hash + output_hash
 
 
+@lru_cache(maxsize=2048)
 def verify_ip_hash_cookie(hash_cookie_value):
+    """
+
+    :type hash_cookie_value: str
+    """
     salt = 'AploiumLoveLuciaz4Ever'  # hash salt
     try:
         input_key_hash = hash_cookie_value[:8]
@@ -243,8 +264,7 @@ def try_get_cached_response(url, client_header):
                 cache.is_unchanged(url, client_header.get('if-modified-since', None)):
             cached_info = cache.get_info(url)
             dbgprint('FileCacheHit-304', cached_info, url)
-            return generate_304_response(last_modified=cached_info.get('last_modified'),
-                                         content_type=cached_info.get('content_type'))
+            return generate_304_response()
         else:
             dbgprint('FileCacheHit-200')
             resp = cache.get_obj(url)
@@ -290,18 +310,18 @@ def regex_url_reassemble(match_obj):
             remote_domain = remote_domain[6:]
     else:
         remote_domain = target_domain
-    dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, v=5)
+    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, v=5)
 
     domain = match_domain or remote_domain
-    dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
+    # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
-    dbgprint('match path', path, v=5)
+    # dbgprint('match path', path, v=5)
     path = urljoin(remote_path, path)
-    dbgprint('middle path', path, v=5)
+    # dbgprint('middle path', path, v=5)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
         if force_https_domains != 'NONE' and (force_https_domains == 'ALL' or domain in force_https_domains):
@@ -309,7 +329,7 @@ def regex_url_reassemble(match_obj):
         else:
             scheme_prefix = ''
         path = urljoin('/extdomains/' + scheme_prefix + domain + '/', path.lstrip('/'))
-    dbgprint('final_path', path, v=5)
+    # dbgprint('final_path', path, v=5)
     if enable_static_resource_CDN and get_group('ext') in static_file_extensions_list:
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
@@ -321,7 +341,7 @@ def regex_url_reassemble(match_obj):
         # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
         replace_to_scheme_domain = my_host_scheme + CDN_domains[len(path) % cdn_domains_number]
     else:
-        replace_to_scheme_domain = 'my_host_name'
+        replace_to_scheme_domain = ''
 
     # reassemble!
     # prefix: src=  quote_left: "
@@ -333,8 +353,9 @@ def regex_url_reassemble(match_obj):
     return reassembled
 
 
-def is_denied_because_of_spider(ua):
-    ua_str = str(ua).lower()
+@lru_cache(maxsize=1024)
+def is_denied_because_of_spider(ua_str):
+    ua_str = ua_str.lower()
     if 'spider' in ua_str or 'bot' in ua_str:
         for allowed_ua in spider_ua_white_list:
             if allowed_ua in ua_str:
@@ -360,6 +381,7 @@ def append_ip_whitelist_file(ip_to_allow):
             fp.write(ip_to_allow + '\n')
     except:
         errprint('Unable to write whitelist file')
+        traceback.print_exc()
 
 
 def ip_whitelist_add(ip_to_allow, info_record_dict=None):
@@ -377,6 +399,7 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
         traceback.print_exc()
 
 
+@lru_cache(maxsize=256)
 def is_ip_not_in_allow_range(ip_address):
     if ip_address in single_ip_allowed_set:
         return False
@@ -470,6 +493,7 @@ def response_content_rewrite(remote_resp_obj):
                 resp_text = resp_text2
         except Exception as e:  # just print err and fallback to normal rewrite
             errprint('Custom Rewrite Function "custom_response_html_rewriter(text)" in custom_func.py ERROR', e)
+            traceback.print_exc()
 
         # then do the normal rewrites
         try:
@@ -555,6 +579,7 @@ def extract_client_header(income_request):
     return outgoing_head
 
 
+@lru_cache(maxsize=2048)
 def rewrite_client_requests_text(raw_text):
     """
     Rewrite proxy domain to origin domain, extdomains supported.
@@ -573,6 +598,7 @@ def rewrite_client_requests_text(raw_text):
     return replaced
 
 
+@lru_cache(maxsize=4096)
 def extract_url_path_and_query(full_url):
     """
     Convert http://foo.bar.com/aaa/p.html?x=y to /aaa/p.html?x=y
@@ -635,6 +661,7 @@ def request_remote_site_and_parse(actual_request_url):
         r = send_request(actual_request_url, method=request.method, headers=client_header, data=request.get_data())
     except Exception as e:
         errprint(e)
+        traceback.print_exc()
         return generate_simple_resp_page()
     else:
         # copy and parse remote response
@@ -648,7 +675,7 @@ def request_remote_site_and_parse(actual_request_url):
 
 def filter_client_request():
     dbgprint('Client Request Url: ', request.url)
-    if is_deny_spiders_by_403 and is_denied_because_of_spider(request.user_agent):
+    if is_deny_spiders_by_403 and is_denied_because_of_spider(str(request.user_agent)):
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
     if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
@@ -680,6 +707,21 @@ def filter_client_request():
 
 
 # ################# Begin Flask #################
+@app.route('/ewm_status')
+def ewm_status():
+    if request.remote_addr != '127.0.0.1':
+        return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
+    output = ""
+    output += strx('is_mime_represents_text', is_mime_represents_text.cache_info())
+    output += strx('\ngenerate_304_response', generate_304_response.cache_info())
+    output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
+    output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())
+    output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
+    output += strx('\nrewrite_client_requests_text', rewrite_client_requests_text.cache_info())
+    output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
+    return "<pre>" + output + "</pre>"
+
+
 @app.route('/ip_ban_verify_page', methods=['GET', 'POST'])
 def ip_ban_verify_page():
     if request.method == 'GET':
@@ -741,7 +783,8 @@ def ip_ban_verify_page():
             resp.set_cookie(
                 'ewm_ip_verify',
                 _hash,
-                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days)
+                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
+                httponly=True
             )
             record_dict['__ewm_ip_verify'] = _hash
 
