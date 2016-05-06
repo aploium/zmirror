@@ -3,7 +3,6 @@
 import os
 
 os.chdir(os.path.dirname(__file__))
-from flask import Flask, request, make_response, Response, redirect
 import requests
 import traceback
 from datetime import datetime, timedelta
@@ -12,6 +11,7 @@ import base64
 import zlib
 from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit
+from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
 try:
@@ -32,7 +32,6 @@ if local_cache_enable:
 
 __VERSION__ = '0.10.0-Dev'
 __author__ = 'Aploium <i@z.codes>'
-
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
@@ -56,10 +55,10 @@ if human_ip_verification_enabled:
 # PreCompile Regex
 # Advanced url rewriter, see function response_text_rewrite()
 regex_adv_url_rewriter = re.compile(
-    r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*))\s*""" +  # prefix, eg: src=
+    r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*)\s*)""" +  # prefix, eg: src=
     r"""(?P<quote_left>["'])?""" +  # quote  "'
-    r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>[^\s/$.?#'";]+?(\.[-a-z0-9]+)+?)/)?""" +  # domain and scheme
-    r"""(?P<path>[^\s;?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+    r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
+    r"""(?P<path>[^\s;+?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
     r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
@@ -131,6 +130,10 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+def set_request_for_debug(dummy_request):
+    global request
+    request = dummy_request
+
 
 def is_mime_represents_text(input_mime):
     """
@@ -270,6 +273,7 @@ def regex_url_reassemble(match_obj):
     quote_left = get_group('quote_left')
     quote_right = get_group('quote_right')
     path = get_group('path')
+    match_domain = get_group('domain')
     # path must be not blank
     if not path \
             or ('src' in prefix or 'href' in prefix) \
@@ -286,17 +290,18 @@ def regex_url_reassemble(match_obj):
             remote_domain = remote_domain[6:]
     else:
         remote_domain = target_domain
-    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain)
+    dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, v=5)
 
-    domain = get_group('domain') or remote_domain
-    # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain)
+    domain = match_domain or remote_domain
+    dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
+    dbgprint('match path', path, v=5)
     path = urljoin(remote_path, path)
-    # dbgprint('middle path', path)
+    dbgprint('middle path', path, v=5)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
         if force_https_domains != 'NONE' and (force_https_domains == 'ALL' or domain in force_https_domains):
@@ -304,7 +309,7 @@ def regex_url_reassemble(match_obj):
         else:
             scheme_prefix = ''
         path = urljoin('/extdomains/' + scheme_prefix + domain + '/', path.lstrip('/'))
-    # dbgprint('final_path', path)
+    dbgprint('final_path', path, v=5)
     if enable_static_resource_CDN and get_group('ext') in static_file_extensions_list:
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
@@ -345,7 +350,7 @@ def load_ip_whitelist_file():
     set_buff = set([])
     if os.path.exists(human_ip_verification_whitelist_file_path):
         with open(human_ip_verification_whitelist_file_path, 'r', encoding='utf-8') as fp:
-            set_buff.add(fp.readline())
+            set_buff.add(fp.readline().strip())
     return set_buff
 
 
