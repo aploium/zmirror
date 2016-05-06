@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import re
 import base64
 import zlib
+from time import time
 from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit
 from flask import Flask, request, make_response, Response, redirect
@@ -636,11 +637,13 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         data = None
 
     # Send real requests
+    req_start_time = time()
     r = requests.request(
         method, final_url,
         params=param_get, headers=headers, data=data,
         proxies=requests_proxies, allow_redirects=False
     )
+    req_time = time() - req_start_time
 
     # Some debug output
     # print(r.request.headers, r.headers)
@@ -651,20 +654,23 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         dbgprint('RemoteRequestRawData: ', r.request.body)
     dbgprint("RemoteResponseHeaders: ", r.headers)
 
-    return r
+    return r, req_time
 
 
-def request_remote_site_and_parse(actual_request_url):
+def request_remote_site_and_parse(actual_request_url, start_time=None):
     client_header = extract_client_header(request)
 
     if local_cache_enable:
         resp = try_get_cached_response(actual_request_url, client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
+            if start_time is not None:
+                resp.headers.set('X-CP-Time', "%.4f" % (time() - start_time))
             return resp  # If cache hit, just skip next steps
 
     try:  # send request to remote server
-        r = send_request(actual_request_url, method=request.method, headers=client_header, data=request.get_data())
+        r, req_time = send_request(actual_request_url, method=request.method, headers=client_header,
+                                   data=request.get_data())
     except Exception as e:
         errprint(e)
         traceback.print_exc()
@@ -675,7 +681,8 @@ def request_remote_site_and_parse(actual_request_url):
 
         if local_cache_enable:  # storge entire our server's response (headers included)
             put_response_to_local_cache(actual_request_url, resp, request, r)
-
+    if start_time is not None:
+        resp.headers.add('X-CP-Time', "%.4f" % (time() - start_time - req_time))
     return resp
 
 
@@ -802,6 +809,7 @@ def ip_ban_verify_page():
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
+    start_time = time()  # to display compute time
     # pre-filter client's request.
     filter_result = filter_client_request()
     if filter_result is not None:
@@ -819,12 +827,13 @@ def get_external_site(hostname, extpath='/'):
         return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
 
-    return request_remote_site_and_parse(actual_request_url)
+    return request_remote_site_and_parse(actual_request_url, start_time)
 
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
+    start_time = time()  # to display compute time
     # pre-filter client's request.
     filter_result = filter_client_request()
     if filter_result is not None:
@@ -832,7 +841,7 @@ def get_main_site(input_path='/'):
 
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
-    return request_remote_site_and_parse(actual_request_url)
+    return request_remote_site_and_parse(actual_request_url, start_time)
 
 
 # ################# End Flask #################
