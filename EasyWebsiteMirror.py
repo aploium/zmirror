@@ -61,6 +61,8 @@ if human_ip_verification_enabled:
     for question in human_ip_verification_questions:
         human_ip_verification_answers_hash_str += question[1]
 
+url_rewrite_cache = {}
+
 # PreCompile Regex
 # Advanced url rewriter, see function response_text_rewrite()
 regex_adv_url_rewriter = re.compile(
@@ -281,6 +283,8 @@ def regex_url_reassemble(match_obj):
     :param match_obj: match object of stdlib re
     :return: re assembled url string (included prefix(url= etc..) and suffix.)
     """
+    if match_obj.group() in url_rewrite_cache:  # Read Cache
+        return url_rewrite_cache[match_obj.group()]
 
     def get_group(name):  # return a blank string if the match group is None
         obj = match_obj.group(name)
@@ -349,6 +353,8 @@ def regex_url_reassemble(match_obj):
     reassembled = prefix + quote_left \
                   + urljoin(replace_to_scheme_domain, path) \
                   + quote_right
+
+    url_rewrite_cache[match_obj.group()] = reassembled  # write cache
 
     return reassembled
 
@@ -707,7 +713,7 @@ def filter_client_request():
 
 
 # ################# Begin Flask #################
-@app.route('/ewm_status')
+@app.route('/ewm_stat')
 def ewm_status():
     if request.remote_addr != '127.0.0.1':
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
@@ -719,7 +725,8 @@ def ewm_status():
     output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
     output += strx('\nrewrite_client_requests_text', rewrite_client_requests_text.cache_info())
     output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
-    return "<pre>" + output + "</pre>"
+    output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache))
+    return "<pre>" + output + "</pre>\n"
 
 
 @app.route('/ip_ban_verify_page', methods=['GET', 'POST'])
