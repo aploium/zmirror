@@ -81,6 +81,10 @@ static_file_extensions_list = [
     'mp3', 'wmv', 'wav',  # sounds
     'js', 'css',  # static
 ]
+# If client's ua equals this, it's access will be granted.Only one value allowed.
+# this white name also affects any other client filter (Human/IP verification, etc..)
+# Please don't use this if you don't use filters.
+global_ua_white_name = 'qiniu-imgstg-spider'
 
 # Your CDN domains, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
 #     If your CDN storge your file permanently (like qiniu), you can disable local cache to save space,

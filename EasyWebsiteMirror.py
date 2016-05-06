@@ -24,11 +24,6 @@ except:
 
     warnprint('package fastcache not found, fallback to stdlib lru_cache.  '
               'Considering install it using "pip3 install fastcache"')
-try:
-    from custom_func import *
-except:
-    custom_text_filter_enable = False
-    pass
 from config import *
 
 if local_cache_enable:
@@ -153,6 +148,17 @@ def strx(*args, sep=' '):
         output += str(arg) + sep
     output.rstrip(sep)
     return output
+
+
+@lru_cache(maxsize=1024)
+def check_global_ua_pass(ua_str):
+    if ua_str is None:
+        return False
+    ua_str = ua_str.lower()
+    if global_ua_white_name in ua_str:
+        return True
+    else:
+        return False
 
 
 @lru_cache(maxsize=128)
@@ -433,7 +439,7 @@ def copy_response(requests_response_obj, content=b''):
     assert isinstance(resp, Response)
     for header_key in requests_response_obj.headers:
         # Add necessary response headers from the origin site, drop other headers
-        if header_key.lower() in (  # TODO: (Maybe) Add More Valid Response Headers
+        if header_key.lower() in (
                 'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server'):
             resp.headers[header_key] = requests_response_obj.headers[header_key]
         # Rewrite the redirection header if we got one, rewrite in-zone domains to our domain
@@ -688,6 +694,10 @@ def request_remote_site_and_parse(actual_request_url, start_time=None):
 
 def filter_client_request():
     dbgprint('Client Request Url: ', request.url)
+    # Global whitelist ua
+    if check_global_ua_pass(str(request.user_agent)):
+        return None
+
     if is_deny_spiders_by_403 and is_denied_because_of_spider(str(request.user_agent)):
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
@@ -849,6 +859,11 @@ def get_main_site(input_path='/'):
 # ################# Begin Post Auto Exec Section #################
 if human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
+try:
+    from custom_func import *
+except:
+    custom_text_filter_enable = False
+    pass
 # ################# End Post Auto Exec Section #################
 
 if __name__ == '__main__':
