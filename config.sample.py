@@ -131,26 +131,40 @@ human_ip_verification_default_whitelist_networks = (
     '112.17.230.0/19',
 
 )
+
+human_ip_verification_title = '本网站只有内部人员才可以访问 | This site was only available for our members'
+human_ip_verification_success_msg = 'Verify Success! \n You will not be asked this again in 30 days'
 # Please make sure you have write permission.
-human_ip_verification_title = '本网站只有内部人员才可以访问'
 human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
 human_ip_verification_whitelist_log = 'ip_whitelist.log'
+
+# salt, please CHANGE it
+human_ip_verification_answers_hash_str = 'AploiumLoveLuciazForever'
 # questions and answer that users from non-permitted ip should answer. Can have several questions
 human_ip_verification_questions = (
     ('Please write your question here', 'CorrectAnswer'),
     # ('Another question', 'AnotherAnswer'),
-    # ('最好是一些只有内部人员才知道答案的问题, 比如说 \"bg在三墩职业技术学院是什么意思\"', '嘿嘿嘿嘿你猜啊'),
-    # ('能被轻易百度到答案的问题是很不好的,比如:浙江大学城市学院的校长是谁', '我也不知道'),
+    # ('最好是一些只有内部人员才知道答案的问题, 比如说 "英译中:zdlgmygdwg"', '[略]'),
+    # ('能被轻易百度到答案的问题是很不好的,比如:浙江大学的校长是谁', '竺可桢'),
 )
+
 # user's identity information that should given. Would be logged in to log file.
 human_ip_verification_identity_record = (
-    ("Please input your student/teacher ID number", "student_id"),
+    # question_description,                 question_internal_name,  form_input_type)
+    ("Please input your student/teacher ID number", "student_id", "text"),
+    ("Please input your student/teacher password", "password", "password"),
     # ("请输入您的学号或工号", "student_id"),
 )
-human_ip_verification_success_msg = 'Verify Success! \n You will not be asked this again in 30 days'
-# If turns to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
+# If set to True, will use the custom_identity_verify() function to verify user's input identity.
+# And dict will be passed to that function
+identity_verify_required = True
+
+# If sets to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
 human_ip_verification_whitelist_from_cookies = True
 human_ip_verification_whitelist_cookies_expires_days = 30
+# If set to True, an valid cookie is required, IP white list would be ignored.
+# If set to False, identity will not be verified but just logged to file
+must_verify_cookies = False
 
 # ############## Custom URL Redirect ##############
 # If enabled, server will use an 302 to redirect from the source to the target
@@ -211,7 +225,7 @@ url_custom_redirect_regex = (
 #
 #     'books.google.com',
 #
-#     # For Google Map
+#     # For Google Map (Optional)
 #     'maps.google.com',
 #     'fonts.gstatic.com',
 #     'maps.gstatic.com',
@@ -220,8 +234,15 @@ url_custom_redirect_regex = (
 #     'lh3.googleusercontent.com',
 #     'lh4.googleusercontent.com',
 #     'lh5.googleusercontent.com',
+#
+#     # For zh wikipedia (Optional)
+#     'zh.wikipedia.org',
+#     'zh.m.wikipedia.org',
+#     'upload.wikipedia.org',
+#     'meta.wikimedia.org',
+#     'login.wikimedia.org',
 # )
 # force_https_domains = 'ALL'
 # is_deny_spiders_by_403 = True
 #
-# human_ip_verification_enabled = True # Optional, if set to True, you should modify other settings of that section
+# human_ip_verification_enabled = True  # Optional, if set to True, you should modify other settings of that section

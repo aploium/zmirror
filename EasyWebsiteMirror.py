@@ -53,7 +53,6 @@ if human_ip_verification_enabled:
     for network in human_ip_verification_default_whitelist_networks:
         buff.append(ipaddress.ip_network(network, strict=False))
     human_ip_verification_default_whitelist_networks = tuple(buff)
-    human_ip_verification_answers_hash_str = 'AploiumLoveLuciazForever'  # salt
     for question in human_ip_verification_questions:
         human_ip_verification_answers_hash_str += question[1]
 
@@ -204,13 +203,12 @@ def generate_304_response(content_type=None):
 
 
 def generate_ip_verify_hash(input_dict):
-    salt = 'AploiumLoveLuciaz4Ever'  # hash salt
-    strbuff = salt
+    strbuff = human_ip_verification_answers_hash_str
     for key in input_dict:
         strbuff += key + input_dict[key]
     input_key_hash = hex(zlib.adler32(strbuff.encode(encoding='utf-8')))[2:]
     output_hash = hex(zlib.adler32(
-        (input_key_hash + human_ip_verification_answers_hash_str + salt).encode(encoding='utf-8')
+        (input_key_hash + human_ip_verification_answers_hash_str).encode(encoding='utf-8')
     ))[2:]
     return input_key_hash + output_hash
 
@@ -221,12 +219,11 @@ def verify_ip_hash_cookie(hash_cookie_value):
 
     :type hash_cookie_value: str
     """
-    salt = 'AploiumLoveLuciaz4Ever'  # hash salt
     try:
         input_key_hash = hash_cookie_value[:8]
         output_hash = hash_cookie_value[8:]
         calculated_hash = hex(zlib.adler32(
-            (input_key_hash + human_ip_verification_answers_hash_str + salt).encode(encoding='utf-8')
+            (input_key_hash + human_ip_verification_answers_hash_str).encode(encoding='utf-8')
         ))[2:]
         if output_hash == calculated_hash:
             return True
@@ -398,6 +395,8 @@ def append_ip_whitelist_file(ip_to_allow):
 
 
 def ip_whitelist_add(ip_to_allow, info_record_dict=None):
+    if ip_to_allow in single_ip_allowed_set:
+        return
     dbgprint('ip white added', ip_to_allow, 'info:', info_record_dict)
     single_ip_allowed_set.add(ip_to_allow)
     append_ip_whitelist_file(ip_to_allow)
@@ -701,7 +700,8 @@ def filter_client_request():
     if is_deny_spiders_by_403 and is_denied_because_of_spider(str(request.user_agent)):
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
-    if human_ip_verification_enabled and is_ip_not_in_allow_range(request.remote_addr):
+    if human_ip_verification_enabled and ((human_ip_verification_whitelist_from_cookies and must_verify_cookies)
+                                          or is_ip_not_in_allow_range(request.remote_addr)):
         if human_ip_verification_whitelist_from_cookies and 'ewm_ip_verify' in request.cookies \
                 and verify_ip_hash_cookie(request.cookies.get('ewm_ip_verify')):
             ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('ewm_ip_verify'))
@@ -754,9 +754,9 @@ def ip_ban_verify_page():
         for q_id, _question in enumerate(human_ip_verification_questions):
             form_body += r"""%s <input type="text" name="%d" /><br/>""" % (html_escape(_question[0]), q_id)
 
-        for rec_explain_string, rec_name in human_ip_verification_identity_record:
-            form_body += r"""%s <input type="text" name="%s" /><br/>""" % (
-                html_escape(rec_explain_string), html_escape(rec_name))
+        for rec_explain_string, rec_name, input_type in human_ip_verification_identity_record:
+            form_body += r"""%s <input type="%s" name="%s" /><br/>""" % (
+                html_escape(rec_explain_string), html_escape(input_type), html_escape(rec_name))
 
         if 'origin' in request.args:
             form_body += r"""<input type="hidden" name="origin" value="%s" />""" % html_escape(
@@ -786,7 +786,7 @@ def ip_ban_verify_page():
                 return generate_simple_resp_page(b'You Got An Error In ' + _question[0].encode(), 200)
 
         record_dict = {}
-        for rec_explain_string, rec_name in human_ip_verification_identity_record:
+        for rec_explain_string, rec_name, form_type in human_ip_verification_identity_record:
             if rec_name not in request.form:
                 return generate_simple_resp_page(b'Param Missing: ' + rec_explain_string.encode(), 200)
             else:
@@ -802,13 +802,19 @@ def ip_ban_verify_page():
                 if not netloc and netloc != my_host_name:
                     origin = '/'
         resp = generate_html_redirect_page(origin, msg=human_ip_verification_success_msg)
+
+        if identity_verify_required:
+            if not custom_identity_verify(record_dict):
+                return generate_simple_resp_page(b'Verification Failed, please check', 200)
+
         if human_ip_verification_whitelist_from_cookies:
             _hash = generate_ip_verify_hash(record_dict)
             resp.set_cookie(
                 'ewm_ip_verify',
                 _hash,
                 expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
-                httponly=True
+                # httponly=True,
+                # domain=my_host_name
             )
             record_dict['__ewm_ip_verify'] = _hash
 
@@ -856,15 +862,27 @@ def get_main_site(input_path='/'):
 
 # ################# End Flask #################
 
-# ################# Begin Post Auto Exec Section #################
+# ################# Begin Post (auto)Exec Section #################
 if human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
 try:
-    from custom_func import *
+    from custom_func import custom_response_html_rewriter
 except:
-    custom_text_filter_enable = False
+    identity_verify_required = False
+    warnprint('Cannot import custom_response_html_rewriter custom_func.py,'
+              ' `custom_text_rewriter` is now disabled(if it was enabled)')
+    traceback.print_exc()
     pass
-# ################# End Post Auto Exec Section #################
+
+try:
+    from custom_func import custom_identity_verify
+except:
+    identity_verify_required = False
+    warnprint('Cannot import custom_identity_verify from custom_func.py,'
+              ' `identity_verify` is now disabled (if it was enabled)')
+    traceback.print_exc()
+    pass
+# ################# End Post (auto)Exec Section #################
 
 if __name__ == '__main__':
     app.run(debug=True, port=80, threaded=True)
