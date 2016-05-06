@@ -182,15 +182,19 @@ def generate_html_redirect_page(target_url, msg='', delay_sec=1):
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>重定向 Page Redirect</title>
+<title>重定向 (Page Redirect)</title>
 <meta http-equiv="refresh" content="%d; url=%s">
+<script>setTimeout(function(){location.href="%s"} , %d000);</script>
 </head>
 <body>
 <pre>%s</pre>
 <hr />
-You are now redirecting to <a href="%s">%s</a>, if it not automatically, please click that link.
+You are now redirecting to <a href="%s">%s</a>, if it didn't redirect automatically, please click that link.
 </body>
-</html>""" % (delay_sec, html_escape(target_url), html_escape(msg), html_escape(target_url), html_escape(target_url))
+</html>""" % (
+        delay_sec, html_escape(target_url), html_escape(target_url), delay_sec + 1,
+        html_escape(msg), html_escape(target_url), html_escape(target_url)
+    )
     resp_content = resp_content.encode('utf-8')
     return Response(response=resp_content)
 
