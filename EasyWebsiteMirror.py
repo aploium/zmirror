@@ -63,7 +63,7 @@ url_rewrite_cache = {}
 regex_adv_url_rewriter = re.compile(
     r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*)\s*)""" +  # prefix, eg: src=
     r"""(?P<quote_left>["'])?""" +  # quote  "'
-    r"""(?P<domain_and_scheme>(https?:)?//(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
+    r"""(?P<domain_and_scheme>(https?:)?\?/\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
     r"""(?P<path>[^\s;+?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
