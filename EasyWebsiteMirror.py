@@ -80,7 +80,7 @@ regex_basic_ext_url_rewriter = {}
 for _domain in external_domains:
     regex_basic_ext_url_rewriter[_domain] = re.compile(r'(https?:)?//' + re.escape(_domain), flags=re.IGNORECASE)
 # Response Cookies Rewriter, see response_cookie_rewrite()
-regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b')
+regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
 # Request Domains Rewriter, see rewrite_client_requests_text()
 regex_request_rewriter = re.compile(
     re.escape(my_host_name) + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
