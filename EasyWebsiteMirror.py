@@ -35,7 +35,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.13.0-dev'
+__VERSION__ = '0.14.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -45,6 +45,16 @@ ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
+
+if not enable_static_resource_CDN:
+    mime_based_static_resource_CDN = False
+    disable_legacy_file_recognize_method = True
+    redirect_code_if_cannot_hard_rewrite = 0
+if mime_based_static_resource_CDN:
+    url_to_use_cdn = {}  # record incoming urls if we should use cdn on it
+else:
+    redirect_code_if_cannot_hard_rewrite = 0
+
 if not is_use_proxy:
     requests_proxies = None
 if human_ip_verification_enabled:
@@ -68,7 +78,7 @@ regex_adv_url_rewriter = re.compile(
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     r"""(?P<domain_and_scheme>(https?:)?\\?/\\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
     r"""(?P<path>[^\s;+?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
-    r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
+    (r"""(\.(?P<ext>[-_a-z0-9]+?))?""" if not disable_legacy_file_recognize_method else '') +  # file ext
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
     r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
     flags=re.IGNORECASE
@@ -189,6 +199,41 @@ def is_mime_represents_text(input_mime):
     return False
 
 
+@lru_cache(maxsize=128)
+def extract_mime_from_content_type(content_type):
+    c = content_type.find(';')
+    if c == -1:
+        return content_type
+    else:
+        return content_type[:c]
+
+
+@lru_cache(maxsize=128)
+def is_content_type_using_cdn(content_type):
+    mime = extract_mime_from_content_type(content_type)
+    if mime in mime_to_use_cdn:
+        dbgprint(content_type, 'Should Use CDN')
+        return True
+    else:
+        dbgprint(content_type, 'Should NOT CDN')
+        return False
+
+
+@lru_cache(maxsize=256)
+def is_ua_in_whitelist(ua_str):
+    """
+
+    :type ua_str: str
+    """
+    ua_str = ua_str.lower()
+    if global_ua_white_name in ua_str:
+        return True
+    for allowed_ua in spider_ua_white_list:
+        if allowed_ua in ua_str:
+            return True
+    return False
+
+
 def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=500):
     return make_response(errormsg, error_code)
 
@@ -270,7 +315,7 @@ def put_response_to_local_cache(url, our_resp, req, remote_resp):
         cache.put_obj(
             url,
             our_resp,
-            expires=get_expire_from_mime(content_type[:content_type.find(';')]),
+            expires=get_expire_from_mime(extract_mime_from_content_type(content_type)),
             obj_size=len(remote_resp.content),
             last_modified=last_modified,
             info_dict={'content-type': content_type,  # storge extra info for future use
@@ -302,11 +347,15 @@ def try_get_cached_response(url, client_header):
 
 
 def get_group(name, match_obj):  # return a blank string if the match group is None
-    obj = match_obj.group(name)
-    if obj is not None:
-        return obj
-    else:
+    try:
+        obj = match_obj.group(name)
+    except:
         return ''
+    else:
+        if obj is not None:
+            return obj
+        else:
+            return ''
 
 
 def regex_url_reassemble(match_obj):
@@ -367,15 +416,25 @@ def regex_url_reassemble(match_obj):
     # dbgprint('match path', path, v=5)
     path = urljoin(remote_path, path)
     # dbgprint('middle path', path, v=5)
+    url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
     # add extdomains prefix in path if need
     if domain in external_domains_set:
         if force_https_domains != 'NONE' and (force_https_domains == 'ALL' or domain in force_https_domains):
             scheme_prefix = 'https-'
         else:
             scheme_prefix = ''
-        path = urljoin('/extdomains/' + scheme_prefix + domain + '/', path.lstrip('/'))
+        path = '/extdomains/' + scheme_prefix + url_no_scheme
     # dbgprint('final_path', path, v=5)
-    if enable_static_resource_CDN and get_group('ext', match_obj) in static_file_extensions_list:
+    if mime_based_static_resource_CDN and url_no_scheme in url_to_use_cdn:
+        dbgprint('We Know:', url_no_scheme)
+        _we_knew_this_url = True
+    else:
+        dbgprint('We Don\'t know:', url_no_scheme)
+        _we_knew_this_url = False
+
+    # Apply CDN domain
+    if (_we_knew_this_url and url_to_use_cdn[url_no_scheme]) or \
+            (not disable_legacy_file_recognize_method and get_group('ext', match_obj) in static_file_extensions_list):
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
 
@@ -397,18 +456,21 @@ def regex_url_reassemble(match_obj):
 
     if require_slash_escape:
         reassembled = reassembled.replace("/", r"\/")
-    url_rewrite_cache[match_obj.group()] = reassembled  # write cache
+
+    # write the adv rewrite cache only if we disable CDN or we known whether this url is CDN-able
+    if not mime_based_static_resource_CDN or _we_knew_this_url:
+        url_rewrite_cache[match_obj.group()] = reassembled  # write cache
+
     return reassembled
 
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=256)
 def is_denied_because_of_spider(ua_str):
     ua_str = ua_str.lower()
     if 'spider' in ua_str or 'bot' in ua_str:
-        for allowed_ua in spider_ua_white_list:
-            if allowed_ua in ua_str:
-                dbgprint('A Spider/Bot', ua_str, ' was permitted because of white list:', allowed_ua)
-                return False
+        if is_ua_in_whitelist(ua_str):
+            dbgprint('A Spider/Bot\'s access was granted', ua_str)
+            return False
         dbgprint('A Spider/Bot was denied, UA is:', ua_str)
         return True
     else:
@@ -472,6 +534,7 @@ def copy_response(requests_response_obj, content=b''):
     :param content: pre-rewrited response content, bytes
     :return: flask response object
     """
+    dbgprint('RemoteRespHeader', requests_response_obj.headers)
     resp = make_response(content, requests_response_obj.status_code)
     assert isinstance(resp, Response)
     for header_key in requests_response_obj.headers:
@@ -527,8 +590,8 @@ def response_content_rewrite(remote_resp_obj):
     :return: bytes
     """
     # Skip if response is binary
-    content_mime = remote_resp_obj.headers.get('content-type', '') or remote_resp_obj.headers.get('Content-Type', '')
-    content_mime = content_mime[:content_mime.find(';')]
+    content_type = remote_resp_obj.headers.get('content-type', '') or remote_resp_obj.headers.get('Content-Type', '')
+    content_mime = extract_mime_from_content_type(content_type)
 
     if content_mime and is_mime_represents_text(content_mime):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
@@ -712,6 +775,16 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse(actual_request_url, start_time=None):
+    if mime_based_static_resource_CDN:
+        url_no_scheme = actual_request_url[actual_request_url.find('//') + 2:]
+        if (cdn_redirect_code_if_cannot_hard_rewrite
+            and url_no_scheme in url_to_use_cdn and url_to_use_cdn[url_no_scheme] and request.method == 'GET'
+            and not is_ua_in_whitelist(str(request.user_agent))):
+            _path_for_client = extract_url_path_and_query(request.url)
+            return redirect(
+                urljoin(my_host_scheme + CDN_domains[len(url_no_scheme) % cdn_domains_number], _path_for_client),
+                code=cdn_redirect_code_if_cannot_hard_rewrite)
+
     client_header = extract_client_header(request)
 
     if local_cache_enable:
@@ -723,13 +796,31 @@ def request_remote_site_and_parse(actual_request_url, start_time=None):
             return resp  # If cache hit, just skip next steps
 
     try:  # send request to remote server
+        # server's request won't follow 301 or 302 redirection
         r, req_time = send_request(actual_request_url, method=request.method, headers=client_header,
                                    data=request.get_data())
     except Exception as e:
-        errprint(e)
+        errprint(e)  # ERROR :( so sad
         traceback.print_exc()
         return generate_simple_resp_page()
     else:
+        # add url's MIME info to record, for MIME-based CDN rewrite
+        # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
+        if mime_based_static_resource_CDN \
+                and r.request.method == 'GET' and r.status_code == 200:
+            # we should only cache GET method, and response code is 200
+            # noinspection PyUnboundLocalVariable
+            if url_no_scheme not in url_to_use_cdn and \
+                    (is_content_type_using_cdn(r.headers.get('Content-Type', '') or r.headers.get('content-type', ''))):
+                # mark it to use cdn, and record it's url without scheme.
+                # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
+                # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
+                url_to_use_cdn[url_no_scheme] = True
+                dbgprint('CDN enabled for:', url_no_scheme)
+            else:
+                dbgprint('CDN disabled for:', url_no_scheme)
+                url_to_use_cdn[url_no_scheme] = False
+
         # copy and parse remote response
         resp = copy_response(r, response_content_rewrite(r))
 
@@ -891,6 +982,7 @@ def get_external_site(hostname, extpath='/'):
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if hostname.rstrip('/') not in allowed_domains_set:
         return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
+
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
 
     return request_remote_site_and_parse(actual_request_url, start_time)
@@ -915,23 +1007,26 @@ def get_main_site(input_path='/'):
 # ################# Begin Post (auto)Exec Section #################
 if human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
-try:
-    from custom_func import custom_response_html_rewriter
-except:
-    identity_verify_required = False
-    warnprint('Cannot import custom_response_html_rewriter custom_func.py,'
-              ' `custom_text_rewriter` is now disabled(if it was enabled)')
-    traceback.print_exc()
-    pass
 
-try:
-    from custom_func import custom_identity_verify
-except:
-    identity_verify_required = False
-    warnprint('Cannot import custom_identity_verify from custom_func.py,'
-              ' `identity_verify` is now disabled (if it was enabled)')
-    traceback.print_exc()
-    pass
+if custom_text_rewriter_enable:
+    try:
+        from custom_func import custom_response_html_rewriter
+    except:
+        identity_verify_required = False
+        warnprint('Cannot import custom_response_html_rewriter custom_func.py,'
+                  ' `custom_text_rewriter` is now disabled(if it was enabled)')
+        traceback.print_exc()
+        pass
+
+if identity_verify_required:
+    try:
+        from custom_func import custom_identity_verify
+    except:
+        identity_verify_required = False
+        warnprint('Cannot import custom_identity_verify from custom_func.py,'
+                  ' `identity_verify` is now disabled (if it was enabled)')
+        traceback.print_exc()
+        pass
 # ################# End Post (auto)Exec Section #################
 
 if __name__ == '__main__':
