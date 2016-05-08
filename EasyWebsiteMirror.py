@@ -57,7 +57,9 @@ if human_ip_verification_enabled:
     for question in human_ip_verification_questions:
         human_ip_verification_answers_hash_str += question[1]
 
-url_rewrite_cache = {}
+url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
+url_rewrite_cache_hit_count = 0
+url_rewrite_cache_miss_count = 0
 
 # PreCompile Regex
 # Advanced url rewriter, see function response_text_rewrite()
@@ -313,8 +315,14 @@ def regex_url_reassemble(match_obj):
     :param match_obj: match object of stdlib re
     :return: re assembled url string (included prefix(url= etc..) and suffix.)
     """
+
     if match_obj.group() in url_rewrite_cache:  # Read Cache
+        global url_rewrite_cache_hit_count
+        url_rewrite_cache_hit_count += 1
         return url_rewrite_cache[match_obj.group()]
+    else:
+        global url_rewrite_cache_miss_count
+        url_rewrite_cache_miss_count += 1
 
     prefix = get_group('prefix', match_obj)
     quote_left = get_group('quote_left', match_obj)
@@ -783,7 +791,8 @@ def ewm_status():
     output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
     output += strx('\nrewrite_client_requests_text', rewrite_client_requests_text.cache_info())
     output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
-    output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache))
+    output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache),
+                   'Hits:', url_rewrite_cache_hit_count, 'Misses:', url_rewrite_cache_miss_count)
     return "<pre>" + output + "</pre>\n"
 
 
