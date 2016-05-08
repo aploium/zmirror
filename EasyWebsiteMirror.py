@@ -35,7 +35,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.12.0-dev'
+__VERSION__ = '0.13.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -145,6 +145,11 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+def add_ssrf_allowed_domain(domain):
+    global allowed_domains_set
+    allowed_domains_set.add(domain)
+
+
 def set_request_for_debug(dummy_request):
     global request
     request = dummy_request
@@ -294,6 +299,14 @@ def try_get_cached_response(url, client_header):
         return None
 
 
+def get_group(name, match_obj):  # return a blank string if the match group is None
+    obj = match_obj.group(name)
+    if obj is not None:
+        return obj
+    else:
+        return ''
+
+
 def regex_url_reassemble(match_obj):
     """
     Reassemble url parts split by the regex.
@@ -303,30 +316,26 @@ def regex_url_reassemble(match_obj):
     if match_obj.group() in url_rewrite_cache:  # Read Cache
         return url_rewrite_cache[match_obj.group()]
 
-    def get_group(name):  # return a blank string if the match group is None
-        obj = match_obj.group(name)
-        if obj is not None:
-            return obj
-        else:
-            return ''
-
-    prefix = get_group('prefix')
-    quote_left = get_group('quote_left')
-    quote_right = get_group('quote_right')
-    path = get_group('path')
-    match_domain = get_group('domain')
-    domain_and_scheme = get_group('domain_and_scheme')
+    prefix = get_group('prefix', match_obj)
+    quote_left = get_group('quote_left', match_obj)
+    quote_right = get_group('quote_right', match_obj)
+    path = get_group('path', match_obj)
+    match_domain = get_group('domain', match_obj)
+    domain_and_scheme = get_group('domain_and_scheme', match_obj)
+    whole_match_string = match_obj.group()
     if r"\/" in path or r"\/" in domain_and_scheme:
         require_slash_escape = True
         path = path.replace(r"\/", "/")
-        domain_and_scheme = domain_and_scheme.replace(r"\/", "/")
+        # domain_and_scheme = domain_and_scheme.replace(r"\/", "/")
     else:
         require_slash_escape = False
     # path must be not blank
-    if not path \
-            or ('src' in prefix or 'href' in prefix) \
-                    and (not quote_left or quote_right == ')'):  # url after src and href must be ' or " quoted
-        return match_obj.group()
+    if (not path  # path is blank
+        # only url(something) and @import are allowed to be unquoted
+        or ('url' not in prefix and 'import' not in prefix) and (not quote_left or quote_right == ')')
+        # for "key":"value" type replace, we must have at least one '/' in url path (for the value to be regard as url)
+        or (':' in prefix and '/' not in path)):
+        return whole_match_string
 
     remote_path = request.path
     if request.path[:11] == '/extdomains':
@@ -358,7 +367,7 @@ def regex_url_reassemble(match_obj):
             scheme_prefix = ''
         path = urljoin('/extdomains/' + scheme_prefix + domain + '/', path.lstrip('/'))
     # dbgprint('final_path', path, v=5)
-    if enable_static_resource_CDN and get_group('ext') in static_file_extensions_list:
+    if enable_static_resource_CDN and get_group('ext', match_obj) in static_file_extensions_list:
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
 
@@ -642,7 +651,7 @@ def rewrite_client_requests_text(raw_text):
     return replaced
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=8192)
 def extract_url_path_and_query(full_url):
     """
     Convert http://foo.bar.com/aaa/p.html?x=y to /aaa/p.html?x=y

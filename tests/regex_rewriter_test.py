@@ -152,6 +152,10 @@ test_cases = (
     (
         r""" " fullName" : "\/i\/start\/Aploium", """,
         r""" " fullName" : "\/i\/start\/Aploium", """
+    ),
+    (
+        r"""!0,g=g.replace(/location\.href/gi,QS_qga(l))),e.push(g);if(0<e.length){f=e.join(";");f=f.replace(/,"is":_loc/g,"");f=f.replace(/,"ss":_ss/g,"");f=f.replace(/,"fp":fp/g,"");f=f.replace(/,"r":dr/g,"");try{var t=QS_Mla(f)}catch(w){f=w.EC,e={},f&&(e.EC=f.substr(0,200)),QS_Lla(k,c,"P",e)}try{ba=b.ha,QS_hka(t,ba)}catch(w){QS_Lla(k,c,"X")}}if(d)c=a.lastIndexOf("\x3c/script>"),b.$=0>c?a:a.substr(c+9);else if('"NCSR"'==a)return QS_Lla(k,c,"C"),!1;return!0};""",
+        r"""!0,g=g.replace(/location\.href/gi,QS_qga(l))),e.push(g);if(0<e.length){f=e.join(";");f=f.replace(/,"is":_loc/g,"");f=f.replace(/,"ss":_ss/g,"");f=f.replace(/,"fp":fp/g,"");f=f.replace(/,"r":dr/g,"");try{var t=QS_Mla(f)}catch(w){f=w.EC,e={},f&&(e.EC=f.substr(0,200)),QS_Lla(k,c,"P",e)}try{ba=b.ha,QS_hka(t,ba)}catch(w){QS_Lla(k,c,"X")}}if(d)c=a.lastIndexOf("\x3c/script>"),b.$=0>c?a:a.substr(c+9);else if('"NCSR"'==a)return QS_Lla(k,c,"C"),!1;return!0};"""
     )
 )
 current_path = "/some23333_/url/"
