@@ -43,6 +43,7 @@ allowed_domains_set = external_domains_set.copy()
 allowed_domains_set.add(target_domain)
 ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
+myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
 if not is_use_proxy:
     requests_proxies = None
@@ -61,9 +62,9 @@ url_rewrite_cache = {}
 # PreCompile Regex
 # Advanced url rewriter, see function response_text_rewrite()
 regex_adv_url_rewriter = re.compile(
-    r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*)\s*)""" +  # prefix, eg: src=
+    r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
     r"""(?P<quote_left>["'])?""" +  # quote  "'
-    r"""(?P<domain_and_scheme>(https?:)?\?/\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
+    r"""(?P<domain_and_scheme>(https?:)?\\?/\\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
     r"""(?P<path>[^\s;+?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     r"""(\.(?P<ext>[-_a-z0-9]+?))?""" +  # file ext
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
@@ -72,13 +73,21 @@ regex_adv_url_rewriter = re.compile(
 )
 # Basic url rewriter for target main site, see function response_text_rewrite()
 regex_basic_main_url_rewriter = re.compile(
-    r'(https?:)?//' + re.escape(target_domain) + '/',
+    r'(https?:)?//' + re.escape(target_domain),
+    flags=re.IGNORECASE
+)
+regex_basic_main_url_escaped_rewriter = re.compile(  # TODO: Combine it together with regex_basic_main_url_rewriter
+    r'(https?:)?\\/\\/' + re.escape(target_domain),
     flags=re.IGNORECASE
 )
 # Basic url rewriter for external sites, see function response_text_rewrite()
 regex_basic_ext_url_rewriter = {}
+regex_basic_ext_url_esc_rewriter = {}
 for _domain in external_domains:
     regex_basic_ext_url_rewriter[_domain] = re.compile(r'(https?:)?//' + re.escape(_domain), flags=re.IGNORECASE)
+    # TODO: Combine it together with regex_basic_ext_url_rewriter
+    regex_basic_ext_url_esc_rewriter[_domain] = re.compile(r'(https?:)?\\/\\/' + re.escape(_domain),
+                                                           flags=re.IGNORECASE)
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
 # Request Domains Rewriter, see rewrite_client_requests_text()
@@ -306,6 +315,13 @@ def regex_url_reassemble(match_obj):
     quote_right = get_group('quote_right')
     path = get_group('path')
     match_domain = get_group('domain')
+    domain_and_scheme = get_group('domain_and_scheme')
+    if r"\/" in path or r"\/" in domain_and_scheme:
+        require_slash_escape = True
+        path = path.replace(r"\/", "/")
+        domain_and_scheme = domain_and_scheme.replace(r"\/", "/")
+    else:
+        require_slash_escape = False
     # path must be not blank
     if not path \
             or ('src' in prefix or 'href' in prefix) \
@@ -362,8 +378,9 @@ def regex_url_reassemble(match_obj):
                   + urljoin(replace_to_scheme_domain, path) \
                   + quote_right
 
+    if require_slash_escape:
+        reassembled = reassembled.replace("/", r"\/")
     url_rewrite_cache[match_obj.group()] = reassembled  # write cache
-
     return reassembled
 
 
@@ -535,15 +552,17 @@ def response_text_rewrite(resp_text):
 
     # basic url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-    resp_text = regex_basic_main_url_rewriter.sub(myurl_prefix + '/', resp_text)
+    resp_text = regex_basic_main_url_rewriter.sub(myurl_prefix, resp_text)
+    resp_text = regex_basic_main_url_escaped_rewriter.sub(myurl_prefix_escaped, resp_text)
 
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
     for domain in external_domains:
         # Explicit HTTPS scheme must be kept
-        resp_text = resp_text.replace('https://' + domain,
-                                      myurl_prefix + '/extdomains/' + 'https-' + domain)
+        resp_text = resp_text.replace('https://' + domain, myurl_prefix + '/extdomains/' + 'https-' + domain)
+        resp_text = resp_text.replace(r'https:\/\/' + domain,  # TODO: Combine it with non-escaped version
+                                      myurl_prefix_escaped + r'\/extdomains\/' + 'https-' + domain)
         # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
         resp_text = regex_basic_ext_url_rewriter[domain].sub(
             '{0}{1}/extdomains/{2}{3}'.format(my_host_scheme, my_host_name,
@@ -551,6 +570,15 @@ def response_text_rewrite(resp_text):
                                                   ('ALL' == force_https_domains) or (
                                                       domain in force_https_domains)
                                               ) else ''), domain),
+            resp_text
+        )
+
+        resp_text = regex_basic_ext_url_esc_rewriter[domain].sub(  # TODO: Combine it with non-escaped version
+            '{0}\\/extdomains\\/{1}{2}'.format(myurl_prefix_escaped,
+                                               ('https-' if ('NONE' != force_https_domains) and (
+                                                   ('ALL' == force_https_domains) or (
+                                                       domain in force_https_domains)
+                                               ) else ''), domain),
             resp_text
         )
 

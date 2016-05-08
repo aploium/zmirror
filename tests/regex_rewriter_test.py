@@ -145,6 +145,14 @@ test_cases = (
         r"""m.background="url("+f+") no-repeat " + b.Ea""",
         r"""m.background="url("+f+") no-repeat " + b.Ea""",
     ),
+    (
+        r""" "assetsBasePath" : "https:\/\/abs.twimg.com\/a\/1462524371\/", """,
+        r""" "assetsBasePath" : "\/extdomains\/https-abs.twimg.com\/a\/1462524371\/", """
+    ),
+    (
+        r""" " fullName" : "\/i\/start\/Aploium", """,
+        r""" " fullName" : "\/i\/start\/Aploium", """
+    )
 )
 current_path = "/some23333_/url/"
 
@@ -164,6 +172,7 @@ for resp_text, correct in test_cases:
     if resp_text != correct:
         errprint('\nRAW:      ', resp_text_raw, '\nRESULT:   ', resp_text, '\nCORRECT:  ', correct)
         fail_count += 1
+
 
 if not fail_count:
     infoprint('All', len(test_cases), 'tests passed')
