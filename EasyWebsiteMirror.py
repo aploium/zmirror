@@ -1121,9 +1121,11 @@ def get_external_site(hostname, extpath='/'):
     if filter_or_rewrite_result is not None:
         return filter_or_rewrite_result  # Ban or redirect if need
 
-    has_been_rewrited = rewrite_client_request()
+    has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
+    if has_been_rewrited:
+        extpath = request.path[request.path.find('/', 12):]  # extpath may have changed, regenerate it
 
-    # if /extdomains/https-**** means server should use https method to request the remote site.
+    # if /extdomains/https-****/foo/bar means server should use https method to request the remote site.
     if hostname[0:6] == 'https-':
         scheme = 'https://'
         hostname = hostname[6:]
@@ -1135,8 +1137,6 @@ def get_external_site(hostname, extpath='/'):
         return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
-    if has_been_rewrited:
-        extpath = request.path[request.path.find('/', 12):]  # extpath may have changed
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
 
     return request_remote_site_and_parse(actual_request_url, start_time)
@@ -1151,11 +1151,11 @@ def get_main_site(input_path='/'):
     if filter_or_rewrite_result is not None:
         return filter_or_rewrite_result  # Ban or redirect if need
 
-    has_been_rewrited = rewrite_client_request()
+    has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
+    if has_been_rewrited:
+        pass
 
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
-    if has_been_rewrited:
-        extpath = request.path[request.path.find('/', 12):]  # extpath may have changed
 
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
