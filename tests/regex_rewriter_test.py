@@ -146,8 +146,8 @@ test_cases = (
         r"""m.background="url("+f+") no-repeat " + b.Ea""",
     ),
     (
-        r""" "assetsBasePath" : "https:\/\/abs.twimg.com\/a\/1462524371\/", """,
-        r""" "assetsBasePath" : "\/extdomains\/https-abs.twimg.com\/a\/1462524371\/", """
+        r""" "assetsBasePath" : "https:\/\/encrypted-tbn0.gstatic.com\/a\/1462524371\/", """,
+        r""" "assetsBasePath" : "\/extdomains\/https-encrypted-tbn0.gstatic.com\/a\/1462524371\/", """
     ),
     (
         r""" " fullName" : "\/i\/start\/Aploium", """,
@@ -158,6 +158,8 @@ test_cases = (
         r"""!0,g=g.replace(/location\.href/gi,QS_qga(l))),e.push(g);if(0<e.length){f=e.join(";");f=f.replace(/,"is":_loc/g,"");f=f.replace(/,"ss":_ss/g,"");f=f.replace(/,"fp":fp/g,"");f=f.replace(/,"r":dr/g,"");try{var t=QS_Mla(f)}catch(w){f=w.EC,e={},f&&(e.EC=f.substr(0,200)),QS_Lla(k,c,"P",e)}try{ba=b.ha,QS_hka(t,ba)}catch(w){QS_Lla(k,c,"X")}}if(d)c=a.lastIndexOf("\x3c/script>"),b.$=0>c?a:a.substr(c+9);else if('"NCSR"'==a)return QS_Lla(k,c,"C"),!1;return!0};"""
     )
 )
+
+
 current_path = "/some23333_/url/"
 
 
@@ -171,6 +173,7 @@ ColorfulPyPrint_set_verbose_level(5)
 fail_count = 0
 
 for resp_text, correct in test_cases:
+
     resp_text_raw = resp_text
     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
     if resp_text != correct:

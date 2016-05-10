@@ -17,6 +17,16 @@
 #
 # Let Magic Happens !!
 
+# #####################################################
+# ############### Begin BASIC Settings ################
+# #####################################################
+
+# ############## Global Settings ##############
+# If client's ua CONTAINS this, it's access will be granted.Only one value allowed.
+# this white name also affects any other client filter (Human/IP verification, etc..)
+# Please don't use this if you don't use filters.
+global_ua_white_name = 'qiniu-imgstg-spider'
+
 # ############## Local Domain Settings ##############
 # Your domain name, eg: 'blah.foobar.com'
 my_host_name = 'localhost'
@@ -57,6 +67,10 @@ requests_proxies = dict(
     https='https://127.0.0.1:8123',
 )
 
+# #####################################################
+# ############## Begin ADVANCED Settings ##############
+# #####################################################
+
 # ############## Output Settings ##############
 # Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 3 (for first time runner)
 verbose_level = 3
@@ -64,11 +78,8 @@ verbose_level = 3
 # ############## Cache Settings ##############
 # Cache remote static files to your local storge. And access them directly from local storge if necessary.
 # an 304 response support is implanted inside
+# Notice: It was relied by `cdn_redirect_encode_query_str_into_url`
 local_cache_enable = True
-
-# ############## Custom Text Rewriter Function ##############
-# Please see https://github.com/Aploium/EasyWebsiteMirror#custom-rewriter-advanced-function for more information
-custom_text_rewriter_enable = False
 
 # ############## CDN Settings ##############
 # If you have an CDN service (like qiniu,cloudflare,etc..), you are able to storge static resource in CDN domains.
@@ -91,6 +102,8 @@ enable_static_resource_CDN = False
 # 不过硬URL重写只能在第二次请求这个资源的时候生效
 #    坏处: 轻微地减少前两个用户的访问速度(基本可以忽略), 并且增加内存消耗(大概几个到十几个MB)
 #    好处: 避免缓存了一些一次性的资源
+#
+# Dependency 依赖: enable_static_resource_CDN == True
 mime_based_static_resource_CDN = True
 
 # v0.14.0+ Soft CDN Redirect 软CDN重定向
@@ -123,24 +136,89 @@ mime_based_static_resource_CDN = True
 #     关于如何找出CDN提供商机器人的UA,请看下面选项 spider_ua_white_list 的注释
 #     如果UA字符串[包含] global_ua_white_name 或 spider_ua_white_list 中的任意一个字符串, 它将被放行
 #     即使填入多个特征串也不会造成性能损失(有内置缓存)
+#
+# Dependency 依赖:
+#     enable_static_resource_CDN == True
+#     mime_based_static_resource_CDN == True
 cdn_redirect_code_if_cannot_hard_rewrite = 0
 
-# v0.14.0+
+# v0.14.1+
+# When use soft redirect, whether encode(gzip + base64) query string into url path.
+#     recommended to enable, this can increase some CDN compatibility.
+#     and will add an extra extension to it.
+#     has no effect to legacy rewrite
+#     will use the following `mime_to_use_cdn` 's settings to convert MIME to extension
+#     Only when request's UA contains CDN fetcher's string, will program try to resolve encoded query string from it.
+# Why Base64, not CRC32?
+#     If use CRC32, we must keep an CRC32-raw value map table, no matter in mem or disk.
+#         If our server was down unexpectedly, we would loss the entire, or at least part of the map.
+#         which let the server can't resolve the request's really query string.
+#         more, because the map, we couldn't use multi server to do load balance (unless write complex sync program)
+#     However,if we encoded the query string into the url itself, no local map is required.
+#         Even if the server suffers the worse disaster, we won't loss the raw request params.
+#         Because the 301, browsers will always request the transformed url.
+#         More, we could switch the server swiftly, or use multi server to do load balance easily.
+#         PS: NEEDN'T to storge doesn't means we won't, we would still do some cache storge for performance.
+#         And don't worry the url would be too long, because we use base64, if we got an long long request string,
+#         it would be shorten after gzip and base64.
+#     Secure problems: Using base64 may give away the query string, leads to security problems.
+#         I would add AES to in the later version.
+#
+# 将url中请求参数的部分gzip压缩+base64编码进url路径中, 并添加对应的扩展名, 这样能增加对某些(实际上是大部分)对参数支持不好的CDN的兼容性
+# 将根据下面的 `mime_to_use_cdn` 选项中的设置来进行MIME到扩展名的转换
+# 仅当请求者的UA中包含CDN的特征串时，程序才会试图从中解析编码的查询参数
+# 推荐开启(默认开启), 对传统CDN重写没有影响
+# 为什么用Base64将参数编入, 而不是用CRC32:
+#     尽管用CRC32比用Base64要短很多(性能也有优势), 但是如果用CRC32, 意味着我们必须在本地保留一个CRC32到原参数的映射表,
+#         当服务器意外崩溃时(或手工重启), 我们将会丢失全部或一部分映射(除非每建立一个映射就写一次磁盘, 但是那样太慢了)
+#         丢失一部分映射意味着我们会无法解析客户端的某些请求, 可能会极大地影响用户体验.
+#         而且如果使用了CRC32来记录, 我们就无法使用多台镜像服务器来进行负载均衡, (除非写复杂的同步机制)
+#             尽管至少目前来看程序性能还可以, 一台服务器足以支撑, 但是一个好的程序必须有很好的可伸缩性和弹性.
+#     如果使用base64, 尽管url会变得很长, 但是我们可以随时从url中读取原始请求参数, 不需要在本地维持一个映射表,
+#         这样,当服务器意外崩溃或者人为重启后, 我们仍然能解析用户(CDN)的请求.
+#         多台镜像服务器的负载均衡也可以在不写任何同步机制的情况下被简单地部署.
+#         也不用担心base64后的url会变得太长而出错, 对于过长的查询参数(暂定128字符以上),
+#             在base64之前会用gzip压缩, 总的长度会比原来的更短, 被gzip的参数在url中会多一个 z 标记
+#
+# Dependency 依赖:
+#     enable_static_resource_CDN == True
+#     mime_based_static_resource_CDN == True
+#     cdn_redirect_code_if_cannot_hard_rewrite != 0
+#
+# eg: https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
+#     ---> https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css
+# eg2: https://foo.com/a/b/?love=live (assume it returns an jpg) (base64 only)
+#     ---> https://cdn.domain.com/a/b/_ewm0_.bG92ZT1saXZl._ewm1_.jpg
+# eg3: https://foo.com/a/b/?love=live[and a long long query string] (assume it returns an jpg) (gzip + base64)
+#     ---> https://cdn.domain.com/a/b/_ewm0z_.[some long long base64 encoded string]._ewm1_.jpg
+# eg4:(no query string): https://foo.com/a (assume it returns an png) (no change)
+#     ---> https://cdn.domain.com/a  (no change)
+cdn_redirect_encode_query_str_into_url = True
+
+# v0.14.0 first add; v0.14.1 change format
+# format: 'MIME':'extension'
+# the extension affects the former `cdn_redirect_encode_query_str_into_url` option
 mime_to_use_cdn = {
-    'application/javascript', 'application/x-javascript', 'text/javascript',  # javascript
-    'text/css',  # css
-    'image/gif', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/webp',  # img
+    'application/javascript': 'js', 'application/x-javascript': 'js', 'text/javascript': 'js',  # javascript
+    'text/css': 'css',  # css
+    # img
+    'image/gif': 'gif', 'image/jpg': 'jpg', 'image/jpeg': 'jpg', 'image/png': 'png',
+    'image/svg+xml': 'svg', 'image/webp': 'webp',
     # Fonts
-    'application/vnd.ms-fontobject', 'font/eot', 'font/opentype', 'application/x-font-ttf',
-    'application/font-woff', 'application/x-font-woff', 'font/woff', 'application/font-woff2',
+    'application/vnd.ms-fontobject': 'eot', 'font/eot': 'eot', 'font/opentype': 'woff',
+    'application/x-font-ttf': 'woff',
+    'application/font-woff': 'woff', 'application/x-font-woff': 'woff', 'font/woff': 'woff',
+    'application/font-woff2': 'woff2',
     # CDN the following large files MAY be not a good idea, you choose
-    # 'image/bmp', 'video/mp4', 'video/ogg', 'video/webm',
+    # 'image/bmp': 'bmp', 'video/mp4': 'mp4', 'video/ogg': 'ogg', 'video/webm': 'webm',
     # icon files MAY change frequently, you choose
-    # 'image/vnd.microsoft.icon', 'image/x-icon',
+    # 'image/vnd.microsoft.icon': 'ico', 'image/x-icon': 'ico',
 }
 
 # v0.14.0+ By disabling legacy extension based file recognize method, we could gain some performance advantage
+#     More, I'm no longer maintaining the codes of legacy cdn, it may have bugs
 # v0.14.0+ 由于有了基于MIME的CDN重写，可以关闭传统的后缀名重写，能提高一些性能
+#     并且我也不再维护传统CDN, 如果继续使用它, 可能会有潜在的bug
 disable_legacy_file_recognize_method = True
 
 # Only file's extension(from it's url suffix), in this list, will it be cached in CDN
@@ -150,11 +228,6 @@ static_file_extensions_list = [
     'mp3', 'wmv', 'wav',  # sounds
     'js', 'css',  # static
 ]
-
-# If client's ua CONTAINS this, it's access will be granted.Only one value allowed.
-# this white name also affects any other client filter (Human/IP verification, etc..)
-# Please don't use this if you don't use filters.
-global_ua_white_name = 'qiniu-imgstg-spider'
 
 # Your CDN domains, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
 #     If your CDN storge your file permanently (like qiniu), you can disable local cache to save space,
@@ -232,7 +305,8 @@ human_ip_verification_identity_record = (
 
 # If set to True, will use the custom_identity_verify() function to verify user's input identity.
 # And dict will be passed to that function
-identity_verify_required = True
+# ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
+identity_verify_required = False
 
 # If sets to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
 human_ip_verification_whitelist_from_cookies = True
@@ -241,6 +315,11 @@ human_ip_verification_whitelist_cookies_expires_days = 30
 # If set to True, an valid cookie is required, IP white list would be ignored.
 # If set to False, identity will not be verified but just logged to file
 must_verify_cookies = False
+
+# ############## Custom Text Rewriter Function ##############
+# Please see https://github.com/Aploium/EasyWebsiteMirror#custom-rewriter-advanced-function for more information
+# ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
+custom_text_rewriter_enable = False
 
 # ############## Custom URL Redirect ##############
 # If enabled, server will use an 302 to redirect from the source to the target
@@ -277,6 +356,10 @@ url_custom_redirect_regex = (
     (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
     # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
 )
+
+# #####################################################
+# ################### Begin SAMPLE ####################
+# #####################################################
 
 # ############## Sample Config For Google Mirror ##############
 # Please remove the following commit if you want to use google mirror

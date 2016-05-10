@@ -11,10 +11,16 @@ import base64
 import zlib
 from time import time
 from html import escape as html_escape
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
+try:
+    from cchardet import detect as c_chardet
+except:
+    cchardet_available = False
+else:
+    cchardet_available = True
 try:
     from fastcache import lru_cache
 
@@ -35,7 +41,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.14.0-dev'
+__VERSION__ = '0.15.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -46,14 +52,17 @@ myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
 
+# Handle dependencies
 if not enable_static_resource_CDN:
     mime_based_static_resource_CDN = False
     disable_legacy_file_recognize_method = True
-    redirect_code_if_cannot_hard_rewrite = 0
-if mime_based_static_resource_CDN:
-    url_to_use_cdn = {}  # record incoming urls if we should use cdn on it
-else:
-    redirect_code_if_cannot_hard_rewrite = 0
+if not mime_based_static_resource_CDN:
+    cdn_redirect_code_if_cannot_hard_rewrite = 0  # record incoming urls if we should use cdn on it
+url_to_use_cdn = {}
+if not cdn_redirect_code_if_cannot_hard_rewrite:
+    cdn_redirect_encode_query_str_into_url = False
+if not local_cache_enable:
+    cdn_redirect_encode_query_str_into_url = False
 
 if not is_use_proxy:
     requests_proxies = None
@@ -70,6 +79,7 @@ if human_ip_verification_enabled:
 url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
 url_rewrite_cache_hit_count = 0
 url_rewrite_cache_miss_count = 0
+is_debug = False
 
 # PreCompile Regex
 # Advanced url rewriter, see function response_text_rewrite()
@@ -92,6 +102,8 @@ regex_basic_main_url_escaped_rewriter = re.compile(  # TODO: Combine it together
     r'(https?:)?\\/\\/' + re.escape(target_domain),
     flags=re.IGNORECASE
 )
+regex_extract_base64_from_embedded_url = re.compile(
+    r'_ewm0(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._ewm1_\.[a-zA-Z\d]+\b')
 # Basic url rewriter for external sites, see function response_text_rewrite()
 regex_basic_ext_url_rewriter = {}
 regex_basic_ext_url_esc_rewriter = {}
@@ -157,6 +169,80 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+
+@lru_cache(maxsize=4096)
+def extract_real_url_from_embedded_url(embedded_url):
+    """
+
+
+    eg: https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css
+        ---> https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
+    eg2: https://cdn.domain.com/a/b/_ewm0_.bG92ZT1saXZl._ewm1_.jpg
+        ---> https://foo.com/a/b/?love=live (assume it returns an jpg) (base64 only)
+    eg3: https://cdn.domain.com/a/b/_ewm0z_.[some long long base64 encoded string]._ewm1_.jpg
+        ---> https://foo.com/a/b/?love=live[and a long long query string] (assume it returns an jpg) (gzip + base64)
+    eg4:https://cdn.domain.com/a  (no change)
+        ---> (no query string): https://foo.com/a (assume it returns an png) (no change)
+    :param embedded_url: embedded_url
+    :return: real url or None
+    """
+    if '._ewm1_.' not in embedded_url[-15:]:  # check url mark
+        return None
+    m = regex_extract_base64_from_embedded_url.search(embedded_url)
+    b64 = get_group('b64', m)
+    if not b64:
+        return None
+
+    # 'https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css'
+    # real_request_url_no_query ---> 'https://cdn.domain.com/a.php'
+    real_request_url_no_query = embedded_url[:m.span()[0]]
+
+    try:
+        query_string_byte = base64.urlsafe_b64decode(b64)
+        is_gzipped = get_group('gzip', m)
+        if is_gzipped:
+            query_string_byte = zlib.decompress(query_string_byte)
+        query_string = query_string_byte.decode(encoding='utf-8')
+    except:
+        traceback.print_exc()
+        return None
+    result = urljoin(real_request_url_no_query, '?' + query_string)
+    dbgprint('extract:', embedded_url, 'to', result)
+    return result
+
+
+@lru_cache(maxsize=4096)
+def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
+    dbgprint(real_url_raw, url_mime, escape_slash)
+    if escape_slash:
+        real_url = real_url_raw.replace(r'\/', '/')
+    else:
+        real_url = real_url_raw
+    url_sp = urlsplit(real_url)
+    if not url_sp.query:  # no query, needn't rewrite
+        return real_url_raw
+    try:
+        byte_query = url_sp.query.encode()
+        if len(byte_query) > 128:
+            gzip_label = 'z'
+            byte_query = zlib.compress(byte_query)
+        else:
+            gzip_label = ''
+
+        b64_query = base64.urlsafe_b64encode(byte_query).decode()
+        dbgprint(url_mime)
+        mixed_path = url_sp.path + '_ewm0' + gzip_label + '_.' + b64_query + '._ewm1_.' + mime_to_use_cdn[url_mime]
+        result = urlunsplit((url_sp.scheme, url_sp.netloc, mixed_path, '', ''))
+    except:
+        traceback.print_exc()
+        return real_url_raw
+    else:
+        if escape_slash:
+            result = result.replace('/', r'\/')
+        dbgprint('embed:', real_url_raw, 'to:', result)
+        return result
+
+
 def add_ssrf_allowed_domain(domain):
     global allowed_domains_set
     allowed_domains_set.add(domain)
@@ -213,7 +299,7 @@ def is_content_type_using_cdn(content_type):
     mime = extract_mime_from_content_type(content_type)
     if mime in mime_to_use_cdn:
         dbgprint(content_type, 'Should Use CDN')
-        return True
+        return mime
     else:
         dbgprint(content_type, 'Should NOT CDN')
         return False
@@ -346,7 +432,9 @@ def try_get_cached_response(url, client_header):
         return None
 
 
-def get_group(name, match_obj):  # return a blank string if the match group is None
+def get_group(name, match_obj):
+    """return a blank string if the match group is None
+    """
     try:
         obj = match_obj.group(name)
     except:
@@ -371,7 +459,6 @@ def regex_url_reassemble(match_obj):
         return url_rewrite_cache[match_obj.group()]
     else:
         global url_rewrite_cache_miss_count
-        url_rewrite_cache_miss_count += 1
 
     prefix = get_group('prefix', match_obj)
     quote_left = get_group('quote_left', match_obj)
@@ -393,6 +480,8 @@ def regex_url_reassemble(match_obj):
         # for "key":"value" type replace, we must have at least one '/' in url path (for the value to be regard as url)
         or (':' in prefix and '/' not in path)):
         return whole_match_string
+    else:
+        url_rewrite_cache_miss_count += 1
 
     remote_path = request.path
     if request.path[:11] == '/extdomains':
@@ -428,13 +517,15 @@ def regex_url_reassemble(match_obj):
     if mime_based_static_resource_CDN and url_no_scheme in url_to_use_cdn:
         dbgprint('We Know:', url_no_scheme)
         _we_knew_this_url = True
+        _this_url_mime_cdn = url_to_use_cdn[url_no_scheme][0]
     else:
         dbgprint('We Don\'t know:', url_no_scheme)
         _we_knew_this_url = False
+        _this_url_mime_cdn = False
 
     # Apply CDN domain
-    if (_we_knew_this_url and url_to_use_cdn[url_no_scheme]) or \
-            (not disable_legacy_file_recognize_method and get_group('ext', match_obj) in static_file_extensions_list):
+    if _this_url_mime_cdn \
+            or (not disable_legacy_file_recognize_method and get_group('ext', match_obj) in static_file_extensions_list):
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
 
@@ -444,15 +535,22 @@ def regex_url_reassemble(match_obj):
         # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
         # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
         replace_to_scheme_domain = my_host_scheme + CDN_domains[len(path) % cdn_domains_number]
+
     else:
-        replace_to_scheme_domain = ''
+        replace_to_scheme_domain = myurl_prefix
+
+    reassembled_url = urljoin(replace_to_scheme_domain, path)
+    if _this_url_mime_cdn and cdn_redirect_encode_query_str_into_url:
+        reassembled_url = embed_real_url_to_embedded_url(
+            reassembled_url,
+            url_mime=url_to_use_cdn[url_no_scheme][1],
+            escape_slash=require_slash_escape
+        )
 
     # reassemble!
     # prefix: src=  quote_left: "
     # path: /extdomains/target.com/foo/bar.js?love=luciaZ
-    reassembled = prefix + quote_left \
-                  + urljoin(replace_to_scheme_domain, path) \
-                  + quote_right
+    reassembled = prefix + quote_left + reassembled_url + quote_right
 
     if require_slash_escape:
         reassembled = reassembled.replace("/", r"\/")
@@ -499,6 +597,7 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
         return
     dbgprint('ip white added', ip_to_allow, 'info:', info_record_dict)
     single_ip_allowed_set.add(ip_to_allow)
+    is_ip_not_in_allow_range.cache_clear()
     append_ip_whitelist_file(ip_to_allow)
     # dbgprint(single_ip_allowed_set)
     try:
@@ -598,6 +697,8 @@ def response_content_rewrite(remote_resp_obj):
         dbgprint('Text-like', content_mime, remote_resp_obj.text[:15], remote_resp_obj.content[:15])
 
         # simply copy the raw text, for custom rewriter function first.
+        if cchardet_available:
+            remote_resp_obj.encoding = c_chardet(remote_resp_obj.content)
         resp_text = remote_resp_obj.text
         # try to apply custom rewrite function if we got an html
         try:
@@ -645,20 +746,25 @@ def response_text_rewrite(resp_text):
                                       myurl_prefix_escaped + r'\/extdomains\/' + 'https-' + domain)
         # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
         resp_text = regex_basic_ext_url_rewriter[domain].sub(
-            '{0}{1}/extdomains/{2}{3}'.format(my_host_scheme, my_host_name,
-                                              ('https-' if ('NONE' != force_https_domains) and (
-                                                  ('ALL' == force_https_domains) or (
-                                                      domain in force_https_domains)
-                                              ) else ''), domain),
+            '{0}{1}/extdomains/{2}{3}'.format(
+                my_host_scheme,
+                my_host_name,
+                ('https-' if ('NONE' != force_https_domains)
+                             and (
+                                 'ALL' == force_https_domains or domain in force_https_domains
+                             ) else ''),
+                domain),
             resp_text
         )
 
         resp_text = regex_basic_ext_url_esc_rewriter[domain].sub(  # TODO: Combine it with non-escaped version
-            '{0}\\/extdomains\\/{1}{2}'.format(myurl_prefix_escaped,
-                                               ('https-' if ('NONE' != force_https_domains) and (
-                                                   ('ALL' == force_https_domains) or (
-                                                       domain in force_https_domains)
-                                               ) else ''), domain),
+            '{0}\\/extdomains\\/{1}{2}'.format(
+                myurl_prefix_escaped,
+                ('https-' if ('NONE' != force_https_domains)
+                             and (
+                                 'ALL' == force_https_domains or domain in force_https_domains
+                             ) else ''),
+                domain),
             resp_text
         )
 
@@ -775,15 +881,20 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse(actual_request_url, start_time=None):
+    dbgprint('actual_request_url:', actual_request_url)
+
     if mime_based_static_resource_CDN:
         url_no_scheme = actual_request_url[actual_request_url.find('//') + 2:]
         if (cdn_redirect_code_if_cannot_hard_rewrite
-            and url_no_scheme in url_to_use_cdn and url_to_use_cdn[url_no_scheme] and request.method == 'GET'
-            and not is_ua_in_whitelist(str(request.user_agent))):
+            and url_no_scheme in url_to_use_cdn and url_to_use_cdn[url_no_scheme][0] and request.method == 'GET'
+            and not is_ua_in_whitelist(str(request.user_agent))
+            ):
             _path_for_client = extract_url_path_and_query(request.url)
-            return redirect(
-                urljoin(my_host_scheme + CDN_domains[len(url_no_scheme) % cdn_domains_number], _path_for_client),
-                code=cdn_redirect_code_if_cannot_hard_rewrite)
+            redirect_to_url = urljoin(my_host_scheme + CDN_domains[len(url_no_scheme) % cdn_domains_number], _path_for_client)
+            if cdn_redirect_encode_query_str_into_url:
+                redirect_to_url = embed_real_url_to_embedded_url(redirect_to_url, url_mime=url_to_use_cdn[url_no_scheme][1])
+
+            return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
 
     client_header = extract_client_header(request)
 
@@ -797,8 +908,12 @@ def request_remote_site_and_parse(actual_request_url, start_time=None):
 
     try:  # send request to remote server
         # server's request won't follow 301 or 302 redirection
-        r, req_time = send_request(actual_request_url, method=request.method, headers=client_header,
-                                   data=request.get_data())
+        r, req_time = send_request(
+            actual_request_url,
+            method=request.method,
+            headers=client_header,
+            data=request.get_data(),
+        )
     except Exception as e:
         errprint(e)  # ERROR :( so sad
         traceback.print_exc()
@@ -810,16 +925,18 @@ def request_remote_site_and_parse(actual_request_url, start_time=None):
                 and r.request.method == 'GET' and r.status_code == 200:
             # we should only cache GET method, and response code is 200
             # noinspection PyUnboundLocalVariable
-            if url_no_scheme not in url_to_use_cdn and \
-                    (is_content_type_using_cdn(r.headers.get('Content-Type', '') or r.headers.get('content-type', ''))):
-                # mark it to use cdn, and record it's url without scheme.
-                # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
-                # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                url_to_use_cdn[url_no_scheme] = True
-                dbgprint('CDN enabled for:', url_no_scheme)
-            else:
-                dbgprint('CDN disabled for:', url_no_scheme)
-                url_to_use_cdn[url_no_scheme] = False
+            if url_no_scheme not in url_to_use_cdn:
+                content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
+                resp_mime = is_content_type_using_cdn(content_type)
+                if resp_mime:
+                    # mark it to use cdn, and record it's url without scheme.
+                    # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
+                    # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
+                    url_to_use_cdn[url_no_scheme] = [True, resp_mime]
+                    dbgprint('CDN enabled for:', url_no_scheme)
+                else:
+                    dbgprint('CDN disabled for:', url_no_scheme)
+                    url_to_use_cdn[url_no_scheme] = [False, '']
 
         # copy and parse remote response
         resp = copy_response(r, response_content_rewrite(r))
@@ -840,17 +957,25 @@ def filter_client_request():
     if is_deny_spiders_by_403 and is_denied_because_of_spider(str(request.user_agent)):
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
-    if human_ip_verification_enabled and ((human_ip_verification_whitelist_from_cookies and must_verify_cookies)
-                                          or is_ip_not_in_allow_range(request.remote_addr)):
+    if human_ip_verification_enabled and (
+                (human_ip_verification_whitelist_from_cookies and must_verify_cookies)
+            or is_ip_not_in_allow_range(request.remote_addr)
+    ):
+        # dbgprint('ip',request.remote_addr,'is verifying cookies')
         if human_ip_verification_whitelist_from_cookies and 'ewm_ip_verify' in request.cookies \
                 and verify_ip_hash_cookie(request.cookies.get('ewm_ip_verify')):
             ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('ewm_ip_verify'))
+            # dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
                 "/ip_ban_verify_page?origin="
                 + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode()
                 , code=302)
 
+    return None
+
+
+def is_client_request_need_redirect():
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
             redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path])
@@ -863,7 +988,22 @@ def filter_client_request():
                 dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=302)
 
-    return None
+
+def rewrite_client_request():
+    has_been_rewrited = False
+    if cdn_redirect_encode_query_str_into_url:
+        if is_ua_in_whitelist(str(request.user_agent)):
+            try:
+                real_url = extract_real_url_from_embedded_url(request.url)
+                if real_url is not None:
+                    global request
+                    request.url = real_url
+                    request.path = urlsplit(real_url).path
+            except:
+                traceback.print_exc()
+            else:
+                has_been_rewrited = True
+    return has_been_rewrited
 
 
 # ################# End Middle Functions #################
@@ -893,11 +1033,11 @@ def ip_ban_verify_page():
         dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
         for q_id, _question in enumerate(human_ip_verification_questions):
-            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (html_escape(_question[0]), q_id)
+            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (_question[0], q_id)
 
         for rec_explain_string, rec_name, input_type in human_ip_verification_identity_record:
             form_body += r"""%s <input type="%s" name="%s" /><br/>""" % (
-                html_escape(rec_explain_string), html_escape(input_type), html_escape(rec_name))
+                rec_explain_string, html_escape(input_type), html_escape(rec_name))
 
         if 'origin' in request.args:
             form_body += r"""<input type="hidden" name="origin" value="%s" />""" % html_escape(
@@ -954,6 +1094,7 @@ def ip_ban_verify_page():
                 'ewm_ip_verify',
                 _hash,
                 expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
+                max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
                 # httponly=True,
                 # domain=my_host_name
             )
@@ -967,10 +1108,13 @@ def ip_ban_verify_page():
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
     start_time = time()  # to display compute time
-    # pre-filter client's request.
-    filter_result = filter_client_request()
-    if filter_result is not None:
-        return filter_result  # Ban or redirect if need
+    # pre-filter client's request
+    filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
+
+    if filter_or_rewrite_result is not None:
+        return filter_or_rewrite_result  # Ban or redirect if need
+
+    has_been_rewrited = rewrite_client_request()
 
     # if /extdomains/https-**** means server should use https method to request the remote site.
     if hostname[0:6] == 'https-':
@@ -983,7 +1127,11 @@ def get_external_site(hostname, extpath='/'):
     if hostname.rstrip('/') not in allowed_domains_set:
         return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
+    dbgprint('after extract, url:', request.url, '   path:', request.path)
+    if has_been_rewrited:
+        extpath = request.path[request.path.find('/', 12):]  # extpath may have changed
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
+    dbgprint('actual_request_url_00000', actual_request_url)
 
     return request_remote_site_and_parse(actual_request_url, start_time)
 
@@ -992,10 +1140,16 @@ def get_external_site(hostname, extpath='/'):
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
     start_time = time()  # to display compute time
-    # pre-filter client's request.
-    filter_result = filter_client_request()
-    if filter_result is not None:
-        return filter_result  # Ban or redirect if need
+    # pre-filter client's request
+    filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
+    if filter_or_rewrite_result is not None:
+        return filter_or_rewrite_result  # Ban or redirect if need
+
+    has_been_rewrited = rewrite_client_request()
+
+    dbgprint('after extract, url:', request.url, '   path:', request.path)
+    if has_been_rewrited:
+        extpath = request.path[request.path.find('/', 12):]  # extpath may have changed
 
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
