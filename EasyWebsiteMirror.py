@@ -176,7 +176,7 @@ app = Flask(__name__)
 
 # ########## Begin Utils #############
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=8192)
 def extract_real_url_from_embedded_url(embedded_url):
     """
 
@@ -1022,7 +1022,13 @@ def ewm_status():
     if request.remote_addr != '127.0.0.1':
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
     output = ""
-    output += strx('is_mime_represents_text', is_mime_represents_text.cache_info())
+    output += strx('extract_real_url_from_embedded_url', extract_real_url_from_embedded_url.cache_info())
+    output += strx('\nembed_real_url_to_embedded_url', embed_real_url_to_embedded_url.cache_info())
+    output += strx('\ncheck_global_ua_pass', check_global_ua_pass.cache_info())
+    output += strx('\nextract_mime_from_content_type', extract_mime_from_content_type.cache_info())
+    output += strx('\nis_content_type_using_cdn', is_content_type_using_cdn.cache_info())
+    output += strx('\nis_ua_in_whitelist', is_content_type_using_cdn.cache_info())
+    output += strx('\nis_mime_represents_text', is_mime_represents_text.cache_info())
     output += strx('\ngenerate_304_response', generate_304_response.cache_info())
     output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
     output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())
