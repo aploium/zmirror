@@ -54,8 +54,9 @@ myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
 
 # ## thread local var ##
-thread_local = threading.local()
-thread_local.start_time = None
+request_local = threading.local()
+request_local.start_time = None
+request_local.cur_mime = ''
 
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
@@ -90,17 +91,27 @@ if not human_ip_verification_whitelist_from_cookies:
 url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
 url_rewrite_cache_hit_count = 0
 url_rewrite_cache_miss_count = 0
-is_debug = False
+
 
 # ########### PreCompile Regex ###############
 # Advanced url rewriter, see function response_text_rewrite()
+# #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出url ####
+# 如果需要阅读这个表达式, 请一定要在IDE(如PyCharm)的正则高亮下阅读
 regex_adv_url_rewriter = re.compile(
+    # 前缀, 必须有  href= src= url( (css) @import (css)  "key":"value" (js/json)
+    # \s 表示空白字符,如空格tab
     r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
+    # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
+    # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
     r"""(?P<domain_and_scheme>(https?:)?\\?/\\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
+    # url路径, 含参数 可选
     r"""(?P<path>[^\s;+?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+    # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
     (r"""(\.(?P<ext>[-_a-z0-9]+?))?""" if not disable_legacy_file_recognize_method else '') +  # file ext
+    # 查询字符串, 可选
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
+    # 右引号(可以是右括弧), 必须
     r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
     flags=re.IGNORECASE
 )
@@ -899,8 +910,8 @@ def request_remote_site_and_parse(actual_request_url):
         resp = try_get_cached_response(actual_request_url, client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
-            if thread_local.start_time is not None:
-                resp.headers.set('X-CP-Time', "%.4f" % (time() - thread_local.start_time))
+            if request_local.start_time is not None:
+                resp.headers.set('X-CP-Time', "%.4f" % (time() - request_local.start_time))
             return resp  # If cache hit, just skip next steps
 
     try:  # send request to remote server
@@ -940,8 +951,8 @@ def request_remote_site_and_parse(actual_request_url):
 
         if local_cache_enable:  # storge entire our server's response (headers included)
             put_response_to_local_cache(actual_request_url, resp, request, r)
-    if thread_local.start_time is not None:
-        resp.headers.add('X-CP-Time', "%.4f" % (time() - thread_local.start_time - req_time))
+    if request_local.start_time is not None:
+        resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
     return resp
 
 
@@ -1108,7 +1119,7 @@ def ip_ban_verify_page():
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
-    thread_local.start_time = time()  # to display compute time
+    request_local.start_time = time()  # to display compute time
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
 
@@ -1139,7 +1150,7 @@ def get_external_site(hostname, extpath='/'):
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
-    thread_local.start_time = time()  # to display compute time
+    request_local.start_time = time()  # to display compute time
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
     if filter_or_rewrite_result is not None:
