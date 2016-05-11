@@ -25,7 +25,7 @@ else:
 try:
     from fastcache import lru_cache
 
-    infoprint('lur_cache loaded from fastcache')
+    infoprint('lru_cache loaded from fastcache')
 except:
     from functools import lru_cache
 
@@ -955,8 +955,11 @@ def request_remote_site_and_parse(actual_request_url):
 
         if local_cache_enable:  # storge entire our server's response (headers included)
             put_response_to_local_cache(actual_request_url, resp, request, r)
+
     if request_local.start_time is not None:
         resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
+    resp.headers.add('X-EWM-Version', __VERSION__)
+
     return resp
 
 
