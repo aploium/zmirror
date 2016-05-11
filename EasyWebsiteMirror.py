@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.16.3-dev'
+__VERSION__ = '0.16.5-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -541,10 +541,12 @@ def regex_url_reassemble(match_obj):
         # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
         # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
         # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
-        replace_to_scheme_domain = my_host_scheme + CDN_domains[len(path) % cdn_domains_number]
+        replace_to_scheme_domain = my_host_scheme + CDN_domains[zlib.adler32(path.encode()) % cdn_domains_number]
 
-    else:
-        replace_to_scheme_domain = myurl_prefix
+    else:  # request_local.cur_mime == 'application/javascript':
+        replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
+    # else:
+    #     replace_to_scheme_domain = myurl_prefix
 
     reassembled_url = urljoin(replace_to_scheme_domain, path)
     if _this_url_mime_cdn and cdn_redirect_encode_query_str_into_url:
@@ -731,13 +733,24 @@ def response_content_rewrite(remote_resp_obj):
         return remote_resp_obj.content
 
 
-def response_text_basic_rewrite(resp_text, domain, is_ext_domain):
-    if is_ext_domain:
-        ext_domain_str = '/extdomains/'
-        ext_domain_str_esc = r'\/extdomains\/'
-    else:
-        ext_domain_str = '/'
-        ext_domain_str_esc = r'\/'
+def response_text_basic_rewrite_main(resp_text):
+    resp_text = resp_text.replace('https://' + target_domain, myurl_prefix)
+    resp_text = resp_text.replace(r'https:\/\/' + target_domain, myurl_prefix_escaped)
+    resp_text = resp_text.replace('http://' + target_domain, myurl_prefix)
+    resp_text = resp_text.replace(r'http:\/\/' + target_domain, myurl_prefix_escaped)
+    resp_text = resp_text.replace('//' + target_domain, myurl_prefix)
+    resp_text = resp_text.replace(r'\/\/' + target_domain, myurl_prefix_escaped)
+
+    # rewrite "foo.domain.tld" and 'foo.domain.tld'
+    resp_text = resp_text.replace('"%s"' % target_domain, '\"' + my_host_name + '\"')
+    resp_text = resp_text.replace("'%s'" % target_domain, "\'" + my_host_name + "\'")
+
+    return resp_text
+
+
+def response_text_basic_rewrite_ext(resp_text, domain):
+    ext_domain_str = '/extdomains/'
+    ext_domain_str_esc = r'\/extdomains\/'
 
     # Explicit HTTPS scheme must be kept
     resp_text = resp_text.replace('https://' + domain, myurl_prefix + ext_domain_str + 'https-' + domain)
@@ -775,13 +788,13 @@ def response_text_rewrite(resp_text):
 
     # basic url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-    resp_text = response_text_basic_rewrite(resp_text, target_domain, False)
+    resp_text = response_text_basic_rewrite_main(resp_text)
 
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
     for domain in external_domains:
-        resp_text = response_text_basic_rewrite(resp_text, domain, True)
+        resp_text = response_text_basic_rewrite_ext(resp_text, domain)
 
     return resp_text
 
@@ -902,7 +915,10 @@ def request_remote_site_and_parse(actual_request_url):
             and not is_ua_in_whitelist(str(request.user_agent))
             ):
             _path_for_client = extract_url_path_and_query(request.url)
-            redirect_to_url = urljoin(my_host_scheme + CDN_domains[len(url_no_scheme) % cdn_domains_number], _path_for_client)
+            redirect_to_url = urljoin(
+                my_host_scheme + CDN_domains[zlib.adler32(url_no_scheme.encode()) % cdn_domains_number],
+                _path_for_client
+            )
             if cdn_redirect_encode_query_str_into_url:
                 redirect_to_url = embed_real_url_to_embedded_url(redirect_to_url, url_mime=url_to_use_cdn[url_no_scheme][1])
 
@@ -931,6 +947,9 @@ def request_remote_site_and_parse(actual_request_url):
         traceback.print_exc()
         return generate_simple_resp_page()
     else:
+        # extract response's mime to thread local var
+        content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
+        request_local.cur_mime = extract_mime_from_content_type(content_type)
         # add url's MIME info to record, for MIME-based CDN rewrite
         # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
         if mime_based_static_resource_CDN \
@@ -938,13 +957,11 @@ def request_remote_site_and_parse(actual_request_url):
             # we should only cache GET method, and response code is 200
             # noinspection PyUnboundLocalVariable
             if url_no_scheme not in url_to_use_cdn:
-                content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
-                resp_mime = is_content_type_using_cdn(content_type)
-                if resp_mime:
+                if is_content_type_using_cdn(request_local.cur_mime):
                     # mark it to use cdn, and record it's url without scheme.
                     # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
                     # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                    url_to_use_cdn[url_no_scheme] = [True, resp_mime]
+                    url_to_use_cdn[url_no_scheme] = [True, request_local.cur_mime]
                     if verbose_level >= 3: dbgprint('CDN enabled for:', url_no_scheme)
                 else:
                     if verbose_level >= 3: dbgprint('CDN disabled for:', url_no_scheme)
@@ -1126,7 +1143,15 @@ def ip_ban_verify_page():
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
+    """
+
+    :type hostname: str
+    """
     request_local.start_time = time()  # to display compute time
+    # redirect to target main site if we got target main site here
+    if hostname.replace('https-', '') == target_domain:
+        return redirect('/' + extpath + '?' + urlsplit(request.url).query)
+
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
 
