@@ -3,7 +3,6 @@
 import os
 
 os.chdir(os.path.dirname(__file__))
-import requests
 import traceback
 from datetime import datetime, timedelta
 import re
@@ -11,7 +10,9 @@ import base64
 import zlib
 from time import time
 from html import escape as html_escape
+import threading
 from urllib.parse import urljoin, urlsplit, urlunsplit
+import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
@@ -41,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.15.1-dev'
+__VERSION__ = '0.16.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -51,6 +52,10 @@ ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
+
+# ## thread local var ##
+thread_local = threading.local()
+thread_local.start_time = None
 
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
@@ -110,14 +115,7 @@ regex_basic_main_url_escaped_rewriter = re.compile(  # TODO: Combine it together
 )
 regex_extract_base64_from_embedded_url = re.compile(
     r'_ewm0(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._ewm1_\.[a-zA-Z\d]+\b')
-# Basic url rewriter for external sites, see function response_text_rewrite()
-regex_basic_ext_url_rewriter = {}
-regex_basic_ext_url_esc_rewriter = {}
-for _domain in external_domains:
-    regex_basic_ext_url_rewriter[_domain] = re.compile(r'(https?:)?//' + re.escape(_domain), flags=re.IGNORECASE)
-    # TODO: Combine it together with regex_basic_ext_url_rewriter
-    regex_basic_ext_url_esc_rewriter[_domain] = re.compile(r'(https?:)?\\/\\/' + re.escape(_domain),
-                                                           flags=re.IGNORECASE)
+
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
 # Request Domains Rewriter, see rewrite_client_requests_text()
@@ -419,6 +417,7 @@ def put_response_to_local_cache(url, our_resp, req, remote_resp):
 def try_get_cached_response(url, client_header):
     """
 
+    :param url: real url with query string
     :type client_header: dict
     """
     # Only use cache when client use GET
@@ -484,10 +483,9 @@ def regex_url_reassemble(match_obj):
         # only url(something) and @import are allowed to be unquoted
         or ('url' not in prefix and 'import' not in prefix) and (not quote_left or quote_right == ')')
         # for "key":"value" type replace, we must have at least one '/' in url path (for the value to be regard as url)
-        or (':' in prefix and '/' not in path)):
+        or (':' in prefix and '/' not in path)
+        ):
         return whole_match_string
-    else:
-        url_rewrite_cache_miss_count += 1
 
     remote_path = request.path
     if request.path[:11] == '/extdomains':
@@ -564,6 +562,7 @@ def regex_url_reassemble(match_obj):
     # write the adv rewrite cache only if we disable CDN or we known whether this url is CDN-able
     if not mime_based_static_resource_CDN or _we_knew_this_url:
         url_rewrite_cache[match_obj.group()] = reassembled  # write cache
+        url_rewrite_cache_miss_count += 1
 
     return reassembled
 
@@ -661,6 +660,7 @@ def copy_response(requests_response_obj, content=b''):
     return resp
 
 
+# noinspection PyProtectedMember
 def response_cookies_deep_copy(req_obj):
     """
     It's a BAD hack to get RAW cookies headers, but so far, we don't have better way.
@@ -711,8 +711,8 @@ def response_content_rewrite(remote_resp_obj):
             if custom_text_rewriter_enable and content_mime == 'text/html':
                 resp_text2 = custom_response_html_rewriter(resp_text)
                 resp_text = resp_text2
-        except Exception as e:  # just print err and fallback to normal rewrite
-            errprint('Custom Rewrite Function "custom_response_html_rewriter(text)" in custom_func.py ERROR', e)
+        except Exception as _e:  # just print err and fallback to normal rewrite
+            errprint('Custom Rewrite Function "custom_response_html_rewriter(text)" in custom_func.py ERROR', _e)
             traceback.print_exc()
 
         # then do the normal rewrites
@@ -751,28 +751,18 @@ def response_text_rewrite(resp_text):
         resp_text = resp_text.replace(r'https:\/\/' + domain,  # TODO: Combine it with non-escaped version
                                       myurl_prefix_escaped + r'\/extdomains\/' + 'https-' + domain)
         # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-        resp_text = regex_basic_ext_url_rewriter[domain].sub(
-            '{0}{1}/extdomains/{2}{3}'.format(
-                my_host_scheme,
-                my_host_name,
-                ('https-' if ('NONE' != force_https_domains)
-                             and (
-                                 'ALL' == force_https_domains or domain in force_https_domains
-                             ) else ''),
-                domain),
-            resp_text
-        )
 
-        resp_text = regex_basic_ext_url_esc_rewriter[domain].sub(  # TODO: Combine it with non-escaped version
-            '{0}\\/extdomains\\/{1}{2}'.format(
-                myurl_prefix_escaped,
-                ('https-' if ('NONE' != force_https_domains)
-                             and (
-                                 'ALL' == force_https_domains or domain in force_https_domains
-                             ) else ''),
-                domain),
-            resp_text
-        )
+        buff = '{0}/extdomains/{1}{2}'.format(
+            myurl_prefix,
+            ('https-' if ('NONE' != force_https_domains)
+                         and (
+                             'ALL' == force_https_domains or domain in force_https_domains
+                         ) else ''),
+            domain)
+        resp_text = resp_text.replace('http://' + domain, buff, )
+        resp_text = resp_text.replace('http:\\/\\/' + domain, buff.replace('/', r'\/'))
+        resp_text = resp_text.replace('//' + domain, buff)
+        resp_text = resp_text.replace('\\/\\/' + domain, buff.replace('/', r'\/'), )
 
         # rewrite "foo.domain.tld" and 'foo.domain.tld'
         resp_text = resp_text.replace('"%s"' % domain, '\"' + my_host_name + '/extdomains/' + domain + '\"')
@@ -887,7 +877,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     return r, req_time
 
 
-def request_remote_site_and_parse(actual_request_url, start_time=None):
+def request_remote_site_and_parse(actual_request_url):
     if verbose_level >= 3: dbgprint('actual_request_url:', actual_request_url)
 
     if mime_based_static_resource_CDN:
@@ -909,8 +899,8 @@ def request_remote_site_and_parse(actual_request_url, start_time=None):
         resp = try_get_cached_response(actual_request_url, client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
-            if start_time is not None:
-                resp.headers.set('X-CP-Time', "%.4f" % (time() - start_time))
+            if thread_local.start_time is not None:
+                resp.headers.set('X-CP-Time', "%.4f" % (time() - thread_local.start_time))
             return resp  # If cache hit, just skip next steps
 
     try:  # send request to remote server
@@ -950,8 +940,8 @@ def request_remote_site_and_parse(actual_request_url, start_time=None):
 
         if local_cache_enable:  # storge entire our server's response (headers included)
             put_response_to_local_cache(actual_request_url, resp, request, r)
-    if start_time is not None:
-        resp.headers.add('X-CP-Time', "%.4f" % (time() - start_time - req_time))
+    if thread_local.start_time is not None:
+        resp.headers.add('X-CP-Time', "%.4f" % (time() - thread_local.start_time - req_time))
     return resp
 
 
@@ -975,9 +965,8 @@ def filter_client_request():
             if verbose_level >= 3: dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
-                "/ip_ban_verify_page?origin="
-                + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode()
-                , code=302)
+                "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(),
+                code=302)
 
     return None
 
@@ -1003,7 +992,6 @@ def rewrite_client_request():
             try:
                 real_url = extract_real_url_from_embedded_url(request.url)
                 if real_url is not None:
-                    global request
                     request.url = real_url
                     request.path = urlsplit(real_url).path
             except:
@@ -1120,7 +1108,7 @@ def ip_ban_verify_page():
 @app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
 @app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
 def get_external_site(hostname, extpath='/'):
-    start_time = time()  # to display compute time
+    thread_local.start_time = time()  # to display compute time
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
 
@@ -1145,13 +1133,13 @@ def get_external_site(hostname, extpath='/'):
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
     actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
 
-    return request_remote_site_and_parse(actual_request_url, start_time)
+    return request_remote_site_and_parse(actual_request_url)
 
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/<path:input_path>', methods=['GET', 'POST'])
 def get_main_site(input_path='/'):
-    start_time = time()  # to display compute time
+    thread_local.start_time = time()  # to display compute time
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
     if filter_or_rewrite_result is not None:
@@ -1165,7 +1153,7 @@ def get_main_site(input_path='/'):
 
     actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
-    return request_remote_site_and_parse(actual_request_url, start_time)
+    return request_remote_site_and_parse(actual_request_url)
 
 
 # ################# End Flask #################

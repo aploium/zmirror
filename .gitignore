@@ -1,6 +1,7 @@
 ### Project Special
 /custom_func.py
 /config.py
+/tests/sample
 /ip_whitelist.txt
 ### Vim template
 # swap

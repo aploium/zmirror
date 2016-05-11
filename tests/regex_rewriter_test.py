@@ -1,5 +1,6 @@
 # coding=utf-8
 import re
+from time import time
 from config import *
 from EasyWebsiteMirror import regex_adv_url_rewriter, regex_url_reassemble, \
     static_file_extensions_list, external_domains_set, allowed_domains_set, myurl_prefix, cdn_domains_number, \
@@ -185,3 +186,25 @@ if not fail_count:
     infoprint('All', len(test_cases), 'tests passed')
 else:
     errprint('Failed in ', fail_count, 'tests')
+
+infoprint('Begin Performance Test')
+
+with open(os.path.join(os.path.dirname(__file__),'sample', 'google_home.html'),'r') as fp:
+    buff = fp.read()
+    try:
+        regex_adv_url_rewriter.cache_clear()
+    except:
+        pass
+    start_time = time()
+    regex_adv_url_rewriter.sub(regex_url_reassemble,buff)
+    infoprint('google_home.html',time()-start_time)
+
+with open(os.path.join(os.path.dirname(__file__),'sample', 'google_script.js'),'r') as fp:
+    buff = fp.read()
+    try:
+        regex_adv_url_rewriter.cache_clear()
+    except:
+        pass
+    start_time = time()
+    regex_adv_url_rewriter.sub(regex_url_reassemble,buff)
+    infoprint('google_script.js',time()-start_time)
