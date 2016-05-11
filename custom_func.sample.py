@@ -1,8 +1,5 @@
 # coding=utf-8
-import requests
 import re
-import config
-from EasyWebsiteMirror import add_ssrf_allowed_domain, get_group
 
 # regex patton from @stephenhay, via https://mathiasbynens.be/demo/url-regex
 REGEX_OF_URL = r'(https?|ftp):\/\/[^\s/$.?#].[^\s]*'
@@ -16,28 +13,22 @@ regex_twitter_data_expanded = re.compile(
     , flags=re.IGNORECASE)
 
 
-# Example for Twitter
-def handle_expand_url(mobj):
-    domain = get_group('domain', mobj)
-    if not domain:
-        return mobj.group()
-    add_ssrf_allowed_domain(domain)
-    if 'https' in get_group('scheme', mobj) or config.force_https_domains == 'ALL':
-        scheme_prefix = 'https-'
-    else:
-        scheme_prefix = ''
+def custom_response_text_rewriter(raw_text, content_mime, remote_url):
+    # Only text content (txt/html/css/js/json) would be passed to this function
 
-    return 'data-expanded-url="%s"' % ('/extdomains/' + scheme_prefix + domain + get_group('path', mobj))
+    # Tips: If you can use plain string.replace, DO NOT USE REGEX, because regex is hundreds times slower than string.replace
+    # string.replace won't cause performance problem
 
-
-def custom_response_html_rewriter(raw_text):
     # replace UBB image to image tag
     # eg. from [upload=jpg]http://foo.bar/blah.jpg[/upload]
     #     to <img src="http://foo.bar/blah.jpg"></img>
     raw_text = regex_ubb_img_rewriter.sub(r'<img src="\g<image_url>" style="max-width: 100%;"></img>', raw_text)
 
     # For twitter expand replace
-    regex_twitter_data_expanded.sub(handle_expand_url, raw_text)
+    regex_twitter_data_expanded.sub(demo__handle_expand_url, raw_text)
+
+    if 'search' in remote_url and (content_mime == 'text/html' or content_mime == 'application/json'):
+        raw_text = demo__google_result_open_in_new_tab(raw_text, content_mime)
 
     return raw_text
 
@@ -56,13 +47,16 @@ def custom_identity_verify(identity_dict):
 
 
 # just_another_demo_custom_identity_verify
-def just_another_demo_custom_identity_verify(identity_dict):
+def demo__custom_identity_verify(identity_dict):
     """
     For CC98 identity verify
 
     :type identity_dict: dict
     """
     import hashlib
+    import requests
+    import config
+
     if 'cc98_username' not in identity_dict or 'cc98_password' not in identity_dict:
         return False
 
@@ -86,3 +80,52 @@ def just_another_demo_custom_identity_verify(identity_dict):
             return False
     except:
         return False
+
+
+# Demo for Twitter
+def demo__handle_expand_url(mobj):
+    import config
+    from EasyWebsiteMirror import add_ssrf_allowed_domain, get_group
+
+    domain = get_group('domain', mobj)
+    if not domain:
+        return mobj.group()
+    add_ssrf_allowed_domain(domain)
+    if 'https' in get_group('scheme', mobj) or config.force_https_domains == 'ALL':
+        scheme_prefix = 'https-'
+    else:
+        scheme_prefix = ''
+
+    return 'data-expanded-url="%s"' % ('/extdomains/' + scheme_prefix + domain + get_group('path', mobj))
+
+
+def demo__google_result_open_in_new_tab(raw_text, content_mime):
+    """Force google search's result to open in new tab. to avoid iframe problem
+    在新标签页中打开google搜索结果
+    """
+
+    def hexlify_to_json(ascii_str):
+        buff = ''
+        for char in ascii_str:
+            if char in '\'\"<>&=':
+                buff += r'\x' + hex(ord(char))[2:]
+            else:
+                buff += char
+        buff = buff.replace('\\', '\\\\')
+        buff = buff.replace('/', r'\/')
+        return buff
+
+    if content_mime == 'application/json':
+        raw_text = raw_text.replace(
+            hexlify_to_json('<h3 class="r"><a href="'),
+            hexlify_to_json('<h3 class="r"><a target="_blank" href="')
+        )
+        raw_text = raw_text.replace(
+            hexlify_to_json('<h3 class="r"><a class="l" href="'),
+            hexlify_to_json('<h3 class="r"><a target="_blank" class="l" href="')
+        )
+    else:
+        raw_text = raw_text.replace('<h3 class="r"><a href="', '<h3 class="r"><a target="_blank" href="')
+        raw_text = raw_text.replace('<h3 class="r"><a class="l" href="', '<h3 class="r"><a target="_blank" class="l" href="')
+
+    return raw_text

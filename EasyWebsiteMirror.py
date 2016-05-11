@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.16.2-dev'
+__VERSION__ = '0.16.3-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -709,13 +709,13 @@ def response_content_rewrite(remote_resp_obj):
         if cchardet_available:
             remote_resp_obj.encoding = c_chardet(remote_resp_obj.content)
         resp_text = remote_resp_obj.text
-        # try to apply custom rewrite function if we got an html
+        # try to apply custom rewrite function
         try:
-            if custom_text_rewriter_enable and content_mime == 'text/html':
-                resp_text2 = custom_response_html_rewriter(resp_text)
+            if custom_text_rewriter_enable:
+                resp_text2 = custom_response_text_rewriter(resp_text, content_mime, remote_resp_obj.url)
                 resp_text = resp_text2
         except Exception as _e:  # just print err and fallback to normal rewrite
-            errprint('Custom Rewrite Function "custom_response_html_rewriter(text)" in custom_func.py ERROR', _e)
+            errprint('Custom Rewrite Function "custom_response_text_rewriter(text)" in custom_func.py ERROR', _e)
             traceback.print_exc()
 
         # then do the normal rewrites
@@ -1182,10 +1182,10 @@ if human_ip_verification_enabled:
 
 if custom_text_rewriter_enable:
     try:
-        from custom_func import custom_response_html_rewriter
+        from custom_func import custom_response_text_rewriter
     except:
         identity_verify_required = False
-        warnprint('Cannot import custom_response_html_rewriter custom_func.py,'
+        warnprint('Cannot import custom_response_text_rewriter custom_func.py,'
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
         traceback.print_exc()
         pass
