@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.16.1-dev'
+__VERSION__ = '0.16.2-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -92,7 +92,6 @@ url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
 url_rewrite_cache_hit_count = 0
 url_rewrite_cache_miss_count = 0
 
-
 # ########### PreCompile Regex ###############
 # Advanced url rewriter, see function response_text_rewrite()
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出url ####
@@ -115,15 +114,7 @@ regex_adv_url_rewriter = re.compile(
     r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
     flags=re.IGNORECASE
 )
-# Basic url rewriter for target main site, see function response_text_rewrite()
-regex_basic_main_url_rewriter = re.compile(
-    r'(https?:)?//' + re.escape(target_domain),
-    flags=re.IGNORECASE
-)
-regex_basic_main_url_escaped_rewriter = re.compile(  # TODO: Combine it together with regex_basic_main_url_rewriter
-    r'(https?:)?\\/\\/' + re.escape(target_domain),
-    flags=re.IGNORECASE
-)
+
 regex_extract_base64_from_embedded_url = re.compile(
     r'_ewm0(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._ewm1_\.[a-zA-Z\d]+\b')
 
@@ -134,6 +125,7 @@ regex_request_rewriter = re.compile(
     re.escape(my_host_name) + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
     flags=re.IGNORECASE)
 
+# Flask main app
 app = Flask(__name__)
 
 
@@ -739,45 +731,57 @@ def response_content_rewrite(remote_resp_obj):
         return remote_resp_obj.content
 
 
+def response_text_basic_rewrite(resp_text, domain, is_ext_domain):
+    if is_ext_domain:
+        ext_domain_str = '/extdomains/'
+        ext_domain_str_esc = r'\/extdomains\/'
+    else:
+        ext_domain_str = '/'
+        ext_domain_str_esc = r'\/'
+
+    # Explicit HTTPS scheme must be kept
+    resp_text = resp_text.replace('https://' + domain, myurl_prefix + ext_domain_str + 'https-' + domain)
+    resp_text = resp_text.replace(r'https:\/\/' + domain, myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
+
+    # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
+    _buff = '{0}{1}{2}{3}'.format(
+        myurl_prefix, ext_domain_str,
+        ('https-' if ('NONE' != force_https_domains)
+                     and (
+                         'ALL' == force_https_domains or domain in force_https_domains
+                     ) else ''),
+        domain)
+    _buff_esc = _buff.replace('/', r'\/')
+    resp_text = resp_text.replace('http://' + domain, _buff)
+    resp_text = resp_text.replace(r'http:\/\/' + domain, _buff_esc)
+    resp_text = resp_text.replace('//' + domain, _buff)
+    resp_text = resp_text.replace(r'\/\/' + domain, _buff_esc)
+
+    # rewrite "foo.domain.tld" and 'foo.domain.tld'
+    resp_text = resp_text.replace('"%s"' % domain, '\"' + my_host_name + ext_domain_str + domain + '\"')
+    resp_text = resp_text.replace("'%s'" % domain, "\'" + my_host_name + ext_domain_str + domain + "\'")
+
+    return resp_text
+
+
 def response_text_rewrite(resp_text):
     """
     rewrite urls in text-like content (html,css,js)
     :type resp_text: str
     """
 
-    # v0.9.2+: advanced url rewrite engine (based on previously CDN rewriter)
+    # v0.9.2+: advanced url rewrite engine
     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
 
     # basic url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-    resp_text = regex_basic_main_url_rewriter.sub(myurl_prefix, resp_text)
-    resp_text = regex_basic_main_url_escaped_rewriter.sub(myurl_prefix_escaped, resp_text)
+    resp_text = response_text_basic_rewrite(resp_text, target_domain, False)
 
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
     for domain in external_domains:
-        # Explicit HTTPS scheme must be kept
-        resp_text = resp_text.replace('https://' + domain, myurl_prefix + '/extdomains/' + 'https-' + domain)
-        resp_text = resp_text.replace(r'https:\/\/' + domain,  # TODO: Combine it with non-escaped version
-                                      myurl_prefix_escaped + r'\/extdomains\/' + 'https-' + domain)
-        # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-
-        buff = '{0}/extdomains/{1}{2}'.format(
-            myurl_prefix,
-            ('https-' if ('NONE' != force_https_domains)
-                         and (
-                             'ALL' == force_https_domains or domain in force_https_domains
-                         ) else ''),
-            domain)
-        resp_text = resp_text.replace('http://' + domain, buff, )
-        resp_text = resp_text.replace('http:\\/\\/' + domain, buff.replace('/', r'\/'))
-        resp_text = resp_text.replace('//' + domain, buff)
-        resp_text = resp_text.replace('\\/\\/' + domain, buff.replace('/', r'\/'), )
-
-        # rewrite "foo.domain.tld" and 'foo.domain.tld'
-        resp_text = resp_text.replace('"%s"' % domain, '\"' + my_host_name + '/extdomains/' + domain + '\"')
-        resp_text = resp_text.replace("'%s'" % domain, "\'" + my_host_name + '/extdomains/' + domain + "\'")
+        resp_text = response_text_basic_rewrite(resp_text, domain, True)
 
     return resp_text
 
