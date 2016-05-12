@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.17.0-dev'
+__VERSION__ = '0.17.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -57,6 +57,7 @@ cdn_domains_number = len(CDN_domains)
 request_local = threading.local()
 request_local.start_time = None
 request_local.cur_mime = ''
+request_local.cache_control = ''
 
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
@@ -105,7 +106,7 @@ regex_adv_url_rewriter = re.compile(
     # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
-    r"""(?P<domain_and_scheme>(https?:)?\\?/\\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
+    r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
     # url路径, 含参数 可选
     r"""(?P<path>[^\s;+$?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
@@ -475,9 +476,9 @@ def regex_url_reassemble(match_obj):
     quote_right = get_group('quote_right', match_obj)
     path = get_group('path', match_obj)
     match_domain = get_group('domain', match_obj)
-    domain_and_scheme = get_group('domain_and_scheme', match_obj)
+    scheme = get_group('scheme', match_obj)
     whole_match_string = match_obj.group()
-    if r"\/" in path or r"\/" in domain_and_scheme:
+    if r"\/" in path or r"\/" in scheme:
         require_slash_escape = True
         path = path.replace(r"\/", "/")
         # domain_and_scheme = domain_and_scheme.replace(r"\/", "/")
@@ -489,6 +490,10 @@ def regex_url_reassemble(match_obj):
         or ('url' not in prefix and 'import' not in prefix) and (not quote_left or quote_right == ')')
         # for "key":"value" type replace, we must have at least one '/' in url path (for the value to be regard as url)
         or (':' in prefix and '/' not in path)
+        # in javascript, those 'path' contains one or only two slash, should not be rewrited (for potential error)
+        # or (request_local.cur_mime == 'application/javascript' and path.count('/') < 2)
+        # in javascript, we only rewrite those with explicit scheme ones.
+        or (request_local.cur_mime == 'application/javascript' and not scheme)
         ):
         return whole_match_string
 
@@ -547,6 +552,8 @@ def regex_url_reassemble(match_obj):
 
     # else:  # request_local.cur_mime == 'application/javascript':
     #     replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
+    elif not scheme:
+        replace_to_scheme_domain = ''
     else:
         replace_to_scheme_domain = myurl_prefix
 
@@ -963,10 +970,16 @@ def request_remote_site_and_parse(actual_request_url):
     else:
         # extract response's mime to thread local var
         content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
+        request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control')
+        if 'no-store' in request_local.cache_control or 'must-revalidate' in request_local.cache_control:
+            _response_no_cache = True
+        else:
+            _response_no_cache = False
+
         request_local.cur_mime = extract_mime_from_content_type(content_type)
         # add url's MIME info to record, for MIME-based CDN rewrite
         # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
-        if mime_based_static_resource_CDN \
+        if mime_based_static_resource_CDN and not _response_no_cache \
                 and r.request.method == 'GET' and r.status_code == 200:
             # we should only cache GET method, and response code is 200
             # noinspection PyUnboundLocalVariable
@@ -984,7 +997,7 @@ def request_remote_site_and_parse(actual_request_url):
         # copy and parse remote response
         resp = copy_response(r, response_content_rewrite(r))
 
-        if local_cache_enable:  # storge entire our server's response (headers included)
+        if local_cache_enable and not _response_no_cache:  # storge entire our server's response (headers included)
             put_response_to_local_cache(actual_request_url, resp, request, r)
 
     if request_local.start_time is not None:
