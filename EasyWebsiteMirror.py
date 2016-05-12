@@ -970,7 +970,7 @@ def request_remote_site_and_parse(actual_request_url):
     else:
         # extract response's mime to thread local var
         content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
-        request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control')
+        request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
         if 'no-store' in request_local.cache_control or 'must-revalidate' in request_local.cache_control:
             _response_no_cache = True
         else:
