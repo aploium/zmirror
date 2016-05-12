@@ -180,6 +180,8 @@ cdn_redirect_code_if_cannot_hard_rewrite = 0
 #         也不用担心base64后的url会变得太长而出错, 对于过长的查询参数(暂定128字符以上),
 #             在base64之前会用gzip压缩, 总的长度会比原来的更短, 被gzip的参数在url中会多一个 z 标记
 #
+# 如果你看不懂或者这么长懒得看, 设置成 True 就行了, 不会出问题的
+#
 # Dependency 依赖:
 #     enable_static_resource_CDN == True
 #     mime_based_static_resource_CDN == True
@@ -193,6 +195,8 @@ cdn_redirect_code_if_cannot_hard_rewrite = 0
 #     ---> https://cdn.domain.com/a/b/_ewm0z_.[some long long base64 encoded string]._ewm1_.jpg
 # eg4:(no query string): https://foo.com/a (assume it returns an png) (no change)
 #     ---> https://cdn.domain.com/a  (no change)
+#
+# Recommended value: True
 cdn_redirect_encode_query_str_into_url = True
 
 # v0.14.0 first add; v0.14.1 change format
@@ -215,6 +219,28 @@ mime_to_use_cdn = {
     # 'image/vnd.microsoft.icon': 'ico', 'image/x-icon': 'ico',
 }
 
+# v0.17.0+
+# If explicitly given target's static resource domains,
+#   can significantly increase the hard CDN rewrite's hit rate. reduce soft redirect.
+# Static domains must ONLY serve static files.
+#   If you don't sure whether a domain is static domain or not, please don't add it.
+#   Missing some domains won't cause functional problems, but added the wrong ones will.
+# Side effect: the mime-based skip-first-access CDN won't affect these domains. may cause more CDN traffic
+# Only domains that contains in the former `external_domains` would have effect
+# See the sample in the bottom of this file for the example for google
+# 如果显示指定目标站的静态资源域名, 可以显著地增加硬CDN重写的覆盖率, 减少影响用户体验的软CDN重定向
+#   仅有能确保仅仅会提供静态资源的域名, 才可以被加入这个列表
+#   如果你不能确定一个域名是否是静态资源域名, 请不要将它加入到这一列表,
+#   漏掉一些静态资源域名不会出现功能上的问题, 但是把动态资源域名添加到这里, 很可能会出现功能性问题.
+# 只有在前面的 `external_domains` 选项中出现过的域名才会生效
+# 坏处: 被标记为静态资源的域名, 将[可能]无法享受 资源首次访问不CDN 带来的流量节省. 会带来更多的流量消耗
+# 在本文件底部有适用于google的静态域名列表
+target_static_domains = {
+    'static-cdn1.example.com',
+    'static-cdn2.example.com',
+    'static-cdn3.example.com',
+}
+
 # v0.14.0+ By disabling legacy extension based file recognize method, we could gain some performance advantage
 #     More, I'm no longer maintaining the codes of legacy cdn, it may have bugs
 # v0.14.0+ 由于有了基于MIME的CDN重写，可以关闭传统的后缀名重写，能提高一些性能
@@ -222,12 +248,12 @@ mime_to_use_cdn = {
 disable_legacy_file_recognize_method = True
 
 # Only file's extension(from it's url suffix), in this list, will it be cached in CDN
-static_file_extensions_list = [
+static_file_extensions_list = {
     'gif', 'jpeg', 'jpg', 'jpeg', 'png', 'ico', 'bmp', 'tif', 'webp',  # images
     'woff', 'woff2',  # web font
     'mp3', 'wmv', 'wav',  # sounds
     'js', 'css',  # static
-]
+}
 
 # Your CDN domains, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
 #     If your CDN storge your file permanently (like qiniu), you can disable local cache to save space,
@@ -368,25 +394,32 @@ url_custom_redirect_regex = (
 # target_domain = 'www.google.com.hk'
 # target_scheme = 'https://'
 # external_domains = (
+#     'www.google.com',
+#
+#     # Some Google Applications Domains
 #     'scholar.google.com',
 #     'scholar.google.com.hk',
+#     'books.google.com',
 #
-#     'www.google.com',
+#     # Additional Google Domains
+#     'apis.google.com',
+#     'accounts.google.com',
+#     'accounts.youtube.com',
+#     'id.google.com.hk',
+#     'id.google.com',
+#     'webcache.googleusercontent.com',
+#
+#     # Static domains
+#     'fonts.gstatic.com',
 #     'ssl.gstatic.com',
 #     'www.gstatic.com',
-#     'apis.google.com',
 #     'encrypted-tbn0.gstatic.com',
 #     'encrypted-tbn1.gstatic.com',
 #     'encrypted-tbn2.gstatic.com',
 #     'encrypted-tbn3.gstatic.com',
-#     'accounts.google.com',
-#     'accounts.youtube.com',
-#
-#     'books.google.com',
 #
 #     # For Google Map (Optional)
 #     'maps.google.com',
-#     'fonts.gstatic.com',
 #     'maps.gstatic.com',
 #     'lh1.googleusercontent.com',
 #     'lh2.googleusercontent.com',
@@ -405,3 +438,25 @@ url_custom_redirect_regex = (
 # is_deny_spiders_by_403 = True
 #
 # human_ip_verification_enabled = True  # Optional, if set to True, you should modify other settings of that section
+#
+# target_static_domains = {
+#     # For Google Main Site
+#     'ssl.gstatic.com',
+#     'www.gstatic.com',
+#     'encrypted-tbn0.gstatic.com',
+#     'encrypted-tbn1.gstatic.com',
+#     'encrypted-tbn2.gstatic.com',
+#     'encrypted-tbn3.gstatic.com',
+#     'fonts.gstatic.com',
+#
+#     # For Google Map (optional)
+#     'maps.gstatic.com',
+#     'lh1.googleusercontent.com',
+#     'lh2.googleusercontent.com',
+#     'lh3.googleusercontent.com',
+#     'lh4.googleusercontent.com',
+#     'lh5.googleusercontent.com',
+#
+#     # For zh wikipedia (Optional)
+#     'upload.wikipedia.org',
+# }

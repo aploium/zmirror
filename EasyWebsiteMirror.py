@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.16.5-dev'
+__VERSION__ = '0.17.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -69,6 +69,8 @@ if not cdn_redirect_code_if_cannot_hard_rewrite:
     cdn_redirect_encode_query_str_into_url = False
 if not local_cache_enable:
     cdn_redirect_encode_query_str_into_url = False
+if not isinstance(target_static_domains, set):
+    target_static_domains = set()
 
 if not is_use_proxy:
     requests_proxies = None
@@ -105,7 +107,7 @@ regex_adv_url_rewriter = re.compile(
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
     r"""(?P<domain_and_scheme>(https?:)?\\?/\\?/(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
     # url路径, 含参数 可选
-    r"""(?P<path>[^\s;+?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+    r"""(?P<path>[^\s;+$?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
     (r"""(\.(?P<ext>[-_a-z0-9]+?))?""" if not disable_legacy_file_recognize_method else '') +  # file ext
     # 查询字符串, 可选
@@ -543,10 +545,10 @@ def regex_url_reassemble(match_obj):
         # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
         replace_to_scheme_domain = my_host_scheme + CDN_domains[zlib.adler32(path.encode()) % cdn_domains_number]
 
-    else:  # request_local.cur_mime == 'application/javascript':
-        replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
-    # else:
-    #     replace_to_scheme_domain = myurl_prefix
+    # else:  # request_local.cur_mime == 'application/javascript':
+    #     replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
+    else:
+        replace_to_scheme_domain = myurl_prefix
 
     reassembled_url = urljoin(replace_to_scheme_domain, path)
     if _this_url_mime_cdn and cdn_redirect_encode_query_str_into_url:
@@ -748,17 +750,29 @@ def response_text_basic_rewrite_main(resp_text):
     return resp_text
 
 
-def response_text_basic_rewrite_ext(resp_text, domain):
+def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
     ext_domain_str = '/extdomains/'
     ext_domain_str_esc = r'\/extdomains\/'
 
+    # Static resources domains hard rewrite
+    if enable_static_resource_CDN and domain in target_static_domains:
+        # dbgprint(domain, 'is static domains')
+        cdn_id = domain_id if domain_id is not None else zlib.adler32(domain.encode())
+        _my_host_name = CDN_domains[cdn_id % cdn_domains_number]
+        _myurl_prefix = my_host_scheme + _my_host_name
+        _myurl_prefix_escaped = _myurl_prefix.replace('/', r'\/')
+    else:
+        _my_host_name = my_host_name
+        _myurl_prefix = myurl_prefix
+        _myurl_prefix_escaped = myurl_prefix_escaped
+
     # Explicit HTTPS scheme must be kept
-    resp_text = resp_text.replace('https://' + domain, myurl_prefix + ext_domain_str + 'https-' + domain)
-    resp_text = resp_text.replace(r'https:\/\/' + domain, myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
+    resp_text = resp_text.replace('https://' + domain, _myurl_prefix + ext_domain_str + 'https-' + domain)
+    resp_text = resp_text.replace(r'https:\/\/' + domain, _myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
     _buff = '{0}{1}{2}{3}'.format(
-        myurl_prefix, ext_domain_str,
+        _myurl_prefix, ext_domain_str,
         ('https-' if ('NONE' != force_https_domains)
                      and (
                          'ALL' == force_https_domains or domain in force_https_domains
@@ -771,8 +785,8 @@ def response_text_basic_rewrite_ext(resp_text, domain):
     resp_text = resp_text.replace(r'\/\/' + domain, _buff_esc)
 
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
-    resp_text = resp_text.replace('"%s"' % domain, '\"' + my_host_name + ext_domain_str + domain + '\"')
-    resp_text = resp_text.replace("'%s'" % domain, "\'" + my_host_name + ext_domain_str + domain + "\'")
+    resp_text = resp_text.replace('"%s"' % domain, '\"' + _my_host_name + ext_domain_str + domain + '\"')
+    resp_text = resp_text.replace("'%s'" % domain, "\'" + _my_host_name + ext_domain_str + domain + "\'")
 
     return resp_text
 
@@ -793,8 +807,8 @@ def response_text_rewrite(resp_text):
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
-    for domain in external_domains:
-        resp_text = response_text_basic_rewrite_ext(resp_text, domain)
+    for domain_id, domain in enumerate(external_domains):
+        resp_text = response_text_basic_rewrite_ext(resp_text, domain, domain_id)
 
     return resp_text
 
