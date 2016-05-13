@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.17.1-dev'
+__VERSION__ = '0.17.2-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -100,9 +100,9 @@ url_rewrite_cache_miss_count = 0
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出url ####
 # 如果需要阅读这个表达式, 请一定要在IDE(如PyCharm)的正则高亮下阅读
 regex_adv_url_rewriter = re.compile(
-    # 前缀, 必须有  href= src= url( (css) @import (css)  "key":"value" (js/json)
+    # 前缀, 必须有  'action='(表单) 'href='(链接) 'src=' 'url('(css) '@import'(css) '":'(js/json, "key":"value")
     # \s 表示空白字符,如空格tab
-    r"""(?P<prefix>\b(href\s*=|src\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
+    r"""(?P<prefix>\b((action|href|src)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
     # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
@@ -114,7 +114,7 @@ regex_adv_url_rewriter = re.compile(
     # 查询字符串, 可选
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
     # 右引号(可以是右括弧), 必须
-    r"""(?P<quote_right>["'\)]\W)""",  # right quote  "'
+    r"""(?P<quote_right>["'\)])(?P<right_suffix>\W)""",  # right quote  "'
     flags=re.IGNORECASE
 )
 
@@ -490,10 +490,12 @@ def regex_url_reassemble(match_obj):
         or ('url' not in prefix and 'import' not in prefix) and (not quote_left or quote_right == ')')
         # for "key":"value" type replace, we must have at least one '/' in url path (for the value to be regard as url)
         or (':' in prefix and '/' not in path)
+        # if we have quote_left, it must equals to the right
+        or (quote_left and quote_left != quote_right)
         # in javascript, those 'path' contains one or only two slash, should not be rewrited (for potential error)
         # or (request_local.cur_mime == 'application/javascript' and path.count('/') < 2)
         # in javascript, we only rewrite those with explicit scheme ones.
-        or (request_local.cur_mime == 'application/javascript' and not scheme)
+        or (('javascript' in request_local.cur_mime) and not scheme)
         ):
         return whole_match_string
 
@@ -507,7 +509,7 @@ def regex_url_reassemble(match_obj):
             remote_domain = remote_domain[6:]
     else:
         remote_domain = target_domain
-    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, v=5)
+    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
 
     domain = match_domain or remote_domain
     # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
@@ -565,13 +567,13 @@ def regex_url_reassemble(match_obj):
             escape_slash=require_slash_escape
         )
 
+    if require_slash_escape:
+        reassembled_url = reassembled_url.replace("/", r"\/")
+
     # reassemble!
     # prefix: src=  quote_left: "
     # path: /extdomains/target.com/foo/bar.js?love=luciaZ
-    reassembled = prefix + quote_left + reassembled_url + quote_right
-
-    if require_slash_escape:
-        reassembled = reassembled.replace("/", r"\/")
+    reassembled = prefix + quote_left + reassembled_url + quote_right + get_group('right_suffix', match_obj)
 
     # write the adv rewrite cache only if we disable CDN or we known whether this url is CDN-able
     if not mime_based_static_resource_CDN or _we_knew_this_url:
@@ -669,7 +671,7 @@ def copy_response(requests_response_obj, content=b''):
             for cookie_string in response_cookies_deep_copy(requests_response_obj):
                 resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
                 # resp.headers[header_key] = response_cookie_rewrite(requests_response_obj.headers[header_key])
-        if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
+    if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
 
     return resp
 
