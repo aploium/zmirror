@@ -266,23 +266,30 @@ CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 
 # ############## Individual Sites Isolation ##############
 # Referer based individual sites isolation (v0.18.0+)
-# If you got several individual sites (eg: google+wiki or twitter+twitter_mobile),
+# If you got several individual sites (eg: google+wiki),
 #   normally, most links will be rewrited quite well, however, if some links are generated dynamically,
 #   eg: /api/profile (which should be /extdomains/https-mobile.twitter.com/api/profile )
 # By enabling this option, we would able to detect and correct these. (detect by referer, correct using 301 redirection)
+# Warning: As for (most) not very complex sites, like wikipedia, this sites isolation mechanism works pretty well,
+#   but for some complex sites like twitter, even if you enabled the isolation, something would still go wrong,
+#   in this case, please us individual domains to hold each sites.
+#   such as: t.foo.com for twitterPC, mt.foo.com for twitterMobile
 #
 # 基于referer的镜像站隔离.
-# 如果你把几个相互独立的网站,比如 google+wiki 或者 twitterPC+twitter手机站, 放在同一台镜像服务器上时,
+# 如果你把几个相互独立的网站,比如 google+wikipedia, 放在同一台镜像服务器上时,
 #   绝大部分链接会被正确地重写, 但是对于某些动态生成的链接, 重写很可能会失效,
 #   比如twitter手机站注册时动态生成的:  /api/profile (正确应该是 /extdomains/https-mobile.twitter.com/api/profile )
-#   通过开启这个选项, 我们可以通过请求的referer检测出这种错误, 并通过301重定向来修正它们.
+#   通过开启这个选项, 我们可以通过请求的referer检测出这种错误, 并通过307重定向来修正它们.
+# 注意: 对于如wikipedia这样比较简单的网站来说, 站点隔离机制工作得非常好,
+#   但是对于某些逻辑特别复杂的站, 比如twitterPC-twitterMobile, 即使使用隔离机制, 仍然会导致子站不正常,
+#   这时候请用两个域名分别承载两个网站. 如 t.foo.com 是twitterPC mt.foo.com 是twitterMobile
 #
 enable_individual_sites_isolation = True
 
 # Isolated domains (sample) (v0.18.0+)
 # Only sites contained in the `external_domains` options, would have effect.
 # 只有包含在`external_domains`选项中的域名才会生效
-isolated_domains = {'mobile.twitter.com', 'zh.wikipedia.org'}
+isolated_domains = {'zh.m.wikipedia.org', 'zh.wikipedia.org'}
 
 # ############## Search Engine Deny ##############
 # If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'
@@ -385,10 +392,13 @@ url_custom_redirect_enable = False
 # It's an plain text list. Less function but higher performance, have higher priority than regex rules
 # eg: "http://foo.com/im/path.php?q=a#mark" , in this url, "/im/path.php" this is PATH
 url_custom_redirect_list = {
+    # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
+    # now, they are for sample only.
+    #
     # This example is to fix search bugs(in wiki) when you put google together with zh.wikipedia.org in one mirror.
-    '/w/load.php': '/extdomains/https-zh.wikipedia.org/w/load.php',
-    '/w/index.php': '/extdomains/https-zh.wikipedia.org/w/index.php',
-    '/w/api.php': '/extdomains/https-zh.wikipedia.org/w/api.php',
+    # '/w/load.php': '/extdomains/https-zh.wikipedia.org/w/load.php',
+    # '/w/index.php': '/extdomains/https-zh.wikipedia.org/w/index.php',
+    # '/w/api.php': '/extdomains/https-zh.wikipedia.org/w/api.php',
 
     # This example acts as an tinyurl program
     '/wiki': '/extdomains/https-zh.wikipedia.org/',
@@ -399,9 +409,12 @@ url_custom_redirect_list = {
 # Same as above, only the url PATH will be applied (maybe change in later version)
 # Please see https://docs.python.org/3.5/library/re.html#re.sub for more rules
 url_custom_redirect_regex = (
+    # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
+    # now, they are for sample only.
+    #
     # This example fix mobile wikipedia's search bug
     # will redirect /wiki/Some_wiki_page to /extdomains/https-zh.m.wikipedia.org/wiki/Some_wiki_page
-    (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
+    # (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
     # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
 )
 

@@ -42,8 +42,10 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.18.0-dev'
+__VERSION__ = '0.18.1-dev'
 __author__ = 'Aploium <i@z.codes>'
+
+# ########## Basic Init #############
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
@@ -52,6 +54,14 @@ ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
+
+# ## Get Target Domain's Root Domain ##
+_temp = target_domain.split('.')
+if len(_temp) <= 2 or len(_temp) == 3 and _temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
+    target_domain_root = target_domain
+    target_domain_root = target_domain
+else:
+    target_domain_root = '.'.join(_temp[1:])
 
 # ## thread local var ##
 request_local = threading.local()
@@ -827,12 +837,12 @@ def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
     resp_text = resp_text.replace(r'https:\/\/' + domain, _myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-    _buff = _myurl_prefix + ext_domain_str + get_ext_domain_inurl_scheme_prefix(domain) + domain
+    _buff = _my_host_name + ext_domain_str + get_ext_domain_inurl_scheme_prefix(domain) + domain
     _buff_esc = _buff.replace('/', r'\/')
-    resp_text = resp_text.replace('http://' + domain, _buff)
-    resp_text = resp_text.replace(r'http:\/\/' + domain, _buff_esc)
-    resp_text = resp_text.replace('//' + domain, _buff)
-    resp_text = resp_text.replace(r'\/\/' + domain, _buff_esc)
+    resp_text = resp_text.replace('http://' + domain, my_host_scheme + _buff)
+    resp_text = resp_text.replace(r'http:\/\/' + domain, my_host_scheme.replace('/', r'\/') + _buff_esc)
+    resp_text = resp_text.replace('//' + domain, '//' + _buff)
+    resp_text = resp_text.replace(r'\/\/' + domain, r'\/\/' + _buff_esc)
 
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace('"%s"' % domain, '\"' + _my_host_name + ext_domain_str + domain + '\"')
@@ -859,6 +869,12 @@ def response_text_rewrite(resp_text):
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
     for domain_id, domain in enumerate(external_domains):
         resp_text = response_text_basic_rewrite_ext(resp_text, domain, domain_id)
+
+    # for cookies set string (in js) replace
+    # eg: ".twitter.com" --> "foo.com"
+    resp_text = resp_text.replace('\".' + target_domain_root + '\"', '\"' + my_host_name + '\"')
+    resp_text = resp_text.replace("\'." + target_domain_root + "\'", "\'" + my_host_name + "\'")
+    resp_text = resp_text.replace("domain=." + target_domain_root + "\'", "domain=" + my_host_name)
 
     return resp_text
 
