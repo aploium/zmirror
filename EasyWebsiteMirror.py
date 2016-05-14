@@ -4,10 +4,12 @@ import os
 
 os.chdir(os.path.dirname(__file__))
 import traceback
+import pickle
 from datetime import datetime, timedelta
 import re
 import base64
 import zlib
+import gzip
 from time import time
 from html import escape as html_escape
 import threading
@@ -42,7 +44,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.18.5-dev'
+__VERSION__ = '0.18.6-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -74,7 +76,6 @@ request_local = threading.local()
 request_local.start_time = None
 request_local.cur_mime = ''
 request_local.cache_control = ''
-request_local.remote_domain = ''
 
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
@@ -1092,15 +1093,17 @@ def request_remote_site_and_parse(actual_request_url):
             dbgprint('CacheHit,Return')
             if request_local.start_time is not None:
                 resp.headers.set('X-CP-Time', "%.4f" % (time() - request_local.start_time))
-            return resp  # If cache hit, just skip next steps
+            return resp  # If cache hit, just skip the next steps
 
     try:  # send request to remote server
+
+        data = client_requests_bin_rewrite(request.get_data())
         # server's request won't follow 301 or 302 redirection
         r, req_time = send_request(
             actual_request_url,
             method=request.method,
             headers=client_header,
-            data=client_requests_bin_rewrite(request.get_data()),
+            data=data  # client_requests_bin_rewrite(request.get_data()),
         )
     except Exception as e:
         errprint(e)  # ERROR :( so sad
@@ -1143,6 +1146,16 @@ def request_remote_site_and_parse(actual_request_url):
         # remote request time should be excluded when calculating total time
         resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
     resp.headers.add('X-EWM-Version', __VERSION__)
+
+    if developer_dump_all_traffics:
+        if not os.path.exists('traffic'):
+            os.mkdir('traffic')
+        _time_str = datetime.now().strftime('traffic_%Y-%m-%d_%H:%M:%S')
+        try:
+            pickle.dump((_time_str, repr(request.url), repr(request.headers), repr(request.get_data()), r, resp),
+                        gzip.open(os.path.join('traffic', _time_str + '.dump'), 'wb'))
+        except:
+            traceback.print_exc()
 
     return resp
 

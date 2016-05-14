@@ -448,6 +448,12 @@ url_custom_redirect_regex = (
 #   It will slow down the calculate speed, set to None in production environment, or an string to trace
 developer_string_trace = None
 
+# v0.18.6+ Dump all traffics (exclude cached)
+# If set to True, all traffic objects would be dumped to an pickle file,
+#   Include: time, flask request object, requests response object, our server's (flask) response object
+developer_dump_all_traffics = False
+
+
 # #####################################################
 # ###################### SAMPLE #######################
 # #####################################################
