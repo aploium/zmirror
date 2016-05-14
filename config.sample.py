@@ -110,10 +110,11 @@ mime_based_static_resource_CDN = True
 # Normally, we are trying to rewrite the URL in document(html/css/js) hard-code,
 # However, some times we cannot rewrite CDN resource in document itself(or it's generated dynamically)
 # Don't worry, we can return an redirect order to our client.
-# Valid values(number) are 0 301 302 307 , 0 for disable redirect, serve these resources by our own
+# Valid values(number) are 0 301 307 , 0 for disable redirect, serve these resources by our own
 #     301 (recommended) means permanently redirect. 302 are equal to 307 means temporary redirect
 #     If use 301, client will skip us and directly turn to the CDN if it need this resource again
-#     302 or 307 means client will ask us again if it need this resource again
+#     !!!! SHOULD NOT USE 302, because post data would lost
+#     307 means client will ask us again if it need this resource again
 # Only GET request would be redirected to CDN
 # To avoid redirection loop, browsers with CDN fetcher's User-Agent would never be redirected
 #     particle match is OK. No regex, plain text match only.
@@ -126,10 +127,11 @@ mime_based_static_resource_CDN = True
 # 但是这并不总对所有资源生效, 有时候并不能直接在文本中改写静态资源到CDN上，比如说是动态组装的url，
 # 这时候我们可以通过返回重定向信息给浏览器，软性重定向到CDN
 # 仅有GET请求会被重定向到CDN
-# 允许的值(数字)为 0 301 302 307
+# 允许的值(数字)为 0 301 307
 #     0 表示关闭, 不软性重定向到CDN
 #     301 (推荐)表示永久性重定向, 在接下来很长一段时间内, 下次浏览器需要此资源时会跳过我们，直接请求CDN
-#     302 和 307 表示临时重定向，重定向仅此次生效, 下次需要时仍然会向我们请求
+#     !!!!!! 绝对不要使用302, 否则POST数据会丢失
+#     307 表示临时重定向，重定向仅此次生效, 下次需要时仍然会向我们请求
 # 为了避免重定向循环, User-Agent带有CDN特征字符的请求不会被重定向，只需要部分匹配即可
 # ### 请务必先弄清楚你的CDN提供商的机器人的UA, 确保放行它们后再启用本选项 ###
 #     请找出能标示它的UA特征串, 并填写在 spider_ua_white_list 或 global_ua_white_name 中
@@ -261,6 +263,26 @@ static_file_extensions_list = {
 #
 # example: ('cdn1.example.com','cdn2.example.com','cdn3.example.com')
 CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
+
+# ############## Individual Sites Isolation ##############
+# Referer based individual sites isolation (v0.18.0+)
+# If you got several individual sites (eg: google+wiki or twitter+twitter_mobile),
+#   normally, most links will be rewrited quite well, however, if some links are generated dynamically,
+#   eg: /api/profile (which should be /extdomains/https-mobile.twitter.com/api/profile )
+# By enabling this option, we would able to detect and correct these. (detect by referer, correct using 301 redirection)
+#
+# 基于referer的镜像站隔离.
+# 如果你把几个相互独立的网站,比如 google+wiki 或者 twitterPC+twitter手机站, 放在同一台镜像服务器上时,
+#   绝大部分链接会被正确地重写, 但是对于某些动态生成的链接, 重写很可能会失效,
+#   比如twitter手机站注册时动态生成的:  /api/profile (正确应该是 /extdomains/https-mobile.twitter.com/api/profile )
+#   通过开启这个选项, 我们可以通过请求的referer检测出这种错误, 并通过301重定向来修正它们.
+#
+enable_individual_sites_isolation = True
+
+# Isolated domains (sample) (v0.18.0+)
+# Only sites contained in the `external_domains` options, would have effect.
+# 只有包含在`external_domains`选项中的域名才会生效
+isolated_domains = {'mobile.twitter.com', 'zh.wikipedia.org'}
 
 # ############## Search Engine Deny ##############
 # If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'

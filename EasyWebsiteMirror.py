@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.17.2-dev'
+__VERSION__ = '0.18.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
@@ -58,6 +58,7 @@ request_local = threading.local()
 request_local.start_time = None
 request_local.cur_mime = ''
 request_local.cache_control = ''
+request_local.remote_domain = ''
 
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
@@ -72,6 +73,14 @@ if not local_cache_enable:
     cdn_redirect_encode_query_str_into_url = False
 if not isinstance(target_static_domains, set):
     target_static_domains = set()
+
+if not enable_individual_sites_isolation:
+    isolated_domains = set()
+else:
+    for isolated_domain in isolated_domains:
+        if isolated_domain not in external_domains_set:
+            warnprint('An isolated domain:', isolated_domain,
+                      'would not have effect because it did not appears in the `external_domains` list')
 
 if not is_use_proxy:
     requests_proxies = None
@@ -97,8 +106,9 @@ url_rewrite_cache_miss_count = 0
 
 # ########### PreCompile Regex ###############
 # Advanced url rewriter, see function response_text_rewrite()
-# #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出url ####
+# #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出长得类似于url的东西 ####
 # 如果需要阅读这个表达式, 请一定要在IDE(如PyCharm)的正则高亮下阅读
+# 这个正则并不保证匹配到的东西一定是url, 在 regex_url_reassemble() 中会进行进一步验证是否是url
 regex_adv_url_rewriter = re.compile(
     # 前缀, 必须有  'action='(表单) 'href='(链接) 'src=' 'url('(css) '@import'(css) '":'(js/json, "key":"value")
     # \s 表示空白字符,如空格tab
@@ -108,7 +118,7 @@ regex_adv_url_rewriter = re.compile(
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
     r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
     # url路径, 含参数 可选
-    r"""(?P<path>[^\s;+$?#'"]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
+    r"""(?P<path>[^\s;+$?#'"\{}]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
     (r"""(\.(?P<ext>[-_a-z0-9]+?))?""" if not disable_legacy_file_recognize_method else '') +  # file ext
     # 查询字符串, 可选
@@ -251,6 +261,47 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
             result = result.replace('/', r'\/')
         # dbgprint('embed:', real_url_raw, 'to:', result)
         return result
+
+
+def extract_real_domain_from_url_may_have_extdomains(extdomains_url=None):
+    """[http://foo.bar]/extdomains/foobar.com/path --> ('foboar.com', False), JSON supported
+        return (real_domain, is_https)
+    """
+    if extdomains_url is None:
+        extdomains_url = request.path
+    extdomains_pos = extdomains_url.find('extdomains')
+    if extdomains_pos != -1:
+        # 10 == len('extdomains')
+        if extdomains_url[extdomains_pos + 10] == '\\':
+            domain_end_pos = extdomains_url.find('\\', extdomains_pos + 12)
+            real_domain = extdomains_url[extdomains_pos + 12:domain_end_pos]
+            real_domain.replace('\\.', '.')
+        else:
+            domain_end_pos = extdomains_url.find('/', extdomains_pos + 11)
+            real_domain = extdomains_url[extdomains_pos + 11:domain_end_pos]
+        remote_path = extdomains_url[domain_end_pos:]
+
+        if real_domain[:6] == 'https-':
+            real_domain = real_domain[6:]
+            is_https = True
+        else:
+            is_https = False
+        # dbgprint(extdomains_url,'extract_real_domain_from_url_may_have_extdomains', real_domain, is_https)
+        return real_domain, is_https, remote_path
+
+    else:
+        return target_domain, target_scheme == 'https://', extdomains_url
+
+
+def get_ext_domain_inurl_scheme_prefix(ext_domain):
+    if force_https_domains == 'NONE':
+        return ''
+    if force_https_domains == 'ALL':
+        return 'https-'
+    if ext_domain in force_https_domains:
+        return 'https-'
+    else:
+        return ''
 
 
 def add_ssrf_allowed_domain(domain):
@@ -478,6 +529,8 @@ def regex_url_reassemble(match_obj):
     match_domain = get_group('domain', match_obj)
     scheme = get_group('scheme', match_obj)
     whole_match_string = match_obj.group()
+    # dbgprint('prefix', prefix, 'quote_left', quote_left, 'quote_right', quote_right,
+    #          'path', path, 'match_domain', match_domain, 'scheme', scheme, 'whole', whole_match_string)
     if r"\/" in path or r"\/" in scheme:
         require_slash_escape = True
         path = path.replace(r"\/", "/")
@@ -497,24 +550,19 @@ def regex_url_reassemble(match_obj):
         # in javascript, we only rewrite those with explicit scheme ones.
         or (('javascript' in request_local.cur_mime) and not scheme)
         ):
+        # dbgprint('returned_un_touch', whole_match_string)
         return whole_match_string
 
-    remote_path = request.path
-    if request.path[:11] == '/extdomains':
-        remote_path_raw = request.path[12:]
-        find_pos = remote_path_raw.find('/')
-        remote_path = remote_path_raw[find_pos:]
-        remote_domain = remote_path_raw[:find_pos]
-        if remote_domain[:6] == 'https-':
-            remote_domain = remote_domain[6:]
-    else:
-        remote_domain = target_domain
+    remote_domain, _is_remote_https, remote_path = extract_real_domain_from_url_may_have_extdomains()
+    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
+    # dbgprint(match_obj.groups(), v=5)
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
 
     domain = match_domain or remote_domain
     # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
+        # dbgprint('return untouched because domain not match', domain, whole_match_string)
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
@@ -522,13 +570,12 @@ def regex_url_reassemble(match_obj):
     path = urljoin(remote_path, path)
     # dbgprint('middle path', path, v=5)
     url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
+    # dbgprint('url_no_scheme', url_no_scheme)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
-        if force_https_domains != 'NONE' and (force_https_domains == 'ALL' or domain in force_https_domains):
-            scheme_prefix = 'https-'
-        else:
-            scheme_prefix = ''
+        scheme_prefix = get_ext_domain_inurl_scheme_prefix(domain)
         path = '/extdomains/' + scheme_prefix + url_no_scheme
+
     # dbgprint('final_path', path, v=5)
     if mime_based_static_resource_CDN and url_no_scheme in url_to_use_cdn:
         # dbgprint('We Know:', url_no_scheme,v=5)
@@ -579,7 +626,7 @@ def regex_url_reassemble(match_obj):
     if not mime_based_static_resource_CDN or _we_knew_this_url:
         url_rewrite_cache[match_obj.group()] = reassembled  # write cache
         url_rewrite_cache_miss_count += 1
-
+    # dbgprint('---------------------', v=5)
     return reassembled
 
 
@@ -780,13 +827,7 @@ def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
     resp_text = resp_text.replace(r'https:\/\/' + domain, _myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-    _buff = '{0}{1}{2}{3}'.format(
-        _myurl_prefix, ext_domain_str,
-        ('https-' if ('NONE' != force_https_domains)
-                     and (
-                         'ALL' == force_https_domains or domain in force_https_domains
-                     ) else ''),
-        domain)
+    _buff = _myurl_prefix + ext_domain_str + get_ext_domain_inurl_scheme_prefix(domain) + domain
     _buff_esc = _buff.replace('/', r'\/')
     resp_text = resp_text.replace('http://' + domain, _buff)
     resp_text = resp_text.replace(r'http:\/\/' + domain, _buff_esc)
@@ -835,15 +876,14 @@ def response_cookie_rewrite(cookie_string):
 
 
 # ################# Begin Client Request Handler #################
-def extract_client_header(income_request):
+def extract_client_header():
     """
     Extract necessary client header, filter out some.
-    :param income_request: flask request object
     :return: dict client request headers
     """
     outgoing_head = {}
-    if verbose_level >= 3: dbgprint('ClientRequestHeaders:', income_request.headers)
-    for head_name, head_value in income_request.headers:
+    if verbose_level >= 3: dbgprint('ClientRequestHeaders:', request.headers)
+    for head_name, head_value in request.headers:
         head_name_l = head_name.lower()
         if (head_name_l not in ('host', 'content-length', 'content-type')) \
                 or (head_name_l == 'content-type' and head_value != ''):
@@ -947,7 +987,7 @@ def request_remote_site_and_parse(actual_request_url):
 
             return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
 
-    client_header = extract_client_header(request)
+    client_header = extract_client_header()
 
     if local_cache_enable:
         resp = try_get_cached_response(actual_request_url, client_header)
@@ -1036,6 +1076,13 @@ def filter_client_request():
 
 
 def is_client_request_need_redirect():
+    if enable_individual_sites_isolation and 'extdomains' not in request.path and request.headers.get('referer'):
+        reference_domain, _is_https, _rp = extract_real_domain_from_url_may_have_extdomains(request.headers.get('referer'))
+        if reference_domain in isolated_domains:
+            return redirect('/extdomains/' + ('https-' if _is_https else '')
+                            + reference_domain + extract_url_path_and_query(request.url),
+                            code=307)
+
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
             redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path])

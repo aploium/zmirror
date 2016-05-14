@@ -1,6 +1,6 @@
 # coding=utf-8
 import re
-from time import time
+from time import time,sleep
 import os
 from config import *
 from EasyWebsiteMirror import regex_adv_url_rewriter, regex_url_reassemble, \
@@ -172,6 +172,11 @@ test_cases = (
         r"""background-image: url("/extdomains/https-apis.google.com/some23333_/url/xx/skin/default/tabs_m_tile.gif");""",
     ),
     (
+        r"""background-image: url('xx/skin/default/tabs_m_tile.gif");""",
+        r"""background-image: url('xx/skin/default/tabs_m_tile.gif");""",
+        r"""background-image: url('xx/skin/default/tabs_m_tile.gif");""",
+    ),
+    (
         r"""} else 2 == e ? this.Ea ? this.Ea.style.display = "" : (e = QS_XA("sbsb_j " + this.$.ef), f = QS_WA("a"), f.id = "sbsb_f", f.href = "http://www.google.com/support/websearch/bin/answer.py?hl=" + this.$.Xe + "&answer=106230", f.innerHTML = this.$.$k, e.appendChild(f), e.onmousedown = QS_c(this.Ia, this), this.Ea = e, this.ma.appendChild(this.Ea)) : 3 == e ? (e = this.cf.pop(), e || (e = QS_WA("li"), e.VLa = !0, f = QS_WA("div", "sbsb_e"), e.appendChild(f)), this.qa.appendChild(e)) : QS_rhb(this, e) &&""",
         r"""} else 2 == e ? this.Ea ? this.Ea.style.display = "" : (e = QS_XA("sbsb_j " + this.$.ef), f = QS_WA("a"), f.id = "sbsb_f", f.href = "http://g.zju.tools/extdomains/https-www.google.com/support/websearch/bin/answer.py?hl=" + this.$.Xe + "&answer=106230", f.innerHTML = this.$.$k, e.appendChild(f), e.onmousedown = QS_c(this.Ia, this), this.Ea = e, this.ma.appendChild(this.Ea)) : 3 == e ? (e = this.cf.pop(), e || (e = QS_WA("li"), e.VLa = !0, f = QS_WA("div", "sbsb_e"), e.appendChild(f)), this.qa.appendChild(e)) : QS_rhb(this, e) &&""",
         r"""} else 2 == e ? this.Ea ? this.Ea.style.display = "" : (e = QS_XA("sbsb_j " + this.$.ef), f = QS_WA("a"), f.id = "sbsb_f", f.href = "http://g.zju.tools/extdomains/https-www.google.com/support/websearch/bin/answer.py?hl=" + this.$.Xe + "&answer=106230", f.innerHTML = this.$.$k, e.appendChild(f), e.onmousedown = QS_c(this.Ia, this), this.Ea = e, this.ma.appendChild(this.Ea)) : 3 == e ? (e = this.cf.pop(), e || (e = QS_WA("li"), e.VLa = !0, f = QS_WA("div", "sbsb_e"), e.appendChild(f)), this.qa.appendChild(e)) : QS_rhb(this, e) &&""",
@@ -216,30 +221,35 @@ test_cases = (
         r"""action="/" """,
         r"""action="/extdomains/https-apis.google.com/" """,
     ),
+    (
+        r"""href='{{url}}' """,
+        r"""href='{{url}}' """,
+        r"""href='{{url}}' """,
+    ),
 )
-ColorfulPyPrint_set_verbose_level(2)
+ColorfulPyPrint_set_verbose_level(5)
 
 
 # test case 1
-class DbgRequest1:
-    path = "/some23333_/url/"
-
-
-EasyWebsiteMirror.set_request_for_debug(DbgRequest1)
-fail_count = 0
-for test_case in test_cases:
-    resp_text = test_case[0]
-    correct = test_case[1]
-
-    resp_text_raw = resp_text
-    resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
-    if resp_text != correct:
-        errprint('TestCase1\nRAW:      ', resp_text_raw, '\nRESULT:   ', resp_text, '\nCORRECT:  ', correct)
-        fail_count += 1
-if not fail_count:
-    infoprint('TestCase1: All', len(test_cases), 'tests passed')
-else:
-    warnprint('TestCase1: Failed in ', fail_count, 'tests')
+# class DbgRequest1:
+#     path = "/some23333_/url/"
+#
+#
+# EasyWebsiteMirror.set_request_for_debug(DbgRequest1)
+# fail_count = 0
+# for test_case in test_cases:
+#     resp_text = test_case[0]
+#     correct = test_case[1]
+#
+#     resp_text_raw = resp_text
+#     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
+#     if resp_text != correct:
+#         errprint('TestCase1\nRAW:      ', resp_text_raw, '\nRESULT:   ', resp_text, '\nCORRECT:  ', correct)
+#         fail_count += 1
+# if not fail_count:
+#     infoprint('TestCase1: All', len(test_cases), 'tests passed')
+# else:
+#     warnprint('TestCase1: Failed in ', fail_count, 'tests')
 
 
 # test case 2
@@ -270,6 +280,7 @@ else:
 infoprint('Begin Performance Test')
 
 with open(os.path.join(os.path.dirname(__file__), 'sample', 'google_home.html'), 'r') as fp:
+    ColorfulPyPrint_set_verbose_level(0)
     buff = fp.read()
     try:
         regex_adv_url_rewriter.cache_clear()
@@ -277,14 +288,17 @@ with open(os.path.join(os.path.dirname(__file__), 'sample', 'google_home.html'),
         pass
     start_time = time()
     regex_adv_url_rewriter.sub(regex_url_reassemble, buff)
+    ColorfulPyPrint_set_verbose_level(5)
     infoprint('google_home.html', time() - start_time)
 
 with open(os.path.join(os.path.dirname(__file__), 'sample', 'google_script.js'), 'r') as fp:
+    ColorfulPyPrint_set_verbose_level(0)
     buff = fp.read()
     try:
         regex_adv_url_rewriter.cache_clear()
     except:
         pass
     start_time = time()
+    ColorfulPyPrint_set_verbose_level(5)
     regex_adv_url_rewriter.sub(regex_url_reassemble, buff)
     infoprint('google_script.js', time() - start_time)
