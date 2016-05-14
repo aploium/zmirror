@@ -42,10 +42,11 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.18.3-dev'
+__VERSION__ = '0.18.4-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
+ColorfulPyPrint_set_verbose_level(verbose_level)
 my_host_name_no_port = my_host_name
 if my_host_port is not None:
     my_host_name += ':' + str(my_host_port)
@@ -56,7 +57,6 @@ static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
 allowed_domains_set.add(target_domain)
-ColorfulPyPrint_set_verbose_level(verbose_level)
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
@@ -64,7 +64,6 @@ cdn_domains_number = len(CDN_domains)
 # ## Get Target Domain's Root Domain ##
 _temp = target_domain.split('.')
 if len(_temp) <= 2 or len(_temp) == 3 and _temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
-    target_domain_root = target_domain
     target_domain_root = target_domain
 else:
     target_domain_root = '.'.join(_temp[1:])
@@ -791,9 +790,12 @@ def response_content_rewrite(remote_resp_obj):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
         if verbose_level >= 3: dbgprint('Text-like', content_mime, remote_resp_obj.text[:15], remote_resp_obj.content[:15])
 
-        # simply copy the raw text, for custom rewriter function first.
-        if cchardet_available:
+        if force_decode_remote_using_encode is not None:
+            remote_resp_obj.encoding = force_decode_remote_using_encode
+        elif cchardet_available:  # detect the encoding using cchardet (if we have)
             remote_resp_obj.encoding = c_chardet(remote_resp_obj.content)
+
+        # simply copy the raw text, for custom rewriter function first.
         resp_text = remote_resp_obj.text
 
         if developer_string_trace is not None and developer_string_trace in resp_text:
@@ -916,7 +918,7 @@ def response_text_rewrite(resp_text):
     # eg: ".twitter.com" --> "foo.com"
     resp_text = resp_text.replace('\".' + target_domain_root + '\"', '\"' + my_host_name_no_port + '\"')
     resp_text = resp_text.replace("\'." + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
-    resp_text = resp_text.replace("domain=." + target_domain_root + "\'", "domain=" + my_host_name_no_port)
+    resp_text = resp_text.replace("domain=." + target_domain_root, "domain=" + my_host_name_no_port)
 
     if developer_string_trace is not None and developer_string_trace in resp_text:
         infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
@@ -975,6 +977,39 @@ def client_requests_text_rewrite(raw_text):
     if verbose_level >= 3 and raw_text != replaced:
         dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
     return replaced
+
+
+def client_requests_bin_rewrite(raw_bin):
+    """
+
+    :type raw_bin: byte
+    """
+    if raw_bin is None or len(raw_bin) > 8192:
+        return raw_bin
+    else:
+        _str_buff = my_host_name + '/extdomains'
+
+        for _str_buff2 in (_str_buff + '/https-', _str_buff + '/', _str_buff):
+            raw_bin = raw_bin.replace(quote_plus(_str_buff2.replace('/', r'\/')).encode(), b'')
+            raw_bin = raw_bin.replace(quote_plus(_str_buff2).encode(), b'')
+            raw_bin = raw_bin.replace(_str_buff2.replace('/', r'\/').encode(), b'')
+            raw_bin = raw_bin.replace(_str_buff2.encode(), b'')
+
+        raw_bin = raw_bin.replace(quote_plus(my_host_name).encode(), quote_plus(target_domain).encode())
+        raw_bin = raw_bin.replace(my_host_name.encode(), target_domain.encode())
+        raw_bin = raw_bin.replace(my_host_name_no_port.encode(), target_domain.encode())
+
+        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2Fhttps-', b'')
+        raw_bin = raw_bin.replace(b'%2Fextdomains%2Fhttps-', b'')
+        raw_bin = raw_bin.replace(b'\\/extdomains\\/https-', b'')
+        raw_bin = raw_bin.replace(b'/extdomains/https-', b'')
+
+        raw_bin = raw_bin.replace(b'%2Fextdomains%2F', b'')
+        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2F', b'')
+        raw_bin = raw_bin.replace(b'\\/extdomains\\/', b'')
+        raw_bin = raw_bin.replace(b'/extdomains/', b'')
+
+        return raw_bin
 
 
 @lru_cache(maxsize=8192)
@@ -1066,7 +1101,7 @@ def request_remote_site_and_parse(actual_request_url):
             actual_request_url,
             method=request.method,
             headers=client_header,
-            data=request.get_data(),
+            data=client_requests_bin_rewrite(request.get_data()),
         )
     except Exception as e:
         errprint(e)  # ERROR :( so sad

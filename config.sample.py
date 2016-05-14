@@ -73,6 +73,17 @@ requests_proxies = dict(
     https='https://127.0.0.1:8123',
 )
 
+# ############## Misc Settings ##############
+# v0.18.4+ for some modern websites (google/wiki, etc), we can assume it well always use utf-8 encoding.
+#   or for some old-styled sites, we could also force the program to use gbk encoding (just for example)
+# this should reduce the content encoding detect time.
+# 对于现代化的站点, 如google/wiki, 我们有理由相信它全站使用了utf-8编码, 于是我们可以显式指定使用utf-8来进行解码
+#   这样可以避免潜在的编码检测错误(比如一大堆ascii中混杂了一个utf-8字符, 可能会被检测成ascii而造成解码错误), 并且可以提升性能
+#   对于一些古老的站点, 强制使用如gbk之类的编码进行解码也是可以的
+# set None to disable it, 'utf-8' for utf-8
+# 设置为 None 表示关闭显式编码指定, 'utf-8' 代表utf-8
+force_decode_remote_using_encode = None
+
 # #####################################################
 # ################# ADVANCED Settings #################
 # #####################################################
