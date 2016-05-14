@@ -226,6 +226,18 @@ test_cases = (
         r"""href='{{url}}' """,
         r"""href='{{url}}' """,
     ),
+    (
+        r"""function ctu(oi,ct){var link = document && document.referrer;var esc_link = "";var e = window && window.encodeURIComponent ?encodeURIComponent :escape;if (link){esc_link = e(link);}
+new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);return false;}
+</script></head><body><div class="_lFe"><div class="_kFe"><font style="font-size:larger"></div></div><div class="_jFe">&nb href="https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91">https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91</a><br>&nbsphref="#" onclick="return go_back();" onmousedown="ctu('unauthorizedredirect','originlink');><br></div></body></html> """,
+        r"""function ctu(oi,ct){var link = document && document.referrer;var esc_link = "";var e = window && window.encodeURIComponent ?encodeURIComponent :escape;if (link){esc_link = e(link);}
+new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);return false;}
+</script></head><body><div class="_lFe"><div class="_kFe"><font style="font-size:larger"></div></div><div class="_jFe">&nb href="https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91">https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91</a><br>&nbsphref="#" onclick="return go_back();" onmousedown="ctu('unauthorizedredirect','originlink');><br></div></body></html> """,
+        r"""function ctu(oi,ct){var link = document && document.referrer;var esc_link = "";var e = window && window.encodeURIComponent ?encodeURIComponent :escape;if (link){esc_link = e(link);}
+new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);return false;}
+</script></head><body><div class="_lFe"><div class="_kFe"><font style="font-size:larger"></div></div><div class="_jFe">&nb href="https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91">https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91</a><br>&nbsphref="#" onclick="return go_back();" onmousedown="ctu('unauthorizedredirect','originlink');><br></div></body></html> """,
+    ),
+
 )
 ColorfulPyPrint_set_verbose_level(5)
 

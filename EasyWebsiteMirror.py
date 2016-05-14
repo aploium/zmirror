@@ -11,7 +11,7 @@ import zlib
 from time import time
 from html import escape as html_escape
 import threading
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
@@ -42,10 +42,16 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.18.1-dev'
+__VERSION__ = '0.18.3-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
+my_host_name_no_port = my_host_name
+if my_host_port is not None:
+    my_host_name += ':' + str(my_host_port)
+    my_host_name_urlencoded = quote_plus(my_host_name)
+else:
+    my_host_name_urlencoded = my_host_name
 static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
@@ -119,7 +125,7 @@ url_rewrite_cache_miss_count = 0
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出长得类似于url的东西 ####
 # 如果需要阅读这个表达式, 请一定要在IDE(如PyCharm)的正则高亮下阅读
 # 这个正则并不保证匹配到的东西一定是url, 在 regex_url_reassemble() 中会进行进一步验证是否是url
-regex_adv_url_rewriter = re.compile(
+regex_adv_url_rewriter = re.compile(  # TODO: Add non-standard port support
     # 前缀, 必须有  'action='(表单) 'href='(链接) 'src=' 'url('(css) '@import'(css) '":'(js/json, "key":"value")
     # \s 表示空白字符,如空格tab
     r"""(?P<prefix>\b((action|href|src)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
@@ -143,9 +149,13 @@ regex_extract_base64_from_embedded_url = re.compile(
 
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
-# Request Domains Rewriter, see rewrite_client_requests_text()
+# Request Domains Rewriter, see client_requests_text_rewrite()
+if my_host_port is not None:
+    _temp = r'(' + re.escape(my_host_name) + r'|' + re.escape(my_host_name_no_port) + r')'
+else:
+    _temp = re.escape(my_host_name)
 regex_request_rewriter = re.compile(
-    re.escape(my_host_name) + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
+    _temp + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
     flags=re.IGNORECASE)
 
 # Flask main app
@@ -199,6 +209,12 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+
+def current_line_number():
+    """Returns the current line number in our program."""
+    import inspect
+    return inspect.currentframe().f_back.f_lineno
+
 
 @lru_cache(maxsize=8192)
 def extract_real_url_from_embedded_url(embedded_url):
@@ -779,6 +795,10 @@ def response_content_rewrite(remote_resp_obj):
         if cchardet_available:
             remote_resp_obj.encoding = c_chardet(remote_resp_obj.content)
         resp_text = remote_resp_obj.text
+
+        if developer_string_trace is not None and developer_string_trace in resp_text:
+            infoprint('StringTrace: appears in the RAW remote response text, code line no. ', current_line_number())
+
         # try to apply custom rewrite function
         try:
             if custom_text_rewriter_enable:
@@ -787,12 +807,18 @@ def response_content_rewrite(remote_resp_obj):
         except Exception as _e:  # just print err and fallback to normal rewrite
             errprint('Custom Rewrite Function "custom_response_text_rewriter(text)" in custom_func.py ERROR', _e)
             traceback.print_exc()
+        else:
+            if developer_string_trace is not None and developer_string_trace in resp_text:
+                infoprint('StringTrace: appears after custom text rewrite, code line no. ', current_line_number())
 
         # then do the normal rewrites
         try:
             resp_text = response_text_rewrite(resp_text)
         except:
             traceback.print_exc()
+        else:
+            if developer_string_trace is not None and developer_string_trace in resp_text:
+                infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
 
         return resp_text.encode(encoding='utf-8')  # return bytes
     else:
@@ -804,10 +830,18 @@ def response_content_rewrite(remote_resp_obj):
 def response_text_basic_rewrite_main(resp_text):
     resp_text = resp_text.replace('https://' + target_domain, myurl_prefix)
     resp_text = resp_text.replace(r'https:\/\/' + target_domain, myurl_prefix_escaped)
+
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        infoprint('StringTrace: appears during basic rewrite(main site), code line no. ', current_line_number())
+
     resp_text = resp_text.replace('http://' + target_domain, myurl_prefix)
     resp_text = resp_text.replace(r'http:\/\/' + target_domain, myurl_prefix_escaped)
-    resp_text = resp_text.replace('//' + target_domain, myurl_prefix)
-    resp_text = resp_text.replace(r'\/\/' + target_domain, myurl_prefix_escaped)
+
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
+
+    resp_text = resp_text.replace('//' + target_domain, '//' + my_host_name)
+    resp_text = resp_text.replace(r'\/\/' + target_domain, r'\/\/' + my_host_name)
 
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace('"%s"' % target_domain, '\"' + my_host_name + '\"')
@@ -860,21 +894,32 @@ def response_text_rewrite(resp_text):
     # v0.9.2+: advanced url rewrite engine
     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
 
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        infoprint('StringTrace: appears after advanced rewrite, code line no. ', current_line_number())
+
     # basic url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
     resp_text = response_text_basic_rewrite_main(resp_text)
+
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
 
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
     for domain_id, domain in enumerate(external_domains):
         resp_text = response_text_basic_rewrite_ext(resp_text, domain, domain_id)
+        if developer_string_trace is not None and developer_string_trace in resp_text:
+            infoprint('StringTrace: appears after basic ext domain rewrite:', domain, ', code line no. ', current_line_number())
 
     # for cookies set string (in js) replace
     # eg: ".twitter.com" --> "foo.com"
-    resp_text = resp_text.replace('\".' + target_domain_root + '\"', '\"' + my_host_name + '\"')
-    resp_text = resp_text.replace("\'." + target_domain_root + "\'", "\'" + my_host_name + "\'")
-    resp_text = resp_text.replace("domain=." + target_domain_root + "\'", "domain=" + my_host_name)
+    resp_text = resp_text.replace('\".' + target_domain_root + '\"', '\"' + my_host_name_no_port + '\"')
+    resp_text = resp_text.replace("\'." + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
+    resp_text = resp_text.replace("domain=." + target_domain_root + "\'", "domain=" + my_host_name_no_port)
+
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
 
     return resp_text
 
@@ -884,7 +929,7 @@ def response_cookie_rewrite(cookie_string):
     rewrite response cookie string's domain to `my_host_name`
     :type cookie_string: str
     """
-    cookie_string = regex_cookie_rewriter.sub('domain=' + my_host_name, cookie_string)
+    cookie_string = regex_cookie_rewriter.sub('domain=' + my_host_name_no_port, cookie_string)
     return cookie_string
 
 
@@ -907,13 +952,13 @@ def extract_client_header():
 
     # rewrite referer head if we have
     if 'referer' in outgoing_head:
-        outgoing_head['referer'] = rewrite_client_requests_text(outgoing_head['referer'])
+        outgoing_head['referer'] = client_requests_text_rewrite(outgoing_head['referer'])
     if verbose_level >= 3: dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
 
 
 @lru_cache(maxsize=2048)
-def rewrite_client_requests_text(raw_text):
+def client_requests_text_rewrite(raw_text):
     """
     Rewrite proxy domain to origin domain, extdomains supported.
     Also Support urlencoded url.
@@ -925,7 +970,8 @@ def rewrite_client_requests_text(raw_text):
             to http%3a%2f%2faccounts.google.com%2f233
     """
     replaced = regex_request_rewriter.sub('\g<origin_domain>', raw_text)
-    replaced = replaced.replace(my_host_name, target_domain)
+    replaced = replaced.replace(my_host_name_urlencoded, target_domain)
+    replaced = replaced.replace(my_host_name_no_port, target_domain)
     if verbose_level >= 3 and raw_text != replaced:
         dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
     return replaced
@@ -952,7 +998,7 @@ def extract_url_path_and_query(full_url):
 
 # ################# Begin Middle Functions #################
 def send_request(url, method='GET', headers=None, param_get=None, data=None):
-    final_url = rewrite_client_requests_text(url)
+    final_url = client_requests_text_rewrite(url)
     final_hostname = urlsplit(final_url).hostname
     # Only external in-zone domains are allowed (SSRF check layer 2)
     if final_hostname not in allowed_domains_set:
@@ -975,7 +1021,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     # Some debug output
     # print(r.request.headers, r.headers)
     if verbose_level >= 3:
-        dbgprint(r.request.method, "RemoteUrl:", r.url, "\nRemote Response Len: ", len(r.content),
+        dbgprint(r.request.method, "FinalSentToRemoteRequestUrl:", r.url, "\nRemote Response Len: ", len(r.content),
                  "\nRem Resp Stat: ", r.status_code)
         dbgprint("RemoteRequestHeaders: ", r.request.headers)
         if data:
@@ -986,7 +1032,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse(actual_request_url):
-    if verbose_level >= 3: dbgprint('actual_request_url:', actual_request_url)
+    if verbose_level >= 3: dbgprint('PreRewritedUrl:', actual_request_url)
 
     if mime_based_static_resource_CDN:
         url_no_scheme = actual_request_url[actual_request_url.find('//') + 2:]
@@ -1150,7 +1196,7 @@ def ewm_status():
     output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
     output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())
     output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
-    output += strx('\nrewrite_client_requests_text', rewrite_client_requests_text.cache_info())
+    output += strx('\nclient_requests_text_rewrite', client_requests_text_rewrite.cache_info())
     output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
     output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache),
                    'Hits:', url_rewrite_cache_hit_count, 'Misses:', url_rewrite_cache_miss_count)

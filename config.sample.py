@@ -31,6 +31,12 @@ global_ua_white_name = 'qiniu-imgstg-spider'
 # Your domain name, eg: 'blah.foobar.com'
 my_host_name = 'localhost'
 
+# v0.18.2+
+# Your port, if use the default value(80 for http, 443 for https), please set it to None
+#   otherwise please set your port (number)
+#   an non-standard port MAY prevent the gfw's observe, but MAY also cause compatibility problems
+my_host_port = None
+
 # Your domain's scheme, 'http://' or 'https://', it affects the user.
 my_host_scheme = 'http://'
 
@@ -417,6 +423,14 @@ url_custom_redirect_regex = (
     # (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
     # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
 )
+
+# #####################################################
+# ################# DEVELOPER Settings ################
+# #####################################################
+# v0.18.3+ Trace when an string appeared in the response content.
+#   helpful to locate some rewrite problems
+#   It will slow down the calculate speed, set to None in production environment, or an string to trace
+developer_string_trace = None
 
 # #####################################################
 # ###################### SAMPLE #######################
