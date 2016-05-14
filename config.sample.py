@@ -84,6 +84,11 @@ requests_proxies = dict(
 # 设置为 None 表示关闭显式编码指定, 'utf-8' 代表utf-8
 force_decode_remote_using_encode = None
 
+# v0.18.5+
+# eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
+# must be lower case
+custom_allowed_remote_headers = {}
+
 # #####################################################
 # ################# ADVANCED Settings #################
 # #####################################################

@@ -42,7 +42,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.18.4-dev'
+__VERSION__ = '0.18.5-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -60,7 +60,8 @@ allowed_domains_set.add(target_domain)
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
-
+allowed_remote_response_headers = {'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server', 'location'}
+allowed_remote_response_headers.update(custom_allowed_remote_headers)
 # ## Get Target Domain's Root Domain ##
 _temp = target_domain.split('.')
 if len(_temp) <= 2 or len(_temp) == 3 and _temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
@@ -731,12 +732,9 @@ def copy_response(requests_response_obj, content=b''):
     assert isinstance(resp, Response)
     for header_key in requests_response_obj.headers:
         # Add necessary response headers from the origin site, drop other headers
-        if header_key.lower() in (
-                'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server'):
-            resp.headers[header_key] = requests_response_obj.headers[header_key]
-        # Rewrite the redirection header if we got one, rewrite in-zone domains to our domain
-        if header_key.lower() == 'location':
+        if header_key.lower() in allowed_remote_response_headers:
             resp.headers[header_key] = response_text_rewrite(requests_response_obj.headers[header_key])
+
         # Rewrite The Set-Cookie Header, change the cookie domain to our domain
         if header_key.lower() == 'set-cookie':
             # cookie_header_str = dump_cookie_jars_to_header_string_dict(requests_response_obj.cookies)
@@ -950,11 +948,8 @@ def extract_client_header():
         head_name_l = head_name.lower()
         if (head_name_l not in ('host', 'content-length', 'content-type')) \
                 or (head_name_l == 'content-type' and head_value != ''):
-            outgoing_head[head_name_l] = head_value
+            outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
 
-    # rewrite referer head if we have
-    if 'referer' in outgoing_head:
-        outgoing_head['referer'] = client_requests_text_rewrite(outgoing_head['referer'])
     if verbose_level >= 3: dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
 
@@ -972,19 +967,23 @@ def client_requests_text_rewrite(raw_text):
             to http%3a%2f%2faccounts.google.com%2f233
     """
     replaced = regex_request_rewriter.sub('\g<origin_domain>', raw_text)
-    replaced = replaced.replace(my_host_name_urlencoded, target_domain)
-    replaced = replaced.replace(my_host_name_no_port, target_domain)
+    # replaced = replaced.replace(my_host_name_urlencoded, target_domain)
+    # replaced = replaced.replace(my_host_name_no_port, target_domain)
+
+    # 32MB == 33554432
+    replaced = client_requests_bin_rewrite(replaced.encode(), max_len=33554432).decode()
+
     if verbose_level >= 3 and raw_text != replaced:
         dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
     return replaced
 
 
-def client_requests_bin_rewrite(raw_bin):
+def client_requests_bin_rewrite(raw_bin, max_len=8192):
     """
 
     :type raw_bin: byte
     """
-    if raw_bin is None or len(raw_bin) > 8192:
+    if raw_bin is None or len(raw_bin) > max_len:
         return raw_bin
     else:
         _str_buff = my_host_name + '/extdomains'
