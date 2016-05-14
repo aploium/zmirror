@@ -969,6 +969,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         params=param_get, headers=headers, data=data,
         proxies=requests_proxies, allow_redirects=False
     )
+    # remote request time
     req_time = time() - req_start_time
 
     # Some debug output
@@ -1059,6 +1060,7 @@ def request_remote_site_and_parse(actual_request_url):
             put_response_to_local_cache(actual_request_url, resp, request, r)
 
     if request_local.start_time is not None:
+        # remote request time should be excluded when calculating total time
         resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
     resp.headers.add('X-EWM-Version', __VERSION__)
 
@@ -1232,8 +1234,8 @@ def ip_ban_verify_page():
         return resp
 
 
-@app.route('/extdomains/<path:hostname>', methods=['GET', 'POST'])
-@app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST'])
+@app.route('/extdomains/<path:hostname>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
+@app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 def get_external_site(hostname, extpath='/'):
     """
 
@@ -1271,8 +1273,8 @@ def get_external_site(hostname, extpath='/'):
     return request_remote_site_and_parse(actual_request_url)
 
 
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/<path:input_path>', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
+@app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 def get_main_site(input_path='/'):
     request_local.start_time = time()  # to display compute time
     # pre-filter client's request
