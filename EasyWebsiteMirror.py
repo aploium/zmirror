@@ -45,7 +45,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.19.0-dev'
+__VERSION__ = '0.19.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -910,20 +910,36 @@ def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
         _myurl_prefix_escaped = myurl_prefix_escaped
 
     # Explicit HTTPS scheme must be kept
-    resp_text = resp_text.replace('https://' + domain, _myurl_prefix + ext_domain_str + 'https-' + domain)
     resp_text = resp_text.replace(r'https:\/\/' + domain, _myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
+    resp_text = resp_text.replace('https://' + domain, _myurl_prefix + ext_domain_str + 'https-' + domain)
+
+    resp_text = resp_text.replace(quote_plus(r'https:\/\/' + domain),
+                                  quote_plus(_myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain))
+    resp_text = resp_text.replace(quote_plus('https://' + domain),
+                                  quote_plus(_myurl_prefix + ext_domain_str + 'https-' + domain))
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
     _buff = _my_host_name + ext_domain_str + get_ext_domain_inurl_scheme_prefix(domain) + domain
     _buff_esc = _buff.replace('/', r'\/')
-    resp_text = resp_text.replace('http://' + domain, my_host_scheme + _buff)
+
     resp_text = resp_text.replace(r'http:\/\/' + domain, my_host_scheme.replace('/', r'\/') + _buff_esc)
-    resp_text = resp_text.replace('//' + domain, '//' + _buff)
+    resp_text = resp_text.replace('http://' + domain, my_host_scheme + _buff)
     resp_text = resp_text.replace(r'\/\/' + domain, r'\/\/' + _buff_esc)
+    resp_text = resp_text.replace('//' + domain, '//' + _buff)
+
+    resp_text = resp_text.replace(quote_plus(r'http:\/\/' + domain), quote_plus(my_host_scheme.replace('/', r'\/') + _buff_esc))
+    resp_text = resp_text.replace(quote_plus('http://' + domain), quote_plus(my_host_scheme + _buff))
+    resp_text = resp_text.replace(quote_plus(r'\/\/' + domain), quote_plus(r'\/\/' + _buff_esc))
+    resp_text = resp_text.replace(quote_plus('//' + domain), quote_plus('//' + _buff))
 
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace('"%s"' % domain, '\"' + _my_host_name + ext_domain_str + domain + '\"')
     resp_text = resp_text.replace("'%s'" % domain, "\'" + _my_host_name + ext_domain_str + domain + "\'")
+
+    resp_text = resp_text.replace(quote_plus('"%s"' % domain),
+                                  quote_plus('\"' + _my_host_name + ext_domain_str + domain + '\"'))
+    resp_text = resp_text.replace(quote_plus("'%s'" % domain),
+                                  quote_plus("\'" + _my_host_name + ext_domain_str + domain + "\'"))
 
     return resp_text
 
@@ -1281,6 +1297,7 @@ def ewm_status():
     output += strx('\nis_content_type_using_cdn', is_content_type_using_cdn.cache_info())
     output += strx('\nis_ua_in_whitelist', is_content_type_using_cdn.cache_info())
     output += strx('\nis_mime_represents_text', is_mime_represents_text.cache_info())
+    output += strx('\nis_domain_match_glob_whitelist', is_domain_match_glob_whitelist.cache_info())
     output += strx('\ngenerate_304_response', generate_304_response.cache_info())
     output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
     output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())

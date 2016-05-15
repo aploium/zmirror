@@ -30,6 +30,17 @@ def custom_response_text_rewriter(raw_text, content_mime, remote_url):
     if 'search' in remote_url and (content_mime == 'text/html' or content_mime == 'application/json'):
         raw_text = demo__google_result_open_in_new_tab(raw_text, content_mime)
 
+    # remove google analytics
+    raw_text = raw_text.replace('www.google-analytics.com/analytics.js', '')
+
+    # Add your own analytics codes
+    if content_mime == 'text/html':
+        # Your statistic code
+        my_statistic_code = r"""<!--Your Own Static Code-->"""
+        # Add to just before the html head
+        raw_text = raw_text.replace('</head>', my_statistic_code + '</head>', 1)
+
+
     return raw_text
 
 
