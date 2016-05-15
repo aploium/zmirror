@@ -11,6 +11,7 @@ import base64
 import zlib
 import gzip
 from time import time
+from fnmatch import fnmatch
 from html import escape as html_escape
 import threading
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
@@ -44,7 +45,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.18.6-dev'
+__VERSION__ = '0.19.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -90,6 +91,9 @@ if not local_cache_enable:
     cdn_redirect_encode_query_str_into_url = False
 if not isinstance(target_static_domains, set):
     target_static_domains = set()
+
+if not enable_automatic_domains_whitelist:
+    domains_whitelist_auto_add_glob_list = tuple()
 
 if not enable_individual_sites_isolation:
     isolated_domains = set()
@@ -210,6 +214,40 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+@lru_cache(maxsize=8192)
+def is_domain_match_glob_whitelist(domain):
+    for domain_glob in domains_whitelist_auto_add_glob_list:
+        if fnmatch(domain, domain_glob):
+            return True
+    return False
+
+
+def try_match_and_add_domain_to_rewrite_white_list(domain):
+    if domain is None or not domain:
+        return False
+    if domain in external_domains_set or domain == target_domain:
+        return True
+    if not is_domain_match_glob_whitelist(domain):
+        return False
+    else:
+        infoprint('A domain:', domain, 'was added to whitelist')
+
+        global external_domains, external_domains_set, allowed_domains_set
+        _buff = list(external_domains)
+        _buff.append(domain)
+        external_domains = tuple(_buff)
+        external_domains_set.add(domain)
+        allowed_domains_set.add(domain)
+
+        # write log
+        try:
+            with open('automatic_domains_whitelist.log', 'a', encoding='utf-8') as fp:
+                fp.write(domain + '\n')
+        except:
+            traceback.print_exc()
+
+        return True
+
 
 def current_line_number():
     """Returns the current line number in our program."""
@@ -579,6 +617,10 @@ def regex_url_reassemble(match_obj):
         ):
         # dbgprint('returned_un_touch', whole_match_string)
         return whole_match_string
+
+    # v0.19.0+ Automatic Domains Whitelist (Experimental)
+    if enable_automatic_domains_whitelist:
+        try_match_and_add_domain_to_rewrite_white_list(match_domain)
 
     remote_domain, _is_remote_https, remote_path = extract_real_domain_from_url_may_have_extdomains()
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)

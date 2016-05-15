@@ -73,6 +73,10 @@ requests_proxies = dict(
     https='https://127.0.0.1:8123',
 )
 
+# ############## Output Settings ##############
+# Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 3 (for first time runner)
+verbose_level = 3
+
 # ############## Misc Settings ##############
 # v0.18.4+ for some modern websites (google/wiki, etc), we can assume it well always use utf-8 encoding.
 #   or for some old-styled sites, we could also force the program to use gbk encoding (just for example)
@@ -84,18 +88,30 @@ requests_proxies = dict(
 # 设置为 None 表示关闭显式编码指定, 'utf-8' 代表utf-8
 force_decode_remote_using_encode = None
 
-# v0.18.5+
-# eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
-# must be lower case
-custom_allowed_remote_headers = {}
+# v0.19.0+ Automatic Domains Whitelist (Experimental)
+# by given wild match domains (glob syntax, '*.example.com'), if we got domains match these cases,
+#   it would be automatically added to the `external_domains`
+# However, before you restart your server, you should check the 'automatic_domains_whitelist.log' file,
+#   and manually add domains to the config, or it would not work after you restart your server
+# You CANNOT relay on the automatic whitelist, because the basic (but important) rewrite require specified domains to work.
+# For More Supported Pattern Please See: https://docs.python.org/3/library/fnmatch.html#module-fnmatch
+# 如果给定以通配符形式的域名, 当程序遇到匹配的域名时, 将会自动加入到 `external_domains` 的列表中
+# 但是, 当你重启服务器程序前, 请检查程序目录下 'automatic_domains_whitelist.log' 文件,
+#   并将里面的域名手动添加到 `external_domains` 的列表中 (因为程序不会在运行时修改本配置文件)
+# 自动域名添加白名单功能并不能取代 `external_domains` 中一个个指定的域名,
+#   因为基础重写(很重要)不支持使用通配符(否则会带来10倍以上的性能下降).
+# 如果需要使用 * 以外的通配符, 请查看 https://docs.python.org/3/library/fnmatch.html#module-fnmatch 这里的的说明
+enable_automatic_domains_whitelist = True
+domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
 
 # #####################################################
 # ################# ADVANCED Settings #################
 # #####################################################
 
-# ############## Output Settings ##############
-# Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 3 (for first time runner)
-verbose_level = 3
+# v0.18.5+
+# eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
+# must be lower case
+custom_allowed_remote_headers = {}
 
 # ############## Cache Settings ##############
 # Cache remote static files to your local storge. And access them directly from local storge if necessary.

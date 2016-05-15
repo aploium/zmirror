@@ -237,7 +237,11 @@ new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);r
 new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);return false;}
 </script></head><body><div class="_lFe"><div class="_kFe"><font style="font-size:larger"></div></div><div class="_jFe">&nb href="https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91">https://g.zju.tools:20822/extdomains/https-zh.wikipedia.org/zh-cn/%E7%BB%B4%E5%9F%BA%E7%99%BE%E7%A7%91</a><br>&nbsphref="#" onclick="return go_back();" onmousedown="ctu('unauthorizedredirect','originlink');><br></div></body></html> """,
     ),
-
+    (
+        r"""<a href="https://t.co/hWOMicwES0" rel="nofollow" dir="ltr" data-expanded-url="http://onforb.es/1NqvWJT" class="twitter-timeline-link" target="_blank" title="http://onforb.es/1NqvWJT"><span class="tco-ellipsis"></span><span class="invisible">http://</span><span class="js-display-url">onforb.es/1NqvWJT</span><span class="invisible"></span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span></span></a>""",
+        r"""<a href="https://t.co/hWOMicwES0" rel="nofollow" dir="ltr" data-expanded-url="http://onforb.es/1NqvWJT" class="twitter-timeline-link" target="_blank" title="http://onforb.es/1NqvWJT"><span class="tco-ellipsis"></span><span class="invisible">http://</span><span class="js-display-url">onforb.es/1NqvWJT</span><span class="invisible"></span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span></span></a>""",
+        r"""<a href="https://t.co/hWOMicwES0" rel="nofollow" dir="ltr" data-expanded-url="http://onforb.es/1NqvWJT" class="twitter-timeline-link" target="_blank" title="http://onforb.es/1NqvWJT"><span class="tco-ellipsis"></span><span class="invisible">http://</span><span class="js-display-url">onforb.es/1NqvWJT</span><span class="invisible"></span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span></span></a>""",
+    )
 )
 ColorfulPyPrint_set_verbose_level(5)
 
