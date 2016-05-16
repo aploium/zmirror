@@ -941,6 +941,8 @@ def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
     resp_text = resp_text.replace(quote_plus("'%s'" % domain),
                                   quote_plus("\'" + _my_host_name + ext_domain_str + domain + "\'"))
 
+    resp_text = resp_text.replace('&quot;' + domain + '&quot;', '&quot;' + _buff_esc + '&quot;')
+
     return resp_text
 
 
@@ -976,6 +978,8 @@ def response_text_rewrite(resp_text):
     resp_text = resp_text.replace('\".' + target_domain_root + '\"', '\"' + my_host_name_no_port + '\"')
     resp_text = resp_text.replace("\'." + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
     resp_text = resp_text.replace("domain=." + target_domain_root, "domain=" + my_host_name_no_port)
+    resp_text = resp_text.replace('\"' + target_domain_root + '\"', '\"' + my_host_name_no_port + '\"')
+    resp_text = resp_text.replace("\'" + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
 
     if developer_string_trace is not None and developer_string_trace in resp_text:
         infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
