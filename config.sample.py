@@ -21,12 +21,6 @@
 # ################## BASIC Settings ###################
 # #####################################################
 
-# ############## Global Settings ##############
-# If client's ua CONTAINS this, it's access will be granted.Only one value allowed.
-# this white name also affects any other client filter (Human/IP verification, etc..)
-# Please don't use this if you don't use filters.
-global_ua_white_name = 'qiniu-imgstg-spider'
-
 # ############## Local Domain Settings ##############
 # Your domain name, eg: 'blah.foobar.com'
 my_host_name = 'localhost'
@@ -60,6 +54,22 @@ external_domains = (
 # 'ALL' for all, 'NONE' for none(case sensitive), ('foo.com','bar.com','www.blah.com') for custom
 force_https_domains = 'NONE'
 
+# v0.19.0+ Automatic Domains Whitelist (Experimental)
+# by given wild match domains (glob syntax, '*.example.com'), if we got domains match these cases,
+#   it would be automatically added to the `external_domains`
+# However, before you restart your server, you should check the 'automatic_domains_whitelist.log' file,
+#   and manually add domains to the config, or it would not work after you restart your server
+# You CANNOT relay on the automatic whitelist, because the basic (but important) rewrite require specified domains to work.
+# For More Supported Pattern Please See: https://docs.python.org/3/library/fnmatch.html#module-fnmatch
+# 如果给定以通配符形式的域名, 当程序遇到匹配的域名时, 将会自动加入到 `external_domains` 的列表中
+# 但是, 当你重启服务器程序前, 请检查程序目录下 'automatic_domains_whitelist.log' 文件,
+#   并将里面的域名手动添加到 `external_domains` 的列表中 (因为程序不会在运行时修改本配置文件)
+# 自动域名添加白名单功能并不能取代 `external_domains` 中一个个指定的域名,
+#   因为基础重写(很重要)不支持使用通配符(否则会带来10倍以上的性能下降).
+# 如果需要使用 * 以外的通配符, 请查看 https://docs.python.org/3/library/fnmatch.html#module-fnmatch 这里的的说明
+enable_automatic_domains_whitelist = True
+domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
+
 # ############## Proxy Settings ##############
 # Global proxy option, True or False (case sensitive)
 # Tip: If you want to make an GOOGLE mirror in China, you need an foreign proxy.
@@ -77,7 +87,18 @@ requests_proxies = dict(
 # Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 3 (for first time runner)
 verbose_level = 3
 
-# ############## Misc Settings ##############
+# #####################################################
+# ################# ADVANCED Settings #################
+# #####################################################
+
+# If client's ua CONTAINS this, it's access will be granted.Only one value allowed.
+# this white name also affects any other client filter (Human/IP verification, etc..)
+# Please don't use this if you don't use filters.
+# 全局UA白名单 (影响所有可能ban掉用户的功能)
+# 只要访问者UA中[包含]这一字符串, 那么它就会被全局放行(限制为只能127.0.0.1访问的服务器信息统计页面除外)
+# 样例白名单是七牛的机器人
+global_ua_white_name = 'qiniu-imgstg-spider'
+
 # v0.18.4+ for some modern websites (google/wiki, etc), we can assume it well always use utf-8 encoding.
 #   or for some old-styled sites, we could also force the program to use gbk encoding (just for example)
 # this should reduce the content encoding detect time.
@@ -88,36 +109,174 @@ verbose_level = 3
 # 设置为 None 表示关闭显式编码指定, 'utf-8' 代表utf-8
 force_decode_remote_using_encode = None
 
-# v0.19.0+ Automatic Domains Whitelist (Experimental)
-# by given wild match domains (glob syntax, '*.example.com'), if we got domains match these cases,
-#   it would be automatically added to the `external_domains`
-# However, before you restart your server, you should check the 'automatic_domains_whitelist.log' file,
-#   and manually add domains to the config, or it would not work after you restart your server
-# You CANNOT relay on the automatic whitelist, because the basic (but important) rewrite require specified domains to work.
-# For More Supported Pattern Please See: https://docs.python.org/3/library/fnmatch.html#module-fnmatch
-# 如果给定以通配符形式的域名, 当程序遇到匹配的域名时, 将会自动加入到 `external_domains` 的列表中
-# 但是, 当你重启服务器程序前, 请检查程序目录下 'automatic_domains_whitelist.log' 文件,
-#   并将里面的域名手动添加到 `external_domains` 的列表中 (因为程序不会在运行时修改本配置文件)
-# 自动域名添加白名单功能并不能取代 `external_domains` 中一个个指定的域名,
-#   因为基础重写(很重要)不支持使用通配符(否则会带来10倍以上的性能下降).
-# 如果需要使用 * 以外的通配符, 请查看 https://docs.python.org/3/library/fnmatch.html#module-fnmatch 这里的的说明
-enable_automatic_domains_whitelist = True
-domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
-
-# #####################################################
-# ################# ADVANCED Settings #################
-# #####################################################
-
-# v0.18.5+
-# eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
-# must be lower case
-custom_allowed_remote_headers = {}
-
 # ############## Cache Settings ##############
 # Cache remote static files to your local storge. And access them directly from local storge if necessary.
-# an 304 response support is implanted inside
-# Notice: It was relied by `cdn_redirect_encode_query_str_into_url`
+#   an 304 response support is implanted inside
 local_cache_enable = True
+
+# ############## Search Engine Deny ##############
+# If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'
+# And, don't worry, no browser's user-agent contains these two words.
+# 使用403来ban掉user-agent中带有 'spider' 或 'bot' 的访问者
+#   不用担心会ban掉正常用户, 目前已知的所有正常浏览器, ua中都不包含这两个关键词
+# 建议开启(默认开启), 可以避免搜索引擎爬虫的访问
+# default: True
+is_deny_spiders_by_403 = True
+
+# However, if spider's ua contains one of these strings, it will be allowed
+# Because some CDN provider's resource fetcher's UA contains spider string. You can let them access
+# the example 'qiniu' is the cdn fetcher of qiniu(七牛, China)
+# Tips: How to find out your CDN provider's UA if it was denied.
+#     Set the verbose_level to 3, let the bot access(and denied), then see the log file(or stdout),
+# you will find string like:   "A Spider/Bot was denied, UA is: qiniu-imgstg-spider-1.0"
+# choose key word(s) from it and add it(them) to the white list.
+# 但是, 如果你使用了CDN, 那么就需要对CDN提供商的机器人进行白名单(它们的UA中也会带有spider或者bot字样)
+#   样例中是七牛的爬虫UA
+# 提示: 如何找到你CDN提供商的机器人的UA
+#   把 `verbose_level` 设置为3, 然后让CDN机器人来访问(然后被ban), 之后你可以查看日志文件(或者stdout),
+# 你会发现这样的记录: "A Spider/Bot was denied, UA is: qiniu-imgstg-spider-1.0"
+# 其中的UA就是CDN机器人的UA, 挑选其中的关键词加入白名单吧. 只需要匹配到其中一个, 就会放行
+# default: ('qiniu', 'cdn')
+spider_ua_white_list = ('qiniu', 'cdn')
+
+# ############## Human/IP verification ##############
+# We could disallow untrusted IP's access by asking users some questions which only your people knew the answer
+# Of course, this can also deny Chinese GFW's access
+# If an user passed this verification, then his/her IP would be added to whitelist
+# You can also acquire some identity information from users.
+human_ip_verification_enabled = False
+
+# can be html
+human_ip_verification_description = r"""本站仅允许浙江大学师生访问.如果您也来自浙江大学, 请您回答以下问题
+This site ONLY allow people from Zhejiang University to access, please answer the following question(s).
+"""
+
+human_ip_verification_default_whitelist_networks = (
+    '127.0.0.1',  # localhost
+
+    '183.157.0.0/16',  # Zhejiang University
+
+    # Zhejiang China Mobile
+    # '211.140.0.0/16',
+    # '218.205.0.0/16',
+    # '211.138.112.0/19',
+    # '112.17.230.0/19',
+
+)
+
+human_ip_verification_title = '本网站只有内部人员才可以访问 | This site was only available for our members'
+human_ip_verification_success_msg = 'Verify Success! \n You will not be asked this again in 30 days'
+
+# Please make sure you have write permission.
+human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
+human_ip_verification_whitelist_log = 'ip_whitelist.log'
+
+# salt, please CHANGE it
+human_ip_verification_answers_hash_str = 'AploiumLoveLuciazForever'
+
+# questions and answer that users from non-permitted ip should answer. Can have several questions
+human_ip_verification_questions = (
+    ('Please write your question here', 'CorrectAnswer'),
+    # ('Another question', 'AnotherAnswer'),
+    # ('最好是一些只有内部人员才知道答案的问题, 比如说 "英译中:zdlgmygdwg"', '[略]'),
+    # ('能被轻易百度到答案的问题是很不好的,比如:浙江大学的校长是谁', '竺可桢'),
+)
+
+# user's identity information that should given. Would be logged in to log file.
+human_ip_verification_identity_record = (
+    # question_description,                 question_internal_name,  form_input_type)
+    ("Please input your student/teacher ID number", "student_id", "text"),
+    ("Please input your student/teacher password", "password", "password"),
+    # ("请输入您的学号或工号", "student_id"),
+)
+
+# If set to True, will use the custom_identity_verify() function to verify user's input identity.
+# And dict will be passed to that function
+# 请参考 custom_func.sample.py 中的示例验证函数
+# ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
+# ### 这是一项高级功能, 你需要写自己的验证函数才行 ###
+identity_verify_required = False
+
+# If sets to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
+human_ip_verification_whitelist_from_cookies = True
+human_ip_verification_whitelist_cookies_expires_days = 30
+
+# If set to True, an valid cookie is required, IP white list would be ignored.
+# If set to False, identity will not be verified but just logged to file
+must_verify_cookies = False
+
+# ############## Custom URL Redirect ##############
+# If enabled, server will use an 302 to redirect from the source to the target
+#
+# 1.It's quite useful when some url's that normal rewrite can't handle perfectly.
+#   (script may not rewrite all urls perfectly when you tries to put several individual sites to one mirror,
+#      eg: if you put google and wikipedia together, you can't search in wikipedia, this can fix)
+#
+# 2.It can also do url shorten jobs, but because it only rewrite url PATH, you cannot change the url's domain.
+#     eg1: http://foo.com/wiki  --->  http://foo.com/extdomains/zh.wikipedia.org/
+#     eg2: http://foo.com/scholar  --->  http://foo.com/extdomains/https-scholar.google.com/
+url_custom_redirect_enable = False
+
+# Only applies to url PATH, other parts remains untouched
+# It's an plain text list. Less function but higher performance, have higher priority than regex rules
+# eg: "http://foo.com/im/path.php?q=a#mark" , in this url, "/im/path.php" this is PATH
+url_custom_redirect_list = {
+    # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
+    # now, they are for sample only.
+    #
+    # This example is to fix search bugs(in wiki) when you put google together with zh.wikipedia.org in one mirror.
+    # '/w/load.php': '/extdomains/https-zh.wikipedia.org/w/load.php',
+    # '/w/index.php': '/extdomains/https-zh.wikipedia.org/w/index.php',
+    # '/w/api.php': '/extdomains/https-zh.wikipedia.org/w/api.php',
+
+    # This example acts as an tinyurl program
+    '/wiki': '/extdomains/https-zh.wikipedia.org/',
+}
+
+# If you want more complicated regex redirect, please add then in this dict.
+# If url FULLY MATCH the first regex, the second regex for re.sub  will be applied
+# Same as above, only the url PATH will be applied (maybe change in later version)
+# Please see https://docs.python.org/3.5/library/re.html#re.sub for more rules
+url_custom_redirect_regex = (
+    # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
+    # now, they are for sample only.
+    #
+    # This example fix mobile wikipedia's search bug
+    # will redirect /wiki/Some_wiki_page to /extdomains/https-zh.m.wikipedia.org/wiki/Some_wiki_page
+    # (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
+    # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
+)
+
+# ############## Individual Sites Isolation ##############
+# Referer based individual sites isolation (v0.18.0+)
+# If you got several individual sites (eg: google+wiki),
+#   normally, most links will be rewrited quite well, however, if some links are generated dynamically,
+#   eg: /api/profile (which should be /extdomains/https-mobile.twitter.com/api/profile )
+# By enabling this option, we would able to detect and correct these. (detect by referer, correct using 301 redirection)
+# Warning: As for (most) not very complex sites, like wikipedia, this sites isolation mechanism works pretty well,
+#   but for some complex sites like twitter, even if you enabled the isolation, something would still go wrong,
+#   in this case, please us individual domains to hold each sites.
+#   such as: t.foo.com for twitterPC, mt.foo.com for twitterMobile
+#
+# 基于referer的镜像站隔离.
+# 如果你把几个相互独立的网站,比如 google+wikipedia, 放在同一台镜像服务器上时,
+#   绝大部分链接会被正确地重写, 但是对于某些动态生成的链接, 重写很可能会失效,
+#   比如twitter手机站注册时动态生成的:  /api/profile (正确应该是 /extdomains/https-mobile.twitter.com/api/profile )
+#   通过开启这个选项, 我们可以通过请求的referer检测出这种错误, 并通过307重定向来修正它们.
+# 注意: 对于如wikipedia这样比较简单的网站来说, 站点隔离机制工作得非常好,
+#   但是对于某些逻辑特别复杂的站, 比如twitterPC-twitterMobile, 即使使用隔离机制, 仍然会导致子站不正常,
+#   这时候请用两个域名分别承载两个网站. 如 t.foo.com 是twitterPC mt.foo.com 是twitterMobile
+#
+enable_individual_sites_isolation = True
+
+# Isolated domains (sample) (v0.18.0+)
+# Only sites contained in the `external_domains` options, would have effect.
+# 只有包含在`external_domains`选项中的域名才会生效
+isolated_domains = {'zh.m.wikipedia.org', 'zh.wikipedia.org'}
+
+# #####################################################
+# ################## EXPERT Settings ##################
+# #####################################################
 
 # ############## CDN Settings ##############
 # If you have an CDN service (like qiniu,cloudflare,etc..), you are able to storge static resource in CDN domains.
@@ -126,7 +285,13 @@ local_cache_enable = True
 # HowTo:
 #   Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name)
 # And then add the CDN domain in the follow.
-# Please see https://github.com/Aploium/EasyWebsiteMirror#cdn-support for more information
+# ## It is an VERY ADVANCED SETTINGS ##
+# ## 这是一项高级功能, 请确保你知道CDN是什么、它的原理以后才使用本功能. ##
+# (请先阅读上面的英文说明,下面是一些中文补充说明)
+# 国内的CDN(或者类似于CDN的)主要有:
+#   非持久性: 百度云加速, 安全宝, etc..
+#   持久性: 七牛(本配置文件是以七牛为适配样例的), 腾讯云, 又拍, etc..
+# ##### 请一定要在 `spider_ua_white_list` 中加入对CDN机器人的UA的白名单 ####
 enable_static_resource_CDN = False
 
 # v0.14.0+ Now, instead of simply distinguish static resource using their url extension name,
@@ -302,159 +467,20 @@ static_file_extensions_list = {
 # example: ('cdn1.example.com','cdn2.example.com','cdn3.example.com')
 CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 
-# ############## Individual Sites Isolation ##############
-# Referer based individual sites isolation (v0.18.0+)
-# If you got several individual sites (eg: google+wiki),
-#   normally, most links will be rewrited quite well, however, if some links are generated dynamically,
-#   eg: /api/profile (which should be /extdomains/https-mobile.twitter.com/api/profile )
-# By enabling this option, we would able to detect and correct these. (detect by referer, correct using 301 redirection)
-# Warning: As for (most) not very complex sites, like wikipedia, this sites isolation mechanism works pretty well,
-#   but for some complex sites like twitter, even if you enabled the isolation, something would still go wrong,
-#   in this case, please us individual domains to hold each sites.
-#   such as: t.foo.com for twitterPC, mt.foo.com for twitterMobile
-#
-# 基于referer的镜像站隔离.
-# 如果你把几个相互独立的网站,比如 google+wikipedia, 放在同一台镜像服务器上时,
-#   绝大部分链接会被正确地重写, 但是对于某些动态生成的链接, 重写很可能会失效,
-#   比如twitter手机站注册时动态生成的:  /api/profile (正确应该是 /extdomains/https-mobile.twitter.com/api/profile )
-#   通过开启这个选项, 我们可以通过请求的referer检测出这种错误, 并通过307重定向来修正它们.
-# 注意: 对于如wikipedia这样比较简单的网站来说, 站点隔离机制工作得非常好,
-#   但是对于某些逻辑特别复杂的站, 比如twitterPC-twitterMobile, 即使使用隔离机制, 仍然会导致子站不正常,
-#   这时候请用两个域名分别承载两个网站. 如 t.foo.com 是twitterPC mt.foo.com 是twitterMobile
-#
-enable_individual_sites_isolation = True
-
-# Isolated domains (sample) (v0.18.0+)
-# Only sites contained in the `external_domains` options, would have effect.
-# 只有包含在`external_domains`选项中的域名才会生效
-isolated_domains = {'zh.m.wikipedia.org', 'zh.wikipedia.org'}
-
-# ############## Search Engine Deny ##############
-# If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'
-# And, don't worry, no browser's user-agent contains these two words.
-# default: False
-is_deny_spiders_by_403 = False
-
-# However, if spider's ua contains one of these strings, it will be allowed
-# Because some CDN provider's resource fetcher's UA contains spider string. You can let them access
-# the example 'qiniu' is the cdn fetcher of qiniu(七牛, China)
-# Tips: How to find out your CDN provider's UA if it was denied.
-#     Set the verbose_level to 3, let the bot access(and denied), then see the log file(or stdout),
-# you will find string like:   "A Spider/Bot was denied, UA is: qiniu-imgstg-spider-1.0"
-# choose key word(s) from it and add it(them) to the white list.
-# default: ('qiniu', 'cdn')
-spider_ua_white_list = ('qiniu', 'cdn')
-
-# ############## Human/IP verification ##############
-# We could disallow untrusted IP's access by asking users some questions which only your people knew the answer
-# Of course, this can also deny Chinese GFW's access
-# If an user passed this verification, then his/her IP would be added to whitelist
-# You can also acquire some identity information from users.
-human_ip_verification_enabled = False
-
-# can be html
-human_ip_verification_description = r"""本站仅允许浙江大学师生访问.如果您也来自浙江大学, 请您回答以下问题
-This site ONLY allow people from Zhejiang University to access, please answer the following question(s).
-"""
-
-human_ip_verification_default_whitelist_networks = (
-    '127.0.0.1',  # localhost
-
-    '183.157.0.0/16',  # Zhejiang University
-
-    # Zhejiang China Mobile
-    # '211.140.0.0/16',
-    # '218.205.0.0/16',
-    # '211.138.112.0/19',
-    # '112.17.230.0/19',
-
-)
-
-human_ip_verification_title = '本网站只有内部人员才可以访问 | This site was only available for our members'
-human_ip_verification_success_msg = 'Verify Success! \n You will not be asked this again in 30 days'
-
-# Please make sure you have write permission.
-human_ip_verification_whitelist_file_path = 'ip_whitelist.txt'
-human_ip_verification_whitelist_log = 'ip_whitelist.log'
-
-# salt, please CHANGE it
-human_ip_verification_answers_hash_str = 'AploiumLoveLuciazForever'
-
-# questions and answer that users from non-permitted ip should answer. Can have several questions
-human_ip_verification_questions = (
-    ('Please write your question here', 'CorrectAnswer'),
-    # ('Another question', 'AnotherAnswer'),
-    # ('最好是一些只有内部人员才知道答案的问题, 比如说 "英译中:zdlgmygdwg"', '[略]'),
-    # ('能被轻易百度到答案的问题是很不好的,比如:浙江大学的校长是谁', '竺可桢'),
-)
-
-# user's identity information that should given. Would be logged in to log file.
-human_ip_verification_identity_record = (
-    # question_description,                 question_internal_name,  form_input_type)
-    ("Please input your student/teacher ID number", "student_id", "text"),
-    ("Please input your student/teacher password", "password", "password"),
-    # ("请输入您的学号或工号", "student_id"),
-)
-
-# If set to True, will use the custom_identity_verify() function to verify user's input identity.
-# And dict will be passed to that function
-# ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
-identity_verify_required = False
-
-# If sets to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
-human_ip_verification_whitelist_from_cookies = True
-human_ip_verification_whitelist_cookies_expires_days = 30
-
-# If set to True, an valid cookie is required, IP white list would be ignored.
-# If set to False, identity will not be verified but just logged to file
-must_verify_cookies = False
-
 # ############## Custom Text Rewriter Function ##############
 # Please see https://github.com/Aploium/EasyWebsiteMirror#custom-rewriter-advanced-function for more information
 # ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
+# ### 这是一项高级选项, 你需要写一些自己的Python代码才行 ###
+# 请参考 custom_func.sample.py 中的示例函数
 custom_text_rewriter_enable = False
 
-# ############## Custom URL Redirect ##############
-# If enabled, server will use an 302 to redirect from the source to the target
-#
-# 1.It's quite useful when some url's that normal rewrite can't handle perfectly.
-#   (script may not rewrite all urls perfectly when you tries to put several individual sites to one mirror,
-#      eg: if you put google and wikipedia together, you can't search in wikipedia, this can fix)
-#
-# 2.It can also do url shorten jobs, but because it only rewrite url PATH, you cannot change the url's domain.
-#     eg1: http://foo.com/wiki  --->  http://foo.com/extdomains/zh.wikipedia.org/
-#     eg2: http://foo.com/scholar  --->  http://foo.com/extdomains/https-scholar.google.com/
-url_custom_redirect_enable = False
-
-# Only applies to url PATH, other parts remains untouched
-# It's an plain text list. Less function but higher performance, have higher priority than regex rules
-# eg: "http://foo.com/im/path.php?q=a#mark" , in this url, "/im/path.php" this is PATH
-url_custom_redirect_list = {
-    # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
-    # now, they are for sample only.
-    #
-    # This example is to fix search bugs(in wiki) when you put google together with zh.wikipedia.org in one mirror.
-    # '/w/load.php': '/extdomains/https-zh.wikipedia.org/w/load.php',
-    # '/w/index.php': '/extdomains/https-zh.wikipedia.org/w/index.php',
-    # '/w/api.php': '/extdomains/https-zh.wikipedia.org/w/api.php',
-
-    # This example acts as an tinyurl program
-    '/wiki': '/extdomains/https-zh.wikipedia.org/',
-}
-
-# If you want more complicated regex redirect, please add then in this dict.
-# If url FULLY MATCH the first regex, the second regex for re.sub  will be applied
-# Same as above, only the url PATH will be applied (maybe change in later version)
-# Please see https://docs.python.org/3.5/library/re.html#re.sub for more rules
-url_custom_redirect_regex = (
-    # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
-    # now, they are for sample only.
-    #
-    # This example fix mobile wikipedia's search bug
-    # will redirect /wiki/Some_wiki_page to /extdomains/https-zh.m.wikipedia.org/wiki/Some_wiki_page
-    # (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
-    # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
-)
+# ############## Misc ##############
+# v0.18.5+
+# eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
+# must be lower case
+# 在默认允许的headers以外添加一些允许被传送到用户的http响应头, 一般不需要添加自定义的. 内置的够用了
+# 必须全部小写
+custom_allowed_remote_headers = {}
 
 # #####################################################
 # ################# DEVELOPER Settings ################
