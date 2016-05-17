@@ -1017,7 +1017,7 @@ def extract_client_header():
     return outgoing_head
 
 
-@lru_cache(maxsize=2048)
+@lru_cache(maxsize=8192)
 def client_requests_text_rewrite(raw_text):
     """
     Rewrite proxy domain to origin domain, extdomains supported.
