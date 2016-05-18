@@ -328,9 +328,9 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
         return result
 
 
-def extract_real_domain_from_url_may_have_extdomains(extdomains_url=None):
+def extract_from_url_may_have_extdomains(extdomains_url=None):
     """[http://foo.bar]/extdomains/foobar.com/path --> ('foboar.com', False), JSON supported
-        return (real_domain, is_https)
+        return (real_domain, is_https, real_path)
     """
     if extdomains_url is None:
         extdomains_url = request.path
@@ -351,7 +351,7 @@ def extract_real_domain_from_url_may_have_extdomains(extdomains_url=None):
             is_https = True
         else:
             is_https = False
-        # dbgprint(extdomains_url,'extract_real_domain_from_url_may_have_extdomains', real_domain, is_https)
+        # dbgprint(extdomains_url,'extract_from_url_may_have_extdomains', real_domain, is_https)
         return real_domain, is_https, remote_path
 
     else:
@@ -622,7 +622,7 @@ def regex_url_reassemble(match_obj):
     if enable_automatic_domains_whitelist:
         try_match_and_add_domain_to_rewrite_white_list(match_domain)
 
-    remote_domain, _is_remote_https, remote_path = extract_real_domain_from_url_may_have_extdomains()
+    remote_domain, _is_remote_https, remote_path = extract_from_url_may_have_extdomains()
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
     # dbgprint(match_obj.groups(), v=5)
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
@@ -758,6 +758,36 @@ def is_ip_not_in_allow_range(ip_address):
     return True
 
 
+def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_escape=False):
+    """
+    convert url from remote to mirror url
+    """
+
+    if is_escape:
+        _raw_url_or_path = raw_url_or_path.replace('r\/', r'/')
+    else:
+        _raw_url_or_path = raw_url_or_path
+    sp = urlsplit(_raw_url_or_path)
+    if '/extdomains/' == sp.path[:12]:
+        return raw_url_or_path
+    domain = remote_domain or sp.netloc or extract_from_url_may_have_extdomains(request.path)[0] or target_domain
+    if domain not in allowed_domains_set or domain == target_domain:
+        return raw_url_or_path
+
+    if is_scheme or ((sp.scheme or _raw_url_or_path[:2] == '//') and is_scheme is not False):
+        our_prefix = myurl_prefix
+    else:
+        our_prefix = ''
+    remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
+
+    result = urljoin(our_prefix + '/extdomains/' + remote_scheme + domain + '/',
+                     extract_url_path_and_query(_raw_url_or_path).lstrip('/'))
+    if is_escape:
+        result = result.replace('/', r'\/')
+
+    return response_text_rewrite(result)
+
+
 # ########## End utils ###############
 
 
@@ -774,16 +804,21 @@ def copy_response(requests_response_obj, content=b''):
     resp = make_response(content, requests_response_obj.status_code)
     assert isinstance(resp, Response)
     for header_key in requests_response_obj.headers:
+        header_key_lower = header_key.lower()
         # Add necessary response headers from the origin site, drop other headers
-        if header_key.lower() in allowed_remote_response_headers:
-            resp.headers[header_key] = response_text_rewrite(requests_response_obj.headers[header_key])
+        if header_key_lower in allowed_remote_response_headers:
+            if header_key_lower == 'location':
+                resp.headers[header_key] = convert_to_mirror_url(requests_response_obj.headers[header_key])
 
-        # Rewrite The Set-Cookie Header, change the cookie domain to our domain
-        if header_key.lower() == 'set-cookie':
-            # cookie_header_str = dump_cookie_jars_to_header_string_dict(requests_response_obj.cookies)
+            else:
+                resp.headers[header_key] = requests_response_obj.headers[header_key]
+
+        # If we have the Set-Cookie header, we should extract the raw ones
+        #   and then change the cookie domain to our domain
+        if header_key_lower == 'set-cookie':
             for cookie_string in response_cookies_deep_copy(requests_response_obj):
                 resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
-                # resp.headers[header_key] = response_cookie_rewrite(requests_response_obj.headers[header_key])
+
     if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
 
     return resp
@@ -1063,7 +1098,6 @@ def client_requests_bin_rewrite(raw_bin, max_len=8192):
 
             raw_bin = raw_bin.replace(_str_buff2.encode(), b'')
 
-
         raw_bin = raw_bin.replace(quote_plus(my_host_name).encode(), quote_plus(target_domain).encode())
         raw_bin = raw_bin.replace(my_host_name.encode(), target_domain.encode())
         raw_bin = raw_bin.replace(my_host_name_no_port.encode(), target_domain.encode())
@@ -1261,7 +1295,7 @@ def filter_client_request():
 
 def is_client_request_need_redirect():
     if enable_individual_sites_isolation and 'extdomains' not in request.path and request.headers.get('referer'):
-        reference_domain, _is_https, _rp = extract_real_domain_from_url_may_have_extdomains(request.headers.get('referer'))
+        reference_domain, _is_https, _rp = extract_from_url_may_have_extdomains(request.headers.get('referer'))
         if reference_domain in isolated_domains:
             return redirect('/extdomains/' + ('https-' if _is_https else '')
                             + reference_domain + extract_url_path_and_query(request.url),
