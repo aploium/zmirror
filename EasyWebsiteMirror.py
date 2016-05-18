@@ -45,7 +45,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.19.1-dev'
+__VERSION__ = '0.19.2-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -66,11 +66,11 @@ cdn_domains_number = len(CDN_domains)
 allowed_remote_response_headers = {'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server', 'location'}
 allowed_remote_response_headers.update(custom_allowed_remote_headers)
 # ## Get Target Domain's Root Domain ##
-_temp = target_domain.split('.')
-if len(_temp) <= 2 or len(_temp) == 3 and _temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
+temp = target_domain.split('.')
+if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
     target_domain_root = target_domain
 else:
-    target_domain_root = '.'.join(_temp[1:])
+    target_domain_root = '.'.join(temp[1:])
 
 # ## thread local var ##
 request_local = threading.local()
@@ -156,11 +156,11 @@ regex_extract_base64_from_embedded_url = re.compile(
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
 # Request Domains Rewriter, see client_requests_text_rewrite()
 if my_host_port is not None:
-    _temp = r'(' + re.escape(my_host_name) + r'|' + re.escape(my_host_name_no_port) + r')'
+    temp = r'(' + re.escape(my_host_name) + r'|' + re.escape(my_host_name_no_port) + r')'
 else:
-    _temp = re.escape(my_host_name)
+    temp = re.escape(my_host_name)
 regex_request_rewriter = re.compile(
-    _temp + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
+    temp + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
     flags=re.IGNORECASE)
 
 # Flask main app
@@ -1053,21 +1053,32 @@ def client_requests_bin_rewrite(raw_bin, max_len=8192):
 
         for _str_buff2 in (_str_buff + '/https-', _str_buff + '/', _str_buff):
             raw_bin = raw_bin.replace(quote_plus(_str_buff2.replace('/', r'\/')).encode(), b'')
+            raw_bin = raw_bin.replace(quote_plus(_str_buff2.replace('/', r'\/')).lower().encode(), b'')
+
             raw_bin = raw_bin.replace(quote_plus(_str_buff2).encode(), b'')
+            raw_bin = raw_bin.replace(quote_plus(_str_buff2).lower().encode(), b'')
+
             raw_bin = raw_bin.replace(_str_buff2.replace('/', r'\/').encode(), b'')
+            raw_bin = raw_bin.replace(_str_buff2.replace('/', r'\/').lower().encode(), b'')
+
             raw_bin = raw_bin.replace(_str_buff2.encode(), b'')
+
 
         raw_bin = raw_bin.replace(quote_plus(my_host_name).encode(), quote_plus(target_domain).encode())
         raw_bin = raw_bin.replace(my_host_name.encode(), target_domain.encode())
         raw_bin = raw_bin.replace(my_host_name_no_port.encode(), target_domain.encode())
 
         raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2Fhttps-', b'')
+        raw_bin = raw_bin.replace(b'%5c%2fextdomains%5c%2fhttps-', b'')
         raw_bin = raw_bin.replace(b'%2Fextdomains%2Fhttps-', b'')
+        raw_bin = raw_bin.replace(b'%2fextdomains%2fhttps-', b'')
         raw_bin = raw_bin.replace(b'\\/extdomains\\/https-', b'')
         raw_bin = raw_bin.replace(b'/extdomains/https-', b'')
 
         raw_bin = raw_bin.replace(b'%2Fextdomains%2F', b'')
+        raw_bin = raw_bin.replace(b'%2fextdomains%2f', b'')
         raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2F', b'')
+        raw_bin = raw_bin.replace(b'%5c%2cextdomains%5c%2c', b'')
         raw_bin = raw_bin.replace(b'\\/extdomains\\/', b'')
         raw_bin = raw_bin.replace(b'/extdomains/', b'')
 
