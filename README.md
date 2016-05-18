@@ -1,9 +1,41 @@
 # EasyWebsiteMirror
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
-一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持 比如国内可以访问的Google镜像(config.sample.py配置文件中有用于Google镜像的例子)  
+一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
+比如国内可以访问的Google镜像/中文维基镜像/twitter镜像(功能完整) 请看`more_config_examples`文件夹下的配置文件  
+  
+  
+`这篇Readme很老了....新添加的功能请看config.sample.py中的注释`  
+  
+注: 由于正处在开发阶段中，每个版本的config.py都很可能不向上兼容(向下也有可能不兼容,但是可能性比较小). 当切换到新版本后请务必更新config.py 
 
-`这篇Readme很老了....新添加的功能请看config.sample.py中的注释`    
-注: 由于正处在开发阶段中，每个版本的config.py都很可能不向上兼容(向下也有可能不兼容,但是可能性比较小). 当切换到新版本后请务必更新config.py  
+## Feature 特性
+3. Completely mirror.  
+  创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站   
+  以下是例子(样例配置文件中的)  
+  - Google镜像(整合中文维基镜像)
+    - 以下google服务完全可用:
+      - google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
+      - google搜索与中文维基百科无缝结合
+    - 以下服务部分可用:
+      - gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)
+    - 以下服务暂不可用(因为目前google登陆还存在问题):
+      - 所有需要登录的东西, docs之类的
+  - twitter镜像(PC站/Mobile站)
+    - 所有功能完整可用(暂时还没发现不能用的功能)
+  - 需要访问demo站点的请联系我, 不在此公开
+  
+2. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
+  (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)
+  
+3. CDN Support, hot statistic resource can serve by CDN, dramatically increase speed  
+  CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)
+  
+4. Easy to config and deploy, highly automatic  
+  非常容易配置和部署, 镜像一个网站只需要添加它的域名即可
+  
+5. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
+  访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)
+
 ## Install and Usage
 It only support python3  
 first install python3  
