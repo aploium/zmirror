@@ -5,16 +5,21 @@
 # Github: https://github.com/Aploium/EasyWebsiteMirror
 
 # ############## Explain to the default config ##############
-#     The default config is an site mirror to `example.com` along with `www.iana.org`
-# you can just rename or copy this file to 'config.py' and then execute `python3 EasyWebsiteMirror.py`,
-# it will start an localhost web server.
-#     Then, enter http://localhost/ you will actually access to the example.com.
-#     More, you can click the "More information..." link in that page,
-# which would bring you to http://localhost/extdomains/www.iana.org/  it's the auto url rewrite.
-#     You don't need to write any code, or do any complex settings. Just change the settings of this page!
+# The default config is an site mirror to `www.kernel.org` along with `*.kernel.org`
+#   you can just copy this file to 'config.py' and then execute `python3 EasyWebsiteMirror.py`,
+#   it will start an localhost web server.
+# Then, enter http://127.0.0.1/ you will actually access to the www.kernel.org  (the linux kernel website)
+#   More, you can click and browse around. everything is withing the mirror.
+# You don't need to write any code, or do any complex settings. Just change the settings of this page!
 #
-#     There are config samples for www.google.com+zh.wikipedia.org and twitter.com, please see the 'more_config_examples'
-#     在 'more_config_examples' 文件夹下还有适用于Google(含中文维基)的配置文件和twitter(功能完整)的配置文件
+# 默认配置文件是对 www.kernel.org (linux内核的网站)及其所有子站的镜像.
+#   请复制一份本文件为 'config.py' 然后运行 `python3 EasyWebsiteMirror.py`
+#   然后访问 http://127.0.0.1 , 你将看到的是 www.kernel.org 的首页
+#   www.kernel.org 和它的所有子站都被自动地加入到了这个反向代理镜像中.
+#   你可以在网站中随意点击, 随意浏览, 而不会跑到镜像外. (*.kernel.org以外的网站仍然会跑到外面, 因为把它们没有加入镜像)
+#
+# There are config samples for www.google.com+zh.wikipedia.org and twitter.com, please see the 'more_config_examples'
+# 在 'more_config_examples' 文件夹下还有适用于Google(含中文维基)的配置文件和twitter(功能完整)的配置文件
 #
 # Let Magic Happens !!
 
@@ -24,7 +29,7 @@
 
 # ############## Local Domain Settings ##############
 # Your domain name, eg: 'blah.foobar.com'
-my_host_name = 'localhost'
+my_host_name = '127.0.0.1'
 
 # v0.18.2+
 # Your port, if use the default value(80 for http, 443 for https), please set it to None
@@ -38,18 +43,21 @@ my_host_scheme = 'http://'
 # ############## Target Domain Settings ##############
 # Target main domain
 #  Notice: ONLY the main domain and external domains are ALLOWED to cross this proxy
-target_domain = 'example.com'
+target_domain = 'www.kernel.org'
 
 # Target domain's scheme, 'http://' or 'https://', it affects the server only.
-target_scheme = 'http://'
+target_scheme = 'https://'
 
 # domain(s) also included in the proxy zone, mostly are the main domain's static file domains or sub domains
 #     tips: you can find a website's external domains by using the developer tools of your browser,
 # it will log all network traffics for you
 external_domains = (
-    'www.example.com',
-    'www.iana.org',
-    'iana.org',
+    # actually, the kernel.org has many sub-domains, but we just add one of them for example
+    # the following `Automatic Domains Whitelist` would detect and add the others automatically
+    #
+    # 实际上, kernel.org 有大量的子域名, 但是我们在这里并不把它们全部添加进来, 而只是添加一个作为示例
+    # 下面的 `Automatic Domains Whitelist` 功能会自动检测并添加其他的子域名
+    'g.kernel.org',
 )
 
 # 'ALL' for all, 'NONE' for none(case sensitive), ('foo.com','bar.com','www.blah.com') for custom
@@ -68,8 +76,10 @@ force_https_domains = 'NONE'
 # 自动域名添加白名单功能并不能取代 `external_domains` 中一个个指定的域名,
 #   因为基础重写(很重要)不支持使用通配符(否则会带来10倍以上的性能下降).
 # 如果需要使用 * 以外的通配符, 请查看 https://docs.python.org/3/library/fnmatch.html#module-fnmatch 这里的的说明
-enable_automatic_domains_whitelist = False
-domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
+enable_automatic_domains_whitelist = True
+# example:
+# domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
+domains_whitelist_auto_add_glob_list = ('*.kernel.org',)
 
 # ############## Proxy Settings ##############
 # Global proxy option, True or False (case sensitive)
@@ -268,7 +278,7 @@ url_custom_redirect_regex = (
 #   但是对于某些逻辑特别复杂的站, 比如twitterPC-twitterMobile, 即使使用隔离机制, 仍然会导致子站不正常,
 #   这时候请用两个域名分别承载两个网站. 如 t.foo.com 是twitterPC mt.foo.com 是twitterMobile
 #
-enable_individual_sites_isolation = True
+enable_individual_sites_isolation = False
 
 # Isolated domains (sample) (v0.18.0+)
 # Only sites contained in the `external_domains` options, would have effect.

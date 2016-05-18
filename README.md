@@ -45,9 +45,10 @@ first install python3
   
 1. install or upgrade flask requests and chardet package `python3 -m pip install -U flask requests chardet`  
 2. Download and unzip this package  
-3. rename or copy `config.sample.py` to `config.py` (don't need to change it's content for now)  
+3. copy `config_sample.py` to `config.py` (don't need to change it's content for now)  
 4. Execute it: `python3 EasyWebsiteMirror.py`  
-5. Open your browser and enter `http://localhost/`, you will see exactly the example.com, and you can click the "More information..." link of the page, you will be bring to `http://localhost/extdomains/www.iana.org/`  it's the auto url rewrite  
+5. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
+ the `*.kernel.org` is withing the mirror.
 6. Please see the config.py for more information, an google mirror config is also included.  
   
 ## Mirror A Website
