@@ -1,0 +1,101 @@
+# coding=utf-8
+# 这是为twitter(PC站)镜像配置的示例配置文件 (为了减少代码冗余, 一部分没有修改的设置直接引用了上层目录 config_sample.py )
+# 各项设置选项的详细介绍请看 config_sample.py 中对应的部分
+# 本配置文件假定你的服务器本身在墙外
+# 如果服务器本身在墙内(或者在本地环境下测试, 请修改`Proxy Settings`中的设置
+#
+# 由于twitterPC和twitterMobile实际上是相互独立的, 而且由于逻辑非常复杂, 即使使用镜像隔离功能, 也会导致手机站不正常
+#   所以把twitterPC和twitterMobile分成两个配置文件
+# 使用本配置文件运行的twitter镜像, 支持所有的twitter功能(暂时还没发现不能用的功能)
+
+# 导入未修改的配置, 减少冗余
+from config_sample import *
+
+# ############## Local Domain Settings ##############
+my_host_name = 'localhost'
+my_host_scheme = 'http://'
+
+# ############## Target Domain Settings ##############
+target_domain = 'twitter.com'
+target_scheme = 'https://'
+
+# 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
+# 实际镜像一个新的站时, 手动只需要添加很少的几个域名就可以了.
+# 自动采集会不断告诉你新域名
+external_domains = [
+    'mobile.twitter.com',
+
+    't.co',
+    'dev.twitter.com',
+    'ads.twitter.com',
+    'analytics.twitter.com',
+    'pic.twitter.com',
+    'api.twitter.com',
+    'platform.twitter.com',
+    'upload.twitter.com',
+    'ton.twitter.com',
+    'support.twitter.com',
+    'about.twitter.com',
+    'tweetdeck-devel.atla.twitter.com',
+    'tweetdeck-devel.smf1.twitter.com',
+    'tdapi-staging.smf1.twitter.com',
+    'tweetdeck.localhost.twitter.com',
+    'tweetdeck.twitter.com',
+    'tdapi-staging.atla.twitter.com',
+    'localhost.twitter.com',
+    'donate.twitter.com',
+    'syndication.twitter.com',
+    'status.twitter.com',
+    'engineering.twitter.com',
+    'help.twitter.com',
+    'blog.twitter.com',
+    'business.twitter.com',
+    'cards-dev.twitter.com',
+
+    'g2.twimg.com',
+    'hca.twimg.com',
+    'g.twimg.com',
+    'video.twimg.com',
+    'ma.twimg.com',
+    'abs.twimg.com',
+    'pbs.twimg.com',
+    'ton.twimg.com',
+    'ma-0.twimg.com',
+    'ma-1.twimg.com',
+    'ma-2.twimg.com',
+    'o.twimg.com',
+    'abs-0.twimg.com',
+    'abs-1.twimg.com',
+    'abs-2.twimg.com',
+    'amp.twimg.com',
+
+    'www.google.com',
+    'ssl.gstatic.com',
+    'www.gstatic.com',
+    'apis.google.com',
+    'encrypted-tbn0.gstatic.com',
+    'encrypted-tbn1.gstatic.com',
+    'encrypted-tbn2.gstatic.com',
+    'encrypted-tbn3.gstatic.com',
+    'accounts.google.com',
+    'accounts.youtube.com',
+]
+
+force_https_domains = 'ALL'
+
+enable_automatic_domains_whitelist = True
+domains_whitelist_auto_add_glob_list = ('*.twitter.com', '*.twimg.com',)
+
+# ############## Proxy Settings ##############
+# 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
+is_use_proxy = False
+requests_proxies = dict(
+    http='http://127.0.0.1:8123',
+    https='https://127.0.0.1:8123',
+)
+
+# ############## Misc ##############
+# 不加这个似乎也没影响的样子..... 不过以防万一还是加上吧
+custom_allowed_remote_headers = {
+    'access-control-allow-credentials', 'access-control-allow-headers', 'access-control-allow-methods',
+    'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}

@@ -13,7 +13,8 @@
 # which would bring you to http://localhost/extdomains/www.iana.org/  it's the auto url rewrite.
 #     You don't need to write any code, or do any complex settings. Just change the settings of this page!
 #
-#     There is another config example of www.google.com for you, in the bottom of this file.
+#     There are config samples for www.google.com+zh.wikipedia.org and twitter.com, please see the 'more_config_examples'
+#     在 'more_config_examples' 文件夹下还有适用于Google(含中文维基)的配置文件和twitter(功能完整)的配置文件
 #
 # Let Magic Happens !!
 
@@ -67,7 +68,7 @@ force_https_domains = 'NONE'
 # 自动域名添加白名单功能并不能取代 `external_domains` 中一个个指定的域名,
 #   因为基础重写(很重要)不支持使用通配符(否则会带来10倍以上的性能下降).
 # 如果需要使用 * 以外的通配符, 请查看 https://docs.python.org/3/library/fnmatch.html#module-fnmatch 这里的的说明
-enable_automatic_domains_whitelist = True
+enable_automatic_domains_whitelist = False
 domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
 
 # ############## Proxy Settings ##############
@@ -494,82 +495,3 @@ developer_string_trace = None
 # If set to True, all traffic objects would be dumped to an pickle file,
 #   Include: time, flask request object, requests response object, our server's (flask) response object
 developer_dump_all_traffics = False
-
-
-# #####################################################
-# ###################### SAMPLE #######################
-# #####################################################
-
-# ############## Sample Config For Google Mirror ##############
-# Please remove the following commit if you want to use google mirror
-# and then don't forget to set up the proxy if your machine is within the China mainland (GFW Zone)
-
-# target_domain = 'www.google.com.hk'
-# target_scheme = 'https://'
-# external_domains = (
-#     'www.google.com',
-#
-#     # Some Google Applications Domains
-#     'scholar.google.com',
-#     'scholar.google.com.hk',
-#     'books.google.com',
-#
-#     # Additional Google Domains
-#     'apis.google.com',
-#     'accounts.google.com',
-#     'accounts.youtube.com',
-#     'id.google.com.hk',
-#     'id.google.com',
-#     'webcache.googleusercontent.com',
-#
-#     # Static domains
-#     'fonts.gstatic.com',
-#     'ssl.gstatic.com',
-#     'www.gstatic.com',
-#     'encrypted-tbn0.gstatic.com',
-#     'encrypted-tbn1.gstatic.com',
-#     'encrypted-tbn2.gstatic.com',
-#     'encrypted-tbn3.gstatic.com',
-#
-#     # For Google Map (Optional)
-#     'maps.google.com',
-#     'maps.gstatic.com',
-#     'lh1.googleusercontent.com',
-#     'lh2.googleusercontent.com',
-#     'lh3.googleusercontent.com',
-#     'lh4.googleusercontent.com',
-#     'lh5.googleusercontent.com',
-#
-#     # For zh wikipedia (Optional)
-#     'zh.wikipedia.org',
-#     'zh.m.wikipedia.org',
-#     'upload.wikipedia.org',
-#     'meta.wikimedia.org',
-#     'login.wikimedia.org',
-# )
-# force_https_domains = 'ALL'
-# is_deny_spiders_by_403 = True
-#
-# human_ip_verification_enabled = True  # Optional, if set to True, you should modify other settings of that section
-#
-# target_static_domains = {
-#     # For Google Main Site
-#     'ssl.gstatic.com',
-#     'www.gstatic.com',
-#     'encrypted-tbn0.gstatic.com',
-#     'encrypted-tbn1.gstatic.com',
-#     'encrypted-tbn2.gstatic.com',
-#     'encrypted-tbn3.gstatic.com',
-#     'fonts.gstatic.com',
-#
-#     # For Google Map (optional)
-#     'maps.gstatic.com',
-#     'lh1.googleusercontent.com',
-#     'lh2.googleusercontent.com',
-#     'lh3.googleusercontent.com',
-#     'lh4.googleusercontent.com',
-#     'lh5.googleusercontent.com',
-#
-#     # For zh wikipedia (Optional)
-#     'upload.wikipedia.org',
-# }
