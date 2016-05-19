@@ -45,7 +45,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.19.2-dev'
+__VERSION__ = '0.19.3-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -1064,7 +1064,18 @@ def extract_client_header():
         head_name_l = head_name.lower()
         if (head_name_l not in ('host', 'content-length', 'content-type')) \
                 or (head_name_l == 'content-type' and head_value != ''):
-            outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
+            # For Firefox, they may send 'Accept-Encoding: gzip, deflate, br'
+            #   however, this program cannot decode the br encode, so we have to remove it from the request header.
+            if head_name_l == 'accept-encoding' and 'br' in head_value:
+                _str_buff = ''
+                if 'gzip' in head_value:
+                    _str_buff += 'gzip, '
+                if 'deflate' in head_value:
+                    _str_buff += 'deflate'
+                if _str_buff:
+                    outgoing_head[head_name_l] = _str_buff
+            else:
+                outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
 
     if verbose_level >= 3: dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
