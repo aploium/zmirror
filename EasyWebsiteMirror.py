@@ -771,16 +771,21 @@ def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, i
     if '/extdomains/' == sp.path[:12]:
         return raw_url_or_path
     domain = remote_domain or sp.netloc or extract_from_url_may_have_extdomains(request.path)[0] or target_domain
-    if domain not in allowed_domains_set or domain == target_domain:
+    if domain not in allowed_domains_set:
         return raw_url_or_path
 
     if is_scheme or ((sp.scheme or _raw_url_or_path[:2] == '//') and is_scheme is not False):
         our_prefix = myurl_prefix
     else:
         our_prefix = ''
-    remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
 
-    result = urljoin(our_prefix + '/extdomains/' + remote_scheme + domain + '/',
+    if domain != target_domain:
+        remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
+        middle_part = '/extdomains/' + remote_scheme + domain
+    else:
+        middle_part = ''
+
+    result = urljoin(our_prefix + middle_part + '/',
                      extract_url_path_and_query(_raw_url_or_path).lstrip('/'))
     if is_escape:
         result = result.replace('/', r'\/')
@@ -810,6 +815,14 @@ def copy_response(requests_response_obj, content=b''):
             if header_key_lower == 'location':
                 resp.headers[header_key] = convert_to_mirror_url(requests_response_obj.headers[header_key])
 
+            elif header_key_lower == 'content-type':
+                # force add utf-8 to content-type if it is text
+                if is_mime_represents_text(requests_response_obj.headers[header_key]) \
+                        and 'utf-8' not in requests_response_obj.headers[header_key]:
+                    resp.headers[header_key] = extract_mime_from_content_type(
+                        requests_response_obj.headers[header_key]) + ';charset=utf-8'
+                else:
+                    resp.headers[header_key] = requests_response_obj.headers[header_key]
             else:
                 resp.headers[header_key] = requests_response_obj.headers[header_key]
 
@@ -847,6 +860,10 @@ def response_cookies_deep_copy(req_obj):
     header_cookies_string_list = []
     for name, value in raw_headers:
         if name.lower() == 'set-cookie':
+            if my_host_scheme == 'http://':
+                value = value.replace('Secure;', '')
+                value = value.replace(';Secure', ';')
+                value = value.replace('; Secure', ';')
             header_cookies_string_list.append(value)
     return header_cookies_string_list
 
@@ -1019,6 +1036,7 @@ def response_text_rewrite(resp_text):
     if developer_string_trace is not None and developer_string_trace in resp_text:
         infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
 
+    # resp_text = resp_text.replace('lang="zh-Hans"', '', 1)
     return resp_text
 
 
@@ -1257,10 +1275,10 @@ def request_remote_site_and_parse(actual_request_url):
     if developer_dump_all_traffics:
         if not os.path.exists('traffic'):
             os.mkdir('traffic')
-        _time_str = datetime.now().strftime('traffic_%Y-%m-%d_%H:%M:%S')
+        _time_str = datetime.now().strftime('traffic_%Y-%m-%d_%H-%M-%S')
         try:
-            pickle.dump((_time_str, repr(request.url), repr(request.headers), repr(request.get_data()), r, resp),
-                        gzip.open(os.path.join('traffic', _time_str + '.dump'), 'wb'))
+            with open(os.path.join('traffic', _time_str + '.dump'), 'wb') as fp:
+                pickle.dump((_time_str, repr(request.url), repr(request.headers), repr(request.get_data()), r, resp), fp)
         except:
             traceback.print_exc()
 
@@ -1288,7 +1306,7 @@ def filter_client_request():
         else:
             return redirect(
                 "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(),
-                code=302)
+                code=307)
 
     return None
 
@@ -1305,13 +1323,13 @@ def is_client_request_need_redirect():
         if request.path in url_custom_redirect_list:
             redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path])
             if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
-            return redirect(redirect_to, code=302)
+            return redirect(redirect_to, code=307)
 
         for regex_match, regex_replace in url_custom_redirect_regex:
             if re.match(regex_match, request.path, flags=re.IGNORECASE) is not None:
                 redirect_to = re.sub(regex_match, regex_replace, request.path, flags=re.IGNORECASE)
                 if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
-                return redirect(redirect_to, code=302)
+                return redirect(redirect_to, code=307)
 
 
 def rewrite_client_request():
