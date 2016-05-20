@@ -9,7 +9,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
 注: 由于正处在开发阶段中，每个版本的config.py都很可能不向上兼容(向下也有可能不兼容,但是可能性比较小). 当切换到新版本后请务必更新config.py 
 
 ## Feature 特性
-3. Completely mirror.  
+1. Completely mirror.  
   创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站   
   以下是例子(样例配置文件中的)  
   - Google镜像(整合中文维基镜像)
@@ -24,16 +24,24 @@ an http reverse proxy designed to automatically and completely mirror a website 
     - 所有功能完整可用(暂时还没发现不能用的功能)
   - 需要访问demo站点的请联系我, 不在此公开
   
-2. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
+2. Mirror ANY website  
+   镜像任意网站, 而不只是Google/Wiki/twitter, 而且功能都非常完整  
+   程序被设计成通用的镜像, 可以镜像任意网站, 而不是常见的nginx/apache镜像规则一样只能用于google.  
+   并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
+   (现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进)  
+
+   附带的一个好处就是在一个网站上修复程序bug, 对所有网站的兼容性都能得到提升
+
+3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
   (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)
   
-3. CDN Support, hot statistic resource can serve by CDN, dramatically increase speed  
+4. CDN Support, hot statistic resource can serve by CDN, dramatically increase speed  
   CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)
   
-4. Easy to config and deploy, highly automatic  
+5. Easy to config and deploy, highly automatic  
   非常容易配置和部署, 镜像一个网站只需要添加它的域名即可
   
-5. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
+6. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
   访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)
 
 ## Install and Usage
