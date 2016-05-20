@@ -4,14 +4,13 @@ an http reverse proxy designed to automatically and completely mirror a website 
 比如国内可以访问的Google镜像/中文维基镜像/twitter镜像(功能完整) 请看`more_config_examples`文件夹下的配置文件  
   
   
-`这篇Readme很老了....新添加的功能请看config.sample.py中的注释`  
+`这篇Readme很老了....新添加的功能请看config_default.py中的注释`  
   
-注: 由于正处在开发阶段中，每个版本的config.py都很可能不向上兼容(向下也有可能不兼容,但是可能性比较小). 当切换到新版本后请务必更新config.py 
 
 ## Feature 特性
 1. Completely mirror.  
   创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站   
-  以下是例子(样例配置文件中的)  
+  以下是例子(样例配置文件中的, 并不代表程序只能镜像这几个, 程序支持__任意__网站的镜像, 这些只是样例配置)  
   - Google镜像(整合中文维基镜像)
     - 以下google服务完全可用:
       - google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
@@ -22,16 +21,17 @@ an http reverse proxy designed to automatically and completely mirror a website 
       - 所有需要登录的东西, docs之类的
   - twitter镜像(PC站/Mobile站)
     - 所有功能完整可用(暂时还没发现不能用的功能)
+  - instagram镜像
+    - 所有功能完整可用(暂时还没发现不能用的功能)
   - 需要访问demo站点的请联系我, 不在此公开
   
-2. Mirror ANY website  
-   镜像任意网站, 而不只是Google/Wiki/twitter, 而且功能都非常完整  
-   程序被设计成通用的镜像, 可以镜像任意网站, 而不是常见的nginx/apache镜像规则一样只能用于google.  
+2. Mirror ANY website, highly compatible  
+   非常高的兼容性和通用性, 可以镜像__任意__网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整  
    并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
    (现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进)  
 
    附带的一个好处就是在一个网站上修复程序bug, 对所有网站的兼容性都能得到提升
-
+  
 3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
   (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)
   
@@ -43,21 +43,42 @@ an http reverse proxy designed to automatically and completely mirror a website 
   
 6. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
   访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)
-
-## Install and Usage
-It only support python3  
-first install python3  
-    - (Debian/Ubuntu) `apt-get install python3`  
-    - (CentOS/RHEL) `yum install python3`  
-    - (Windows) go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
   
+7. Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly  
+  自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理
+  
+## Install and Usage
+It only support python3, based on flask and requests  
+first install python3  
+    - (Debian/Ubuntu) `apt-get install python3`
+    - (CentOS/RHEL) `yum install python3`
+    - (Windows) go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
+
+### HelloWorld Usage  
 1. install or upgrade flask requests and chardet package `python3 -m pip install -U flask requests chardet`  
-2. Download and unzip this package  
-3. copy `config_sample.py` to `config.py` (don't need to change it's content for now)  
-4. Execute it: `python3 EasyWebsiteMirror.py`  
-5. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
+2. (recommended) `git clone https://github.com/Aploium/EasyWebsiteMirror.git` or download and unzip this package(not recommend).   
+3. Execute it: `python3 EasyWebsiteMirror.py`  
+4. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
  the `*.kernel.org` is withing the mirror.
-6. Please see the config.py for more information, an google mirror config is also included.  
+5. Please see the config.py for more information, an google mirror config is also included.
+
+### Mirror Google or twitter or instagram (include zh-wikipedia) 搭建一个Google镜像(包含中文维基)或twitter镜像或instagram镜像 
+0. assume you have completed the HelloWorld above
+1. 
+  - (google) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_google_and_zhwikipedia.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (twitterPC) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_twitter_pc.py` to `YOUR_EWM_FOLDER/config.py`
+  - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_instagram.py` to `YOUR_EWM_FOLDER/config.py`
+2. 
+  - If your computer can access google directly(outside the GFW), ignore this step
+  - If you are inside the GFW, please set your http proxy in the `config.py`
+3. execute `python3 EasyWebsiteMirror.py`
+4. open `http://127.0.0.1/` and see magic happens. (google) and `http://127.0.0.1/wiki` for zh-wikipedia, `http://127.0.0.1/scholar` for google scholar
+
+### Upgrade 升级
+ - (for users of git) `cd YOUR_EWM_FOLDER` and `git pull`
+ - (for users of plain zip download) re-download, unzip, and override all files
+ 
+
   
 ## Mirror A Website
 Mirror a website is very simple.  

@@ -34,7 +34,22 @@ except:
 
     warnprint('package fastcache not found, fallback to stdlib lru_cache.  '
               'Considering install it using "pip3 install fastcache"')
-from config import *
+try:
+    from config_default import *
+except:
+    warnprint('the config_default.py is missing, this program may not works normally\n'
+              'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
+try:
+    from config import *
+except:
+    warnprint(
+        'the config_default.py is missing, fallback to default configs(if we can), '
+        'please COPY the config_default.py to config.py, and change it\'s content, '
+        'or use the configs in the more_config_examples folder\n'
+        '自定义配置文件 config.py 丢失, 将使用默认设置, 请将 config_default.py 复制一份为 config.py, '
+        '并根据自己的需求修改里面的设置'
+        '(或者使用 more_config_examples 中的配置文件)'
+    )
 
 if local_cache_enable:
     try:
@@ -45,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.19.3-dev'
+__VERSION__ = '0.19.4-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############

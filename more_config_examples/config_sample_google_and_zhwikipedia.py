@@ -1,7 +1,10 @@
 # coding=utf-8
 # 这是为Google和中文维基(无缝整合)镜像配置的示例配置文件
-# (为了减少代码冗余, 一部分没有修改的设置直接引用了上层目录 config_sample.py )
-# 各项设置选项的详细介绍请看 config_sample.py 中对应的部分
+#
+# 使用方法:
+#   复制本文件到 EasyWebsiteMirror.py 同级目录, 并重命名为 config.py
+#
+# 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 # 本配置文件假定你的服务器本身在墙外
 # 如果服务器本身在墙内(或者在本地环境下测试, 请修改`Proxy Settings`中的设置
 #
@@ -26,18 +29,14 @@
 #       Google搜索/学术/图片搜索/视频搜索/与中文维基百科无缝结合
 #   尽管是轻量级, 但是仍然是目前互联网上能找到的最好(功能/整合性/用户体验/访问速度)的Google镜像方案
 #
-# 速度对比, 在一台256M Ramnode OpenVZ VPS上处理Google首页(169.41KB), 测试5次取平均, 排除请求时间, 只测量运算时间
+# 速度对比, 在一台256M Ramnode OpenVZ VPS(Intel E3 3.3GHz)上处理Google首页(169.41KB), 测试5次取平均, 排除请求时间, 只测量运算时间
 #   全功能: 0.167秒
 #   轻量版: 0.045秒
-
-
-# 导入未修改的配置, 减少冗余
-from config_sample import *
 
 # Github: https://github.com/Aploium/EasyWebsiteMirror
 
 # ############## Local Domain Settings ##############
-my_host_name = 'localhost'
+my_host_name = '127.0.0.1'
 my_host_scheme = 'http://'
 
 # ############## Target Domain Settings ##############
