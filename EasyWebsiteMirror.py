@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 import os
+
 if os.path.dirname(__file__) != '':
     os.chdir(os.path.dirname(__file__))
 import traceback
@@ -9,7 +10,6 @@ from datetime import datetime, timedelta
 import re
 import base64
 import zlib
-import gzip
 from time import time
 from fnmatch import fnmatch
 from html import escape as html_escape
@@ -60,12 +60,13 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.19.4-dev'
+__VERSION__ = '0.20.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
 ColorfulPyPrint_set_verbose_level(verbose_level)
 my_host_name_no_port = my_host_name
+
 if my_host_port is not None:
     my_host_name += ':' + str(my_host_port)
     my_host_name_urlencoded = quote_plus(my_host_name)
@@ -75,6 +76,19 @@ static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
 allowed_domains_set.add(target_domain)
+
+domain_alias_to_target_set = set()
+domain_alias_to_target_set.add(target_domain)
+domains_alias_to_target_domain = list(domains_alias_to_target_domain)
+if domains_alias_to_target_domain:
+
+    for _domain in domains_alias_to_target_domain:
+        allowed_domains_set.add(_domain)
+        domain_alias_to_target_set.add(_domain)
+    domains_alias_to_target_domain.append(target_domain)
+else:
+    domains_alias_to_target_domain = [target_domain]
+my_host_scheme_escaped = my_host_scheme.replace('/', r'\/')
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
@@ -139,6 +153,32 @@ if not human_ip_verification_whitelist_from_cookies:
 url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
 url_rewrite_cache_hit_count = 0
 url_rewrite_cache_miss_count = 0
+
+# ########### domain replacer prefix string buff ###############
+prefix_buff = {}
+for _domain in allowed_domains_set:
+    prefix_buff[_domain] = dict(
+        # normal
+        slash='//' + _domain,
+        http='http://' + _domain,
+        https='https://' + _domain,
+        double_quoted='"%s"' % _domain,
+        single_quoted="'%s'" % _domain,
+        # escape slash
+        slash_esc=('//' + _domain).replace('/', r'\/'),
+        http_esc=('http://' + _domain).replace('/', r'\/'),
+        https_esc=('https://' + _domain).replace('/', r'\/'),
+        # urlencoded
+        slash_ue=quote_plus('//' + _domain),
+        http_ue=quote_plus('http://' + _domain),
+        https_ue=quote_plus('https://' + _domain),
+        double_quoted_ue=quote_plus('"%s"' % _domain),
+        single_quoted_ue=quote_plus("'%s'" % _domain),
+        # escaped and urlencoded
+        slash_esc_ue=quote_plus(('//' + _domain).replace('/', r'\/')),
+        http_esc_ue=quote_plus(('http://' + _domain).replace('/', r'\/')),
+        https_esc_ue=quote_plus(('https://' + _domain).replace('/', r'\/')),
+    )
 
 # ########### PreCompile Regex ###############
 # Advanced url rewriter, see function response_text_rewrite()
@@ -238,16 +278,17 @@ def is_domain_match_glob_whitelist(domain):
 
 
 def try_match_and_add_domain_to_rewrite_white_list(domain):
+    global external_domains, external_domains_set, allowed_domains_set
+
     if domain is None or not domain:
         return False
-    if domain in external_domains_set or domain == target_domain:
+    if domain in allowed_domains_set:
         return True
     if not is_domain_match_glob_whitelist(domain):
         return False
     else:
         infoprint('A domain:', domain, 'was added to whitelist')
 
-        global external_domains, external_domains_set, allowed_domains_set
         _buff = list(external_domains)
         _buff.append(domain)
         external_domains = tuple(_buff)
@@ -794,7 +835,7 @@ def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, i
     else:
         our_prefix = ''
 
-    if domain != target_domain:
+    if domain not in domain_alias_to_target_set:
         remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
         middle_part = '/extdomains/' + remote_scheme + domain
     else:
@@ -937,32 +978,15 @@ def response_content_rewrite(remote_resp_obj):
         return remote_resp_obj.content
 
 
-def response_text_basic_rewrite_main(resp_text):
-    resp_text = resp_text.replace('https://' + target_domain, myurl_prefix)
-    resp_text = resp_text.replace(r'https:\/\/' + target_domain, myurl_prefix_escaped)
-
-    if developer_string_trace is not None and developer_string_trace in resp_text:
-        infoprint('StringTrace: appears during basic rewrite(main site), code line no. ', current_line_number())
-
-    resp_text = resp_text.replace('http://' + target_domain, myurl_prefix)
-    resp_text = resp_text.replace(r'http:\/\/' + target_domain, myurl_prefix_escaped)
-
-    if developer_string_trace is not None and developer_string_trace in resp_text:
-        infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
-
-    resp_text = resp_text.replace('//' + target_domain, '//' + my_host_name)
-    resp_text = resp_text.replace(r'\/\/' + target_domain, r'\/\/' + my_host_name)
-
-    # rewrite "foo.domain.tld" and 'foo.domain.tld'
-    resp_text = resp_text.replace('"%s"' % target_domain, '\"' + my_host_name + '\"')
-    resp_text = resp_text.replace("'%s'" % target_domain, "\'" + my_host_name + "\'")
-
-    return resp_text
-
-
-def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
-    ext_domain_str = '/extdomains/'
-    ext_domain_str_esc = r'\/extdomains\/'
+def response_text_basic_rewrite(resp_text, domain, domain_id=None):
+    if domain not in domains_alias_to_target_domain:
+        domain_prefix = '/extdomains/' + get_ext_domain_inurl_scheme_prefix(domain) + domain
+        domain_prefix_https = '/extdomains/https-' + domain
+        domain_prefix_https_esc = r'\/extdomains\/https-' + domain
+    else:
+        domain_prefix = ''
+        domain_prefix_https = ''
+        domain_prefix_https_esc = ''
 
     # Static resources domains hard rewrite
     if enable_static_resource_CDN and domain in target_static_domains:
@@ -976,37 +1000,39 @@ def response_text_basic_rewrite_ext(resp_text, domain, domain_id=None):
         _myurl_prefix = myurl_prefix
         _myurl_prefix_escaped = myurl_prefix_escaped
 
-    # Explicit HTTPS scheme must be kept
-    resp_text = resp_text.replace(r'https:\/\/' + domain, _myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain)
-    resp_text = resp_text.replace('https://' + domain, _myurl_prefix + ext_domain_str + 'https-' + domain)
+    # load pre-generated replace prefix
+    prefix = prefix_buff[domain]
 
-    resp_text = resp_text.replace(quote_plus(r'https:\/\/' + domain),
-                                  quote_plus(_myurl_prefix_escaped + ext_domain_str_esc + 'https-' + domain))
-    resp_text = resp_text.replace(quote_plus('https://' + domain),
-                                  quote_plus(_myurl_prefix + ext_domain_str + 'https-' + domain))
+    # Explicit HTTPS scheme must be kept
+    resp_text = resp_text.replace(prefix['https_esc'], _myurl_prefix_escaped + domain_prefix_https_esc)
+    resp_text = resp_text.replace(prefix['https'], _myurl_prefix + domain_prefix_https)
+
+    resp_text = resp_text.replace(prefix['https_esc_ue'], quote_plus(_myurl_prefix_escaped + domain_prefix_https_esc))
+    resp_text = resp_text.replace(prefix['https_ue'], quote_plus(_myurl_prefix + domain_prefix_https))
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-    _buff = _my_host_name + ext_domain_str + get_ext_domain_inurl_scheme_prefix(domain) + domain
+    # _buff: my-domain.com/extdomains/https-remote.com or my-domain.com
+    if domain not in domains_alias_to_target_domain:
+        _buff = _my_host_name + domain_prefix
+    else:
+        _buff = _my_host_name
     _buff_esc = _buff.replace('/', r'\/')
 
-    resp_text = resp_text.replace(r'http:\/\/' + domain, my_host_scheme.replace('/', r'\/') + _buff_esc)
-    resp_text = resp_text.replace('http://' + domain, my_host_scheme + _buff)
-    resp_text = resp_text.replace(r'\/\/' + domain, r'\/\/' + _buff_esc)
-    resp_text = resp_text.replace('//' + domain, '//' + _buff)
+    resp_text = resp_text.replace(prefix['http_esc'], my_host_scheme_escaped + _buff_esc)
+    resp_text = resp_text.replace(prefix['http'], my_host_scheme + _buff)
+    resp_text = resp_text.replace(prefix['slash_esc'], r'\/\/' + _buff_esc)
+    resp_text = resp_text.replace(prefix['slash'], '//' + _buff)
 
-    resp_text = resp_text.replace(quote_plus(r'http:\/\/' + domain), quote_plus(my_host_scheme.replace('/', r'\/') + _buff_esc))
-    resp_text = resp_text.replace(quote_plus('http://' + domain), quote_plus(my_host_scheme + _buff))
-    resp_text = resp_text.replace(quote_plus(r'\/\/' + domain), quote_plus(r'\/\/' + _buff_esc))
-    resp_text = resp_text.replace(quote_plus('//' + domain), quote_plus('//' + _buff))
+    resp_text = resp_text.replace(prefix['http_esc_ue'], quote_plus(my_host_scheme_escaped + _buff_esc))
+    resp_text = resp_text.replace(prefix['http_ue'], quote_plus(my_host_scheme + _buff))
+    resp_text = resp_text.replace(prefix['slash_esc_ue'], quote_plus(r'\/\/' + _buff_esc))
+    resp_text = resp_text.replace(prefix['slash_ue'], quote_plus('//' + _buff))
 
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
-    resp_text = resp_text.replace('"%s"' % domain, '\"' + _my_host_name + ext_domain_str + domain + '\"')
-    resp_text = resp_text.replace("'%s'" % domain, "\'" + _my_host_name + ext_domain_str + domain + "\'")
-
-    resp_text = resp_text.replace(quote_plus('"%s"' % domain),
-                                  quote_plus('\"' + _my_host_name + ext_domain_str + domain + '\"'))
-    resp_text = resp_text.replace(quote_plus("'%s'" % domain),
-                                  quote_plus("\'" + _my_host_name + ext_domain_str + domain + "\'"))
+    resp_text = resp_text.replace(prefix['double_quoted'], '"%s"' % _buff)
+    resp_text = resp_text.replace(prefix['single_quoted'], "'%s'" % _buff)
+    resp_text = resp_text.replace(prefix['double_quoted_ue'], quote_plus('"%s"' % _buff))
+    resp_text = resp_text.replace(prefix['single_quoted_ue'], quote_plus("'%s'" % _buff))
 
     resp_text = resp_text.replace('&quot;' + domain + '&quot;', '&quot;' + _buff_esc + '&quot;')
 
@@ -1027,7 +1053,8 @@ def response_text_rewrite(resp_text):
 
     # basic url rewrite, rewrite the main site's url
     # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-    resp_text = response_text_basic_rewrite_main(resp_text)
+    for _target_domain in domains_alias_to_target_domain:
+        resp_text = response_text_basic_rewrite(resp_text, _target_domain)
 
     if developer_string_trace is not None and developer_string_trace in resp_text:
         infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
@@ -1036,7 +1063,7 @@ def response_text_rewrite(resp_text):
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
     for domain_id, domain in enumerate(external_domains):
-        resp_text = response_text_basic_rewrite_ext(resp_text, domain, domain_id)
+        resp_text = response_text_basic_rewrite(resp_text, domain, domain_id)
         if developer_string_trace is not None and developer_string_trace in resp_text:
             infoprint('StringTrace: appears after basic ext domain rewrite:', domain, ', code line no. ', current_line_number())
 
@@ -1488,7 +1515,7 @@ def get_external_site(hostname, extpath='/'):
     """
     request_local.start_time = time()  # to display compute time
     # redirect to target main site if we got target main site here
-    if hostname.replace('https-', '') == target_domain:
+    if hostname.replace('https-', '', 1) in domain_alias_to_target_set:
         return redirect('/' + extpath + '?' + urlsplit(request.url).query)
 
     # pre-filter client's request

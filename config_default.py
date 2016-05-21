@@ -81,6 +81,14 @@ enable_automatic_domains_whitelist = True
 # domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
 domains_whitelist_auto_add_glob_list = ('*.kernel.org',)
 
+# v0.20.0+
+# these domains would be regarded as the `target_domain`, and do the same process
+#   eg: kernel.org is the same of www.kernel.org
+#       format: ('kernel.org',)
+# 列在这里这些域名会被认为是target_domain, 并做同样的处理和修改
+# 可以添加www域名(主站使用裸域名)或者裸域名(主站使用www域名)到这里
+domains_alias_to_target_domain = []
+
 # ############## Proxy Settings ##############
 # Global proxy option, True or False (case sensitive)
 # Tip: If you want to make an GOOGLE mirror in China, you need an foreign proxy.
