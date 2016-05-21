@@ -517,6 +517,12 @@ CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 # 请参考 custom_func.sample.py 中的示例函数
 custom_text_rewriter_enable = False
 
+# ############## which mime means text ##############
+# v0.20.2+ If mime contains any of these keywords, it would be regarded as text
+#   some websites(such as twitter), would send some strange mime which also represent txt ('x-mpegurl')
+#   in these cases, you can add them here
+text_like_mime_keywords = ('text', 'json', 'javascript', 'xml')
+
 # ############## Misc ##############
 # v0.18.5+
 # eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}

@@ -95,6 +95,8 @@ requests_proxies = dict(
     https='https://127.0.0.1:8123',
 )
 
+text_like_mime_keywords = ('text', 'json', 'javascript', 'xml', 'x-mpegurl')
+
 # ############## Misc ##############
 # 不加这个似乎也没影响的样子..... 不过以防万一还是加上吧
 custom_allowed_remote_headers = {

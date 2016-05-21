@@ -31,6 +31,7 @@ external_domains = (
     'help.instagram.com',
     'blog.instagram.com',
     'www.facebook.com',
+    'connect.facebook.net',
     'static.xx.fbcdn.net',
     'pixel.facebook.com',
     'facebook.com',

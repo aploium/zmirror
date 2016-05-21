@@ -394,8 +394,9 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
 
 
 def extract_from_url_may_have_extdomains(extdomains_url=None):
-    """[http://foo.bar]/extdomains/foobar.com/path --> ('foboar.com', False), JSON supported
-        return (real_domain, is_https, real_path)
+    """[http://foo.bar]/extdomains/foobar.com/path --> ('foboar.com', False), JSON supported. return:(real_domain, is_https, real_path)
+
+        :rtype: (real_domain, is_https, real_path)
     """
     if extdomains_url is None:
         extdomains_url = request.path
@@ -470,8 +471,9 @@ def is_mime_represents_text(input_mime):
     :param input_mime: str
     :return: bool
     """
-    for text_word in ('text', 'json', 'javascript', 'xml'):
-        if text_word in input_mime:
+    input_mime_l = input_mime.lower()
+    for text_word in text_like_mime_keywords:
+        if text_word in input_mime_l:
             return True
     return False
 
