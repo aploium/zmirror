@@ -225,7 +225,7 @@ human_ip_verification_whitelist_cookies_expires_days = 30
 must_verify_cookies = False
 
 # ############## Custom URL Redirect ##############
-# If enabled, server will use an 302 to redirect from the source to the target
+# If enabled, server will use an 307 to redirect from the source to the target
 #
 # 1.It's quite useful when some url's that normal rewrite can't handle perfectly.
 #   (script may not rewrite all urls perfectly when you tries to put several individual sites to one mirror,
@@ -265,6 +265,14 @@ url_custom_redirect_regex = (
     # (r'^/wiki/(?P<name>.*)$', '/extdomains/https-zh.m.wikipedia.org/wiki/\g<name>'),
     # (r'^/wiki/(?P<name>.*)', '/extdomains/https-zh.m.wikipedia.org//wiki/\g<name>'),
 )
+
+# v0.20.3+ while normal redirect send 307 back to browser, shadow redirect don't actually change the url,
+#   but change the url only inside the program.
+# 正常的重定向会通过307来真正地修改url, 但是隐性重定向不会修改浏览器的url, 而是只在本程序内部进行url的修改
+shadow_url_redirect_regex = (
+    # (r'^/ext_tw_video/(?P<ext>.*)', r'/extdomains/https-video.twimg.com/ext_tw_video/\g<ext>'),
+)
+
 
 # ############## Individual Sites Isolation ##############
 # Referer based individual sites isolation (v0.18.0+)

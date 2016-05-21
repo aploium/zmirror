@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.1-dev'
+__VERSION__ = '0.20.4-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -1427,6 +1427,17 @@ def rewrite_client_request():
                 traceback.print_exc()
             else:
                 has_been_rewrited = True
+
+    if url_custom_redirect_enable and shadow_url_redirect_regex:
+        _path = request.path
+        for before, after in shadow_url_redirect_regex:
+            _path = re.sub(before, after, _path)
+        if _path != request.path:
+            dbgprint('ShadowUrlRedirect:', request.path, 'to', _path)
+            request.url = myurl_prefix + _path
+            request.path = _path
+            has_been_rewrited = True
+
     return has_been_rewrited
 
 
@@ -1536,61 +1547,29 @@ def ip_ban_verify_page():
         return resp
 
 
-@app.route('/extdomains/<path:hostname>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
-@app.route('/extdomains/<path:hostname>/<path:extpath>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
-def get_external_site(hostname, extpath='/'):
-    """
-
-    :type hostname: str
-    """
+@app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
+@app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
+def main_function(input_path='/'):
     request_local.start_time = time()  # to display compute time
-    # redirect to target main site if we got target main site here
-    if hostname.replace('https-', '', 1) in domain_alias_to_target_set:
-        return redirect('/' + extpath + '?' + urlsplit(request.url).query)
-
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
-
     if filter_or_rewrite_result is not None:
         return filter_or_rewrite_result  # Ban or redirect if need
 
-    has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
-    if has_been_rewrited:
-        extpath = request.path[request.path.find('/', 12):]  # extpath may have changed, regenerate it
+    rewrite_client_request()  # this process may change the global flask request object
 
-    # if /extdomains/https-****/foo/bar means server should use https method to request the remote site.
-    if hostname[0:6] == 'https-':
-        scheme = 'https://'
-        hostname = hostname[6:]
-    else:
-        scheme = 'http://'
+    hostname, is_https, extpath = extract_from_url_may_have_extdomains()
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
-    if hostname.rstrip('/') not in allowed_domains_set:
+    if hostname not in allowed_domains_set:
         return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
-    actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
-
-    return request_remote_site_and_parse(actual_request_url)
-
-
-@app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
-@app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
-def get_main_site(input_path='/'):
-    request_local.start_time = time()  # to display compute time
-    # pre-filter client's request
-    filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
-    if filter_or_rewrite_result is not None:
-        return filter_or_rewrite_result  # Ban or redirect if need
-
-    has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
-    if has_been_rewrited:
-        pass
-
-    if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
-
-    actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
+    if hostname in external_domains_set:
+        scheme = 'https://' if is_https else 'http://'
+        actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
+    else:
+        actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
 
     return request_remote_site_and_parse(actual_request_url)
 
