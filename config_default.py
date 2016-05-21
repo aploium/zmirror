@@ -293,6 +293,30 @@ enable_individual_sites_isolation = False
 # 只有包含在`external_domains`选项中的域名才会生效
 isolated_domains = {'zh.m.wikipedia.org', 'zh.wikipedia.org'}
 
+# ############## Stream Content Transfer ##############
+# v0.20.1+ We can transfer some content (eg:video) in stream mode
+#   in non-stream mode, our server have to receive all remote response first, then send it to user
+#   However, in stream mode, we would receive and send data piece-by-piece (small pieces)
+# Notice: local cache would not be available for stream content, please don't add image to stream list
+# IMPORTANT: NEVER ADD TEXT-LIKE CONTENT TYPE TO STREAM
+# 对于某些类型的服务器响应, 我们可以使用Stream模式来传送给用户. 提升对视频/音频的兼容性
+#   非stream模式下, 我们的服务器必须首先接受整个的远程响应, 然后才能发送给用户
+#   在stream模式下, 我们的程序会首先接受一小部分远程响应, 把它发送给用户, 再接受下一小部分远程响应(重复这个过程)
+#   这样用户感受到的延迟和流畅程度就会显著地改善
+# 注意: 由于本地缓存会在stream模式下失效, 请不要把图片添加到stream模式中
+# 重要: 永远不要把表示文本, 或者可能表示文本的mime关键字添加到stream模式中
+enable_stream_content_transfer = True
+
+# v0.20.1+ if response's mime CONTAINS any of these words, it would be use stream mode.
+steamed_mime_keywords = (
+    'video', 'audio', 'binary', 'octet-stream',
+    'x-compress', 'application/zip',
+    'pdf', 'msword', 'powerpoint', 'vnd.ms-excel',
+)
+
+# v0.20.1+ streamed buffer
+stream_transfer_buffer_size = 16384  # 16KB
+
 # #####################################################
 # ################## EXPERT Settings ##################
 # #####################################################

@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.0-dev'
+__VERSION__ = '0.20.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -81,7 +81,6 @@ domain_alias_to_target_set = set()
 domain_alias_to_target_set.add(target_domain)
 domains_alias_to_target_domain = list(domains_alias_to_target_domain)
 if domains_alias_to_target_domain:
-
     for _domain in domains_alias_to_target_domain:
         allowed_domains_set.add(_domain)
         domain_alias_to_target_set.add(_domain)
@@ -120,6 +119,8 @@ if not local_cache_enable:
     cdn_redirect_encode_query_str_into_url = False
 if not isinstance(target_static_domains, set):
     target_static_domains = set()
+if not enable_stream_content_transfer:
+    steamed_mime_keywords = ()
 
 if not enable_automatic_domains_whitelist:
     domains_whitelist_auto_add_glob_list = tuple()
@@ -273,6 +274,14 @@ app = Flask(__name__)
 def is_domain_match_glob_whitelist(domain):
     for domain_glob in domains_whitelist_auto_add_glob_list:
         if fnmatch(domain, domain_glob):
+            return True
+    return False
+
+
+@lru_cache(maxsize=128)
+def is_content_type_streamed(content_type):
+    for streamed_keyword in steamed_mime_keywords:
+        if streamed_keyword in content_type:
             return True
     return False
 
@@ -853,17 +862,30 @@ def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, i
 
 
 # ################# Begin Server Response Handler #################
-def copy_response(requests_response_obj, content=b''):
+def iter_streamed_response(requests_response_obj):
+    for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
+        yield particle_content
+
+
+def copy_response(requests_response_obj, content=None, is_streamed=False):
     """
     Copy and parse remote server's response headers, generate our flask response object
 
+    :type is_streamed: bool
     :param requests_response_obj: remote server's response, requests' response object (only headers and status are used)
     :param content: pre-rewrited response content, bytes
     :return: flask response object
     """
+    if content is None:
+        if is_streamed:
+            dbgprint('Transfer Using Stream Mode:', requests_response_obj.url, request_local.cur_mime)
+            content = iter_streamed_response(requests_response_obj)
+        else:
+            content = response_content_rewrite(requests_response_obj)
+
     if verbose_level >= 3: dbgprint('RemoteRespHeader', requests_response_obj.headers)
-    resp = make_response(content, requests_response_obj.status_code)
-    assert isinstance(resp, Response)
+    resp = Response(content, status=requests_response_obj.status_code)
+
     for header_key in requests_response_obj.headers:
         header_key_lower = header_key.lower()
         # Add necessary response headers from the origin site, drop other headers
@@ -1226,7 +1248,8 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     r = requests.request(
         method, final_url,
         params=param_get, headers=headers, data=data,
-        proxies=requests_proxies, allow_redirects=False
+        proxies=requests_proxies, allow_redirects=False,
+        stream=enable_stream_content_transfer,
     )
     # remote request time
     req_time = time() - req_start_time
@@ -1274,55 +1297,59 @@ def request_remote_site_and_parse(actual_request_url):
             return resp  # If cache hit, just skip the next steps
 
     try:  # send request to remote server
-
         data = client_requests_bin_rewrite(request.get_data())
         # server's request won't follow 301 or 302 redirection
         r, req_time = send_request(
             actual_request_url,
             method=request.method,
             headers=client_header,
-            data=data  # client_requests_bin_rewrite(request.get_data()),
+            data=data,  # client_requests_bin_rewrite(request.get_data()),
         )
     except Exception as e:
         errprint(e)  # ERROR :( so sad
         traceback.print_exc()
         return generate_simple_resp_page()
-    else:
-        # extract response's mime to thread local var
-        content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
-        request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
-        if 'no-store' in request_local.cache_control or 'must-revalidate' in request_local.cache_control:
-            _response_no_cache = True
-        else:
-            _response_no_cache = False
 
-        request_local.cur_mime = extract_mime_from_content_type(content_type)
-        # add url's MIME info to record, for MIME-based CDN rewrite
-        # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
-        if mime_based_static_resource_CDN and not _response_no_cache \
-                and r.request.method == 'GET' and r.status_code == 200:
-            # we should only cache GET method, and response code is 200
-            # noinspection PyUnboundLocalVariable
-            if url_no_scheme not in url_to_use_cdn:
-                if is_content_type_using_cdn(request_local.cur_mime):
-                    # mark it to use cdn, and record it's url without scheme.
-                    # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
-                    # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                    url_to_use_cdn[url_no_scheme] = [True, request_local.cur_mime]
-                    if verbose_level >= 3: dbgprint('CDN enabled for:', url_no_scheme)
-                else:
-                    if verbose_level >= 3: dbgprint('CDN disabled for:', url_no_scheme)
-                    url_to_use_cdn[url_no_scheme] = [False, '']
+    # extract response's mime to thread local var
+    content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
+    request_local.cur_mime = extract_mime_from_content_type(content_type)
 
-        # copy and parse remote response
-        resp = copy_response(r, response_content_rewrite(r))
+    # is streamed
+    is_streamed = enable_stream_content_transfer and is_content_type_streamed(content_type)
 
-        if local_cache_enable and not _response_no_cache:  # storge entire our server's response (headers included)
-            put_response_to_local_cache(actual_request_url, resp, request, r)
+    # extract cache control header, if not cache, we should disable local cache
+    request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
+    _response_no_cache = 'no-store' in request_local.cache_control or 'must-revalidate' in request_local.cache_control
 
-    if request_local.start_time is not None:
+    # add url's MIME info to record, for MIME-based CDN rewrite,
+    #   next time we access this url, we would know it's mime
+    # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
+    if mime_based_static_resource_CDN and not _response_no_cache \
+            and r.request.method == 'GET' and r.status_code == 200:
+        # we should only cache GET method, and response code is 200
+        # noinspection PyUnboundLocalVariable
+        if url_no_scheme not in url_to_use_cdn:
+            if is_content_type_using_cdn(request_local.cur_mime):
+                # mark it to use cdn, and record it's url without scheme.
+                # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
+                # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
+                url_to_use_cdn[url_no_scheme] = [True, request_local.cur_mime]
+                if verbose_level >= 3: dbgprint('CDN enabled for:', url_no_scheme)
+            else:
+                if verbose_level >= 3: dbgprint('CDN disabled for:', url_no_scheme)
+                url_to_use_cdn[url_no_scheme] = [False, '']
+
+    # copy and parse remote response
+    resp = copy_response(r, is_streamed=is_streamed)
+
+    # storge entire our server's response (headers included)
+    if local_cache_enable and not _response_no_cache and not is_streamed:
+        put_response_to_local_cache(actual_request_url, resp, request, r)
+
+    if request_local.start_time is not None and not is_streamed:
         # remote request time should be excluded when calculating total time
         resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
+
     resp.headers.add('X-EWM-Version', __VERSION__)
 
     if developer_dump_all_traffics:
@@ -1411,6 +1438,7 @@ def ewm_status():
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
     output = ""
     output += strx('extract_real_url_from_embedded_url', extract_real_url_from_embedded_url.cache_info())
+    output += strx('\nis_content_type_streamed', is_content_type_streamed.cache_info())
     output += strx('\nembed_real_url_to_embedded_url', embed_real_url_to_embedded_url.cache_info())
     output += strx('\ncheck_global_ua_pass', check_global_ua_pass.cache_info())
     output += strx('\nextract_mime_from_content_type', extract_mime_from_content_type.cache_info())
