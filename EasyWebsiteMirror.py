@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.4-dev'
+__VERSION__ = '0.20.5-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -155,32 +155,6 @@ url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
 url_rewrite_cache_hit_count = 0
 url_rewrite_cache_miss_count = 0
 
-# ########### domain replacer prefix string buff ###############
-prefix_buff = {}
-for _domain in allowed_domains_set:
-    prefix_buff[_domain] = dict(
-        # normal
-        slash='//' + _domain,
-        http='http://' + _domain,
-        https='https://' + _domain,
-        double_quoted='"%s"' % _domain,
-        single_quoted="'%s'" % _domain,
-        # escape slash
-        slash_esc=('//' + _domain).replace('/', r'\/'),
-        http_esc=('http://' + _domain).replace('/', r'\/'),
-        https_esc=('https://' + _domain).replace('/', r'\/'),
-        # urlencoded
-        slash_ue=quote_plus('//' + _domain),
-        http_ue=quote_plus('http://' + _domain),
-        https_ue=quote_plus('https://' + _domain),
-        double_quoted_ue=quote_plus('"%s"' % _domain),
-        single_quoted_ue=quote_plus("'%s'" % _domain),
-        # escaped and urlencoded
-        slash_esc_ue=quote_plus(('//' + _domain).replace('/', r'\/')),
-        http_esc_ue=quote_plus(('http://' + _domain).replace('/', r'\/')),
-        https_esc_ue=quote_plus(('https://' + _domain).replace('/', r'\/')),
-    )
-
 # ########### PreCompile Regex ###############
 # Advanced url rewriter, see function response_text_rewrite()
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出长得类似于url的东西 ####
@@ -270,6 +244,31 @@ app = Flask(__name__)
 #
 
 # ########## Begin Utils #############
+def calc_domain_replace_prefix(_domain):
+    return dict(
+        # normal
+        slash='//' + _domain,
+        http='http://' + _domain,
+        https='https://' + _domain,
+        double_quoted='"%s"' % _domain,
+        single_quoted="'%s'" % _domain,
+        # escape slash
+        slash_esc=('//' + _domain).replace('/', r'\/'),
+        http_esc=('http://' + _domain).replace('/', r'\/'),
+        https_esc=('https://' + _domain).replace('/', r'\/'),
+        # urlencoded
+        slash_ue=quote_plus('//' + _domain),
+        http_ue=quote_plus('http://' + _domain),
+        https_ue=quote_plus('https://' + _domain),
+        double_quoted_ue=quote_plus('"%s"' % _domain),
+        single_quoted_ue=quote_plus("'%s'" % _domain),
+        # escaped and urlencoded
+        slash_esc_ue=quote_plus(('//' + _domain).replace('/', r'\/')),
+        http_esc_ue=quote_plus(('http://' + _domain).replace('/', r'\/')),
+        https_esc_ue=quote_plus(('https://' + _domain).replace('/', r'\/')),
+    )
+
+
 @lru_cache(maxsize=8192)
 def is_domain_match_glob_whitelist(domain):
     for domain_glob in domains_whitelist_auto_add_glob_list:
@@ -287,7 +286,7 @@ def is_content_type_streamed(content_type):
 
 
 def try_match_and_add_domain_to_rewrite_white_list(domain):
-    global external_domains, external_domains_set, allowed_domains_set
+    global external_domains, external_domains_set, allowed_domains_set, prefix_buff
 
     if domain is None or not domain:
         return False
@@ -303,6 +302,8 @@ def try_match_and_add_domain_to_rewrite_white_list(domain):
         external_domains = tuple(_buff)
         external_domains_set.add(domain)
         allowed_domains_set.add(domain)
+
+        prefix_buff[domain] = calc_domain_replace_prefix(domain)
 
         # write log
         try:
@@ -865,7 +866,11 @@ def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, i
 
 # ################# Begin Server Response Handler #################
 def iter_streamed_response(requests_response_obj):
+    total_size = 0
     for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
+        if verbose_level >= 4:
+            total_size += len(particle_content)
+            dbgprint('total_size:', total_size)
         yield particle_content
 
 
@@ -978,7 +983,13 @@ def response_content_rewrite(remote_resp_obj):
         try:
             if custom_text_rewriter_enable:
                 resp_text2 = custom_response_text_rewriter(resp_text, content_mime, remote_resp_obj.url)
-                resp_text = resp_text2
+                if isinstance(resp_text2, str):
+                    resp_text = resp_text2
+                elif isinstance(resp_text2, tuple) or isinstance(resp_text2, list):
+                    resp_text, is_skip_builtin_rewrite = resp_text2
+                    if is_skip_builtin_rewrite:
+                        dbgprint('Skip_builtin_rewrite', request.url)
+                        return resp_text.encode(encoding='utf-8')
         except Exception as _e:  # just print err and fallback to normal rewrite
             errprint('Custom Rewrite Function "custom_response_text_rewriter(text)" in custom_func.py ERROR', _e)
             traceback.print_exc()
@@ -1238,7 +1249,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     final_url = client_requests_text_rewrite(url)
     final_hostname = urlsplit(final_url).hostname
     # Only external in-zone domains are allowed (SSRF check layer 2)
-    if final_hostname not in allowed_domains_set:
+    if final_hostname not in allowed_domains_set and not developer_temporary_disable_ssrf_prevention:
         raise ConnectionAbortedError('Tried to access an OUT-OF-ZONE domain:', final_hostname)
 
     # set zero data to None instead of b''
@@ -1255,12 +1266,12 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     )
     # remote request time
     req_time = time() - req_start_time
+    dbgprint('RequestTime:', req_time, v=4)
 
     # Some debug output
     # print(r.request.headers, r.headers)
     if verbose_level >= 3:
-        dbgprint(r.request.method, "FinalSentToRemoteRequestUrl:", r.url, "\nRemote Response Len: ", len(r.content),
-                 "\nRem Resp Stat: ", r.status_code)
+        dbgprint(r.request.method, "FinalSentToRemoteRequestUrl:", r.url, "\nRem Resp Stat: ", r.status_code)
         dbgprint("RemoteRequestHeaders: ", r.request.headers)
         if data:
             dbgprint('RemoteRequestRawData: ', r.request.body)
@@ -1270,8 +1281,6 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse(actual_request_url):
-    if verbose_level >= 3: dbgprint('PreRewritedUrl:', actual_request_url)
-
     if mime_based_static_resource_CDN:
         url_no_scheme = actual_request_url[actual_request_url.find('//') + 2:]
         if (cdn_redirect_code_if_cannot_hard_rewrite
@@ -1323,6 +1332,11 @@ def request_remote_site_and_parse(actual_request_url):
     request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
     _response_no_cache = 'no-store' in request_local.cache_control or 'must-revalidate' in request_local.cache_control
 
+    dbgprint('Response Content-Type:', content_type,
+             'IsStreamed:', is_streamed,
+             'is_no_cache:', _response_no_cache,
+             'Line', current_line_number(), v=4)
+
     # add url's MIME info to record, for MIME-based CDN rewrite,
     #   next time we access this url, we would know it's mime
     # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
@@ -1354,7 +1368,7 @@ def request_remote_site_and_parse(actual_request_url):
 
     resp.headers.add('X-EWM-Version', __VERSION__)
 
-    if developer_dump_all_traffics:
+    if developer_dump_all_traffics and not is_streamed:
         if not os.path.exists('traffic'):
             os.mkdir('traffic')
         _time_str = datetime.now().strftime('traffic_%Y-%m-%d_%H-%M-%S')
@@ -1409,7 +1423,7 @@ def is_client_request_need_redirect():
 
         for regex_match, regex_replace in url_custom_redirect_regex:
             if re.match(regex_match, request.path, flags=re.IGNORECASE) is not None:
-                redirect_to = re.sub(regex_match, regex_replace, request.path, flags=re.IGNORECASE)
+                redirect_to = re.sub(regex_match, regex_replace, extract_url_path_and_query(request.url), flags=re.IGNORECASE)
                 if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)
 
@@ -1431,9 +1445,9 @@ def rewrite_client_request():
     if url_custom_redirect_enable and shadow_url_redirect_regex:
         _path = request.path
         for before, after in shadow_url_redirect_regex:
-            _path = re.sub(before, after, _path)
+            _path = re.sub(before, after, extract_url_path_and_query(request.url))
         if _path != request.path:
-            dbgprint('ShadowUrlRedirect:', request.path, 'to', _path)
+            dbgprint('ShadowUrlRedirect:', extract_url_path_and_query(request.url), 'to', _path)
             request.url = myurl_prefix + _path
             request.path = _path
             has_been_rewrited = True
@@ -1467,6 +1481,10 @@ def ewm_status():
     output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
     output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache),
                    'Hits:', url_rewrite_cache_hit_count, 'Misses:', url_rewrite_cache_miss_count)
+
+    output += strx('\n----------------\n')
+    output += strx('\ndomain_alias_to_target_set', domain_alias_to_target_set)
+
     return "<pre>" + output + "</pre>\n"
 
 
@@ -1559,17 +1577,23 @@ def main_function(input_path='/'):
     rewrite_client_request()  # this process may change the global flask request object
 
     hostname, is_https, extpath = extract_from_url_may_have_extdomains()
+    dbgprint('ResolveRequestUrl hostname:', hostname, 'is_https', is_https, 'extpath:', extpath)
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if hostname not in allowed_domains_set:
-        return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
+        if developer_temporary_disable_ssrf_prevention:
+            add_ssrf_allowed_domain(hostname)
+        else:
+            return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
-    if hostname in external_domains_set:
+    if hostname not in domain_alias_to_target_set:
         scheme = 'https://' if is_https else 'http://'
         actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
+        if verbose_level >= 3: dbgprint('PreRewritedUrl(ext):', actual_request_url)
     else:
         actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
+        if verbose_level >= 3: dbgprint('PreRewritedUrl(main):', actual_request_url)
 
     return request_remote_site_and_parse(actual_request_url)
 
@@ -1577,6 +1601,12 @@ def main_function(input_path='/'):
 # ################# End Flask #################
 
 # ################# Begin Post (auto)Exec Section #################
+
+# ########### domain replacer prefix string buff ###############
+prefix_buff = {}
+for _domain in allowed_domains_set:
+    prefix_buff[_domain] = calc_domain_replace_prefix(_domain)
+
 if human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
 

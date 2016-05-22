@@ -551,3 +551,6 @@ developer_string_trace = None
 # If set to True, all traffic objects would be dumped to an pickle file,
 #   Include: time, flask request object, requests response object, our server's (flask) response object
 developer_dump_all_traffics = False
+
+# v0.20.4+ temporary disable SSRF prevention
+developer_temporary_disable_ssrf_prevention = False
