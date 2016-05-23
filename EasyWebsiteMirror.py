@@ -91,7 +91,11 @@ my_host_scheme_escaped = my_host_scheme.replace('/', r'\/')
 myurl_prefix = my_host_scheme + my_host_name
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
-allowed_remote_response_headers = {'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server', 'location'}
+allowed_remote_response_headers = {
+    'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server', 'location',
+    'access-control-allow-origin', 'access-control-allow-headers', 'access-control-allow-methods',
+    'access-control-expose-headers', 'access-control-max-age', 'access-control-allow-credentials',
+}
 allowed_remote_response_headers.update(custom_allowed_remote_headers)
 # ## Get Target Domain's Root Domain ##
 temp = target_domain.split('.')
@@ -274,6 +278,18 @@ def calc_domain_replace_prefix(_domain):
         http_esc_ue=quote_plus(('http://' + _domain).replace('/', r'\/')),
         https_esc_ue=quote_plus(('https://' + _domain).replace('/', r'\/')),
     )
+
+
+def add_temporary_domain_alias(source_domain, target_domain):
+    if request_local.temporary_domain_alias is None:
+        request_local.temporary_domain_alias = []
+    else:
+        request_local.temporary_domain_alias = list(request_local.temporary_domain_alias)
+
+    request_local.temporary_domain_alias.append((source_domain, target_domain))
+    request_local.temporary_domain_alias = tuple(request_local.temporary_domain_alias)
+    dbgprint('A domain', source_domain, 'to', target_domain, 'added to temporary_domain_alias',
+             request_local.temporary_domain_alias)
 
 
 @lru_cache(maxsize=8192)
@@ -915,6 +931,8 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
                         requests_response_obj.headers[header_key]) + ';charset=utf-8'
                 else:
                     resp.headers[header_key] = requests_response_obj.headers[header_key]
+            elif header_key_lower == 'access-control-allow-origin':
+                resp.headers[header_key] = myurl_prefix
             else:
                 resp.headers[header_key] = requests_response_obj.headers[header_key]
 
@@ -1088,12 +1106,13 @@ def response_text_rewrite(resp_text):
     """
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
-        for before_replace, after_replace in plain_replace_domain_alias:
-            _before_e = before_replace.replace('/', r'\/')
-            _after_e = after_replace.replace('/', r'\/')
+        for before_replace, after_replace in (plain_replace_domain_alias + request_local.temporary_domain_alias):
+            # _before_e = before_replace.replace('/', r'\/')
+            # _after_e = after_replace.replace('/', r'\/')
             # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
             # resp_text = resp_text.replace(_before_e, _after_e)
             # resp_text = resp_text.replace(quote_plus(before_replace), quote_plus(after_replace))
+            dbgprint('plain_replace_domain_alias', before_replace, after_replace)
             resp_text = resp_text.replace(before_replace, after_replace)
 
     # v0.9.2+: advanced url rewrite engine
@@ -1590,8 +1609,10 @@ def ip_ban_verify_page():
 @app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 def main_function(input_path='/'):
+    dbgprint('-----BeginRequest-----')
+
     request_local.start_time = time()  # to display compute time
-    request_local.temporary_domain_alias = []  # init temporary_domain_alias
+    request_local.temporary_domain_alias = ()  # init temporary_domain_alias
 
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
@@ -1631,13 +1652,13 @@ def main_function(input_path='/'):
 
 @app.route('/crossdomain.xml')
 def crossdomain_xml():
-    return """<?xml version="1.0"?>
+    return Response("""<?xml version="1.0"?>
 <!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
 <cross-domain-policy>
 <allow-access-from domain="*"/>
 <site-control permitted-cross-domain-policies="all"/>
 <allow-http-request-headers-from domain="*" headers="*" secure="false"/>
-</cross-domain-policy>"""
+</cross-domain-policy>""", content_type='text/x-cross-domain-policy')
 
 
 # ################# End Flask #################
