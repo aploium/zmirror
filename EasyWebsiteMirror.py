@@ -1383,6 +1383,12 @@ def request_remote_site_and_parse(actual_request_url):
 
 def filter_client_request():
     if verbose_level >= 3: dbgprint('Client Request Url: ', request.url)
+
+    # crossdomain.xml
+    if os.path.basename(request.path) == 'crossdomain.xml':
+        dbgprint('Crossdomain.xml hit from', request.url)
+        return crossdomain_xml()
+
     # Global whitelist ua
     if check_global_ua_pass(str(request.user_agent)):
         return None
@@ -1581,10 +1587,11 @@ def main_function(input_path='/'):
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if hostname not in allowed_domains_set:
-        if developer_temporary_disable_ssrf_prevention:
-            add_ssrf_allowed_domain(hostname)
-        else:
-            return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
+        if not try_match_and_add_domain_to_rewrite_white_list(hostname):
+            if developer_temporary_disable_ssrf_prevention:
+                add_ssrf_allowed_domain(hostname)
+            else:
+                return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
     if hostname not in domain_alias_to_target_set:
@@ -1596,6 +1603,17 @@ def main_function(input_path='/'):
         if verbose_level >= 3: dbgprint('PreRewritedUrl(main):', actual_request_url)
 
     return request_remote_site_and_parse(actual_request_url)
+
+
+@app.route('/crossdomain.xml')
+def crossdomain_xml():
+    return """<?xml version="1.0"?>
+<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
+<cross-domain-policy>
+<allow-access-from domain="*"/>
+<site-control permitted-cross-domain-policies="all"/>
+<allow-http-request-headers-from domain="*" headers="*" secure="false"/>
+</cross-domain-policy>"""
 
 
 # ################# End Flask #################
