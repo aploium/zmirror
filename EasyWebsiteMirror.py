@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.5-dev'
+__VERSION__ = '0.20.6-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -105,6 +105,7 @@ request_local = threading.local()
 request_local.start_time = None
 request_local.cur_mime = ''
 request_local.cache_control = ''
+request_local.temporary_domain_alias = None
 
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
@@ -121,6 +122,12 @@ if not isinstance(target_static_domains, set):
     target_static_domains = set()
 if not enable_stream_content_transfer:
     steamed_mime_keywords = ()
+
+if not url_custom_redirect_enable:
+    url_custom_redirect_list = {}
+    url_custom_redirect_regex = ()
+    shadow_url_redirect_regex = ()
+    plain_replace_domain_alias = ()
 
 if not enable_automatic_domains_whitelist:
     domains_whitelist_auto_add_glob_list = tuple()
@@ -1079,6 +1086,15 @@ def response_text_rewrite(resp_text):
     rewrite urls in text-like content (html,css,js)
     :type resp_text: str
     """
+    # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
+    if url_custom_redirect_enable:
+        for before_replace, after_replace in plain_replace_domain_alias:
+            _before_e = before_replace.replace('/', r'\/')
+            _after_e = after_replace.replace('/', r'\/')
+            # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
+            # resp_text = resp_text.replace(_before_e, _after_e)
+            # resp_text = resp_text.replace(quote_plus(before_replace), quote_plus(after_replace))
+            resp_text = resp_text.replace(before_replace, after_replace)
 
     # v0.9.2+: advanced url rewrite engine
     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
@@ -1575,6 +1591,8 @@ def ip_ban_verify_page():
 @app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 def main_function(input_path='/'):
     request_local.start_time = time()  # to display compute time
+    request_local.temporary_domain_alias = []  # init temporary_domain_alias
+
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
     if filter_or_rewrite_result is not None:
@@ -1602,7 +1620,13 @@ def main_function(input_path='/'):
         actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
         if verbose_level >= 3: dbgprint('PreRewritedUrl(main):', actual_request_url)
 
-    return request_remote_site_and_parse(actual_request_url)
+    try:
+        resp = request_remote_site_and_parse(actual_request_url)
+    except:
+        traceback.print_exc()
+        return generate_simple_resp_page()
+
+    return resp
 
 
 @app.route('/crossdomain.xml')

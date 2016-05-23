@@ -239,6 +239,8 @@ url_custom_redirect_enable = False
 # Only applies to url PATH, other parts remains untouched
 # It's an plain text list. Less function but higher performance, have higher priority than regex rules
 # eg: "http://foo.com/im/path.php?q=a#mark" , in this url, "/im/path.php" this is PATH
+#
+# Dependency: url_custom_redirect_enable == True
 url_custom_redirect_list = {
     # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
     # now, they are for sample only.
@@ -256,6 +258,8 @@ url_custom_redirect_list = {
 # If url FULLY MATCH the first regex, the second regex for re.sub  will be applied
 # Same as above, only the url PATH will be applied (maybe change in later version)
 # Please see https://docs.python.org/3.5/library/re.html#re.sub for more rules
+#
+# Dependency: url_custom_redirect_enable == True
 url_custom_redirect_regex = (
     # v0.18.0+ because the new sites isolation mechanism, these redirect are NO LONGER NEEDED FOR WIKIPEDIA
     # now, they are for sample only.
@@ -269,10 +273,28 @@ url_custom_redirect_regex = (
 # v0.20.3+ while normal redirect send 307 back to browser, shadow redirect don't actually change the url,
 #   but change the url only inside the program.
 # 正常的重定向会通过307来真正地修改url, 但是隐性重定向不会修改浏览器的url, 而是只在本程序内部进行url的修改
+#
+# Dependency: url_custom_redirect_enable == True
 shadow_url_redirect_regex = (
     # (r'^/ext_tw_video/(?P<ext>.*)', r'/extdomains/https-video.twimg.com/ext_tw_video/\g<ext>'),
 )
 
+# v0.20.6+ plain replace domain alias
+# before any builtin rewrite(but after custom_text_rewrite), program will do a plain text replace,
+#   which allow you replace some domains to others,
+#       for example, replace www.twitter.com to twitter.your-website-mirror.com
+#   Notice: if you have www.foo.com and foo.com, please place the longer one first,
+#       because www.foo.com would be matched by foo.com too
+# 在任何内置重写前, (但是在`custom_text_rewrite`之后), 程序会进行一次纯文本替换
+#   使得你可以把一些域名替换成别的(比如把墙外的域名替换成你自己的镜像).
+#   比如: www.twitter.com 替换成 twitter.your-website-mirror.com
+# 注意: 如果你需要同时替换二级域名和根域名, 请把二级域名放在根域名前面, 因为二级域名在替换时也会被根域名匹配到
+#
+# Dependency: url_custom_redirect_enable == True
+plain_replace_domain_alias = (
+    # ('www.twitter.com', 'twitter.your-website-mirror.com'),
+    # ('www.youtube.com', 'youtube.your-website-mirror.com'),
+)
 
 # ############## Individual Sites Isolation ##############
 # Referer based individual sites isolation (v0.18.0+)
