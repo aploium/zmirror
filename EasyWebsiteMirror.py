@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.6-dev'
+__VERSION__ = '0.20.7-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -93,16 +93,23 @@ myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
 allowed_remote_response_headers = {
     'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server', 'location',
+    'accept-ranges',
     'access-control-allow-origin', 'access-control-allow-headers', 'access-control-allow-methods',
     'access-control-expose-headers', 'access-control-max-age', 'access-control-allow-credentials',
+    'timing-allow-origin',
 }
 allowed_remote_response_headers.update(custom_allowed_remote_headers)
-# ## Get Target Domain's Root Domain ##
+# ## Get Target Domain and MyHostName's Root Domain ##
 temp = target_domain.split('.')
 if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
     target_domain_root = target_domain
 else:
     target_domain_root = '.'.join(temp[1:])
+temp = my_host_name.split('.')
+if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
+    my_host_name_root = target_domain
+else:
+    my_host_name_root = '.'.join(temp[1:])
 
 # ## thread local var ##
 request_local = threading.local()
@@ -931,7 +938,7 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
                         requests_response_obj.headers[header_key]) + ';charset=utf-8'
                 else:
                     resp.headers[header_key] = requests_response_obj.headers[header_key]
-            elif header_key_lower == 'access-control-allow-origin':
+            elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
                 resp.headers[header_key] = myurl_prefix
             else:
                 resp.headers[header_key] = requests_response_obj.headers[header_key]
@@ -1188,6 +1195,7 @@ def extract_client_header():
                     outgoing_head[head_name_l] = _str_buff
             else:
                 outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
+    # outgoing_head['host'] = extract_from_url_may_have_extdomains()[0]
 
     if verbose_level >= 3: dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
@@ -1208,6 +1216,8 @@ def client_requests_text_rewrite(raw_text):
     replaced = regex_request_rewriter.sub('\g<origin_domain>', raw_text)
     # replaced = replaced.replace(my_host_name_urlencoded, target_domain)
     # replaced = replaced.replace(my_host_name_no_port, target_domain)
+
+    dbgprint('after regex_request_rewriter', replaced)
 
     # 32MB == 33554432
     replaced = client_requests_bin_rewrite(replaced.encode(), max_len=33554432).decode()
@@ -1617,6 +1627,7 @@ def main_function(input_path='/'):
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
     if filter_or_rewrite_result is not None:
+        dbgprint('-----EndRequest(Rewrite)-----')
         return filter_or_rewrite_result  # Ban or redirect if need
 
     rewrite_client_request()  # this process may change the global flask request object
@@ -1647,6 +1658,7 @@ def main_function(input_path='/'):
         traceback.print_exc()
         return generate_simple_resp_page()
 
+    dbgprint('-----EndRequest-----')
     return resp
 
 
