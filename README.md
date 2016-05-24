@@ -1,16 +1,18 @@
 # EasyWebsiteMirror
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
-比如国内可以访问的Google镜像/中文维基镜像/twitter镜像(功能完整) 请看`more_config_examples`文件夹下的配置文件  
+比如国内可以访问的Google镜像/中文维基镜像 请看`more_config_examples`文件夹下的配置文件  
+程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像   
   
   
 `这篇Readme很老了....新添加的功能请看config_default.py中的注释`  
   
 
-## Feature 特性
-1. Completely mirror.  
+## Features 特性
+1. Completely mirror, provide some (almost) out-of-box configs  
   创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站   
-  以下是例子(样例配置文件中的, 并不代表程序只能镜像这几个, 程序支持__任意__网站的镜像, 这些只是样例配置)  
+  提供几个(几乎)开箱即用的网站镜像配置文件  
+  以下是例子(样例配置文件中的, 并不代表程序只能镜像这几个, 程序支持__任意__网站的镜像, 这些只是样例配置)    
   - Google镜像(整合中文维基镜像)
     - 以下google服务完全可用:
       - google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
@@ -20,9 +22,11 @@ an http reverse proxy designed to automatically and completely mirror a website 
     - 以下服务暂不可用(因为目前google登陆还存在问题):
       - 所有需要登录的东西, docs之类的
   - twitter镜像(PC站/Mobile站)
-    - 所有功能完整可用(暂时还没发现不能用的功能)
+    - 几乎所有功能完整可用(一部分视频可以加载, 但是无法播放, 原因未知)
   - instagram镜像
-    - 所有功能完整可用(暂时还没发现不能用的功能)
+    - 所有功能完整可用, 包括视频(暂时还没发现不能用的功能)
+  - Youtube镜像
+    - 只有基础看视频功能可用, 评论区很多时候无法加载, 无法登陆 
   - 需要访问demo站点的请联系我, 不在此公开
   
 2. Mirror ANY website, highly compatible  
@@ -30,22 +34,25 @@ an http reverse proxy designed to automatically and completely mirror a website 
    并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
    (现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进)  
 
-   附带的一个好处就是在一个网站上修复程序bug, 对所有网站的兼容性都能得到提升
+   附带的一个好处就是在一个网站上修复程序bug, 对所有网站的兼容性都能得到提升  
   
 3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
-  (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)
+  (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  
   
 4. CDN Support, hot statistic resource can serve by CDN, dramatically increase speed  
-  CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)
+  CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  
   
 5. Easy to config and deploy, highly automatic  
-  非常容易配置和部署, 镜像一个网站只需要添加它的域名即可
+  非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  
   
 6. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
-  访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)
+  访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  
   
 7. Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly  
-  自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理
+  自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  
+
+8. Stream content support (audio/video)  
+  流媒体支持(视频/音频)  
   
 ## Install and Usage
 It only support python3, based on flask and requests  
@@ -66,8 +73,15 @@ first install python3
 0. assume you have completed the HelloWorld above
 1. 
   - (google) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_google_and_zhwikipedia.py` to `YOUR_EWM_FOLDER/config.py`  
-  - (twitterPC) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_twitter_pc.py` to `YOUR_EWM_FOLDER/config.py`
-  - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_instagram.py` to `YOUR_EWM_FOLDER/config.py`
+  
+  - (twitter) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_twitter_pc.py` to `YOUR_EWM_FOLDER/config.py`  
+                copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_twitter.py` to `YOUR_EWM_FOLDER/custom_func.py`  
+                TwitterMobile is almost the same
+
+  - (Youtube)  copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_youtube.py` to `YOUR_EWM_FOLDER/config.py`  
+               copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_youtube.py` to `YOUR_EWM_FOLDER/custom_func.py`  
+  
+  - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_instagram.py` to `YOUR_EWM_FOLDER/config.py`  
 2. 
   - If your computer can access google directly(outside the GFW), ignore this step
   - If you are inside the GFW, please set your http proxy in the `config.py`

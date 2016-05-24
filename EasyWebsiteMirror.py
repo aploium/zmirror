@@ -315,14 +315,14 @@ def is_content_type_streamed(content_type):
     return False
 
 
-def try_match_and_add_domain_to_rewrite_white_list(domain):
+def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     global external_domains, external_domains_set, allowed_domains_set, prefix_buff
 
     if domain is None or not domain:
         return False
     if domain in allowed_domains_set:
         return True
-    if not is_domain_match_glob_whitelist(domain):
+    if not force_add and not is_domain_match_glob_whitelist(domain):
         return False
     else:
         infoprint('A domain:', domain, 'was added to whitelist')
@@ -947,7 +947,10 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
         #   and then change the cookie domain to our domain
         if header_key_lower == 'set-cookie':
             for cookie_string in response_cookies_deep_copy(requests_response_obj):
-                resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
+                try:
+                    resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
+                except:
+                    traceback.print_exc()
 
     if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
 
@@ -1473,7 +1476,7 @@ def is_client_request_need_redirect():
             return redirect(redirect_to, code=307)
 
         for regex_match, regex_replace in url_custom_redirect_regex:
-            if re.match(regex_match, request.path, flags=re.IGNORECASE) is not None:
+            if re.match(regex_match, extract_url_path_and_query(request.url), flags=re.IGNORECASE) is not None:
                 redirect_to = re.sub(regex_match, regex_replace, extract_url_path_and_query(request.url), flags=re.IGNORECASE)
                 if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)

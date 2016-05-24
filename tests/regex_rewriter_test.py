@@ -242,6 +242,35 @@ new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);r
         r"""<a href="https://t.co/hWOMicwES0" rel="nofollow" dir="ltr" data-expanded-url="http://onforb.es/1NqvWJT" class="twitter-timeline-link" target="_blank" title="http://onforb.es/1NqvWJT"><span class="tco-ellipsis"></span><span class="invisible">http://</span><span class="js-display-url">onforb.es/1NqvWJT</span><span class="invisible"></span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span></span></a>""",
         r"""<a href="https://t.co/hWOMicwES0" rel="nofollow" dir="ltr" data-expanded-url="http://onforb.es/1NqvWJT" class="twitter-timeline-link" target="_blank" title="http://onforb.es/1NqvWJT"><span class="tco-ellipsis"></span><span class="invisible">http://</span><span class="js-display-url">onforb.es/1NqvWJT</span><span class="invisible"></span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span></span></a>""",
         r"""<a href="https://t.co/hWOMicwES0" rel="nofollow" dir="ltr" data-expanded-url="http://onforb.es/1NqvWJT" class="twitter-timeline-link" target="_blank" title="http://onforb.es/1NqvWJT"><span class="tco-ellipsis"></span><span class="invisible">http://</span><span class="js-display-url">onforb.es/1NqvWJT</span><span class="invisible"></span><span class="tco-ellipsis"><span class="invisible">&nbsp;</span></span></a>""",
+    ),
+    (
+        r"""<a href="#" onClick="window.clipboardData.setData('text', directlink.href); return false;" title="Copy direct-link" class="bglink">[複製]</a>
+                <a href="http://www.bfooru.info/jdc.php?ref=8aYRLJzCCE" class="bglink">http://www.bfooru.info/jdc.php?ref=8aYRLJzCCE</a>
+                <span id="waitoutput">.</span>
+                <BR><BR>
+                <div style="margin:5px;">
+                <a href="http://www.boosme.info" target="_blank"><img src="ad.gif" border="0" width="468" height="60"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+                <a href="http://www.xpj9199.com/Register/?a=64" target="_blank"><img src="http://dioguitar23.co/images/2015-1206-468X60.gif" border="0" width="468" height="60"></a>
+                </div>
+                <BR><BR>""",
+        r"""<a href="#" onClick="window.clipboardData.setData('text', directlink.href); return false;" title="Copy direct-link" class="bglink">[複製]</a>
+                <a href="http://www.bfooru.info/jdc.php?ref=8aYRLJzCCE" class="bglink">http://www.bfooru.info/jdc.php?ref=8aYRLJzCCE</a>
+                <span id="waitoutput">.</span>
+                <BR><BR>
+                <div style="margin:5px;">
+                <a href="http://www.boosme.info" target="_blank"><img src="ad.gif" border="0" width="468" height="60"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+                <a href="http://www.xpj9199.com/Register/?a=64" target="_blank"><img src="http://dioguitar23.co/images/2015-1206-468X60.gif" border="0" width="468" height="60"></a>
+                </div>
+                <BR><BR>"""
+        r"""<a href="#" onClick="window.clipboardData.setData('text', directlink.href); return false;" title="Copy direct-link" class="bglink">[複製]</a>
+                <a href="http://www.bfooru.info/jdc.php?ref=8aYRLJzCCE" class="bglink">http://www.bfooru.info/jdc.php?ref=8aYRLJzCCE</a>
+                <span id="waitoutput">.</span>
+                <BR><BR>
+                <div style="margin:5px;">
+                <a href="http://www.boosme.info" target="_blank"><img src="ad.gif" border="0" width="468" height="60"></a>&nbsp;&nbsp;&nbsp;&nbsp;
+                <a href="http://www.xpj9199.com/Register/?a=64" target="_blank"><img src="http://dioguitar23.co/images/2015-1206-468X60.gif" border="0" width="468" height="60"></a>
+                </div>
+                <BR><BR>""",
     )
 )
 ColorfulPyPrint_set_verbose_level(5)
