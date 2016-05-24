@@ -2,18 +2,18 @@
 # This is the sample config, please copy or rename it to 'config.py'
 # DO NOT delete or commit following settings
 
-# Github: https://github.com/Aploium/EasyWebsiteMirror
+# Github: https://github.com/Aploium/MagicWebsiteMirror
 
 # ############## Explain to the default config ##############
 # The default config is an site mirror to `www.kernel.org` along with `*.kernel.org`
-#   you can just copy this file to 'config.py' and then execute `python3 EasyWebsiteMirror.py`,
+#   you can just copy this file to 'config.py' and then execute `python3 MagicWebsiteMirror.py`,
 #   it will start an localhost web server.
 # Then, enter http://127.0.0.1/ you will actually access to the www.kernel.org  (the linux kernel website)
 #   More, you can click and browse around. everything is withing the mirror.
 # You don't need to write any code, or do any complex settings. Just change the settings of this page!
 #
 # 默认配置文件是对 www.kernel.org (linux内核的网站)及其所有子站的镜像.
-#   请复制一份本文件为 'config.py' 然后运行 `python3 EasyWebsiteMirror.py`
+#   请复制一份本文件为 'config.py' 然后运行 `python3 MagicWebsiteMirror.py`
 #   然后访问 http://127.0.0.1 , 你将看到的是 www.kernel.org 的首页
 #   www.kernel.org 和它的所有子站都被自动地加入到了这个反向代理镜像中.
 #   你可以在网站中随意点击, 随意浏览, 而不会跑到镜像外. (*.kernel.org以外的网站仍然会跑到外面, 因为把它们没有加入镜像)
@@ -541,7 +541,7 @@ static_file_extensions_list = {
 CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 
 # ############## Custom Text Rewriter Function ##############
-# Please see https://github.com/Aploium/EasyWebsiteMirror#custom-rewriter-advanced-function for more information
+# Please see https://github.com/Aploium/MagicWebsiteMirrorr#custom-rewriter-advanced-function for more information
 # ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
 # ### 这是一项高级选项, 你需要写一些自己的Python代码才行 ###
 # 请参考 custom_func.sample.py 中的示例函数

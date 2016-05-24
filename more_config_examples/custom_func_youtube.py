@@ -6,7 +6,7 @@ please copy it to YOUR_EWM_FOLDER/custom_func.py
 Without this file, twitter mirror won't work normally
 """
 import re
-from EasyWebsiteMirror import *
+from MagicWebsiteMirror import *
 
 regex_youtube_video_videoplayback_resolve = re.compile(
     r'''(?P<prefix>r\d+---sn-[a-z0-9]{8})\.googlevideo\.com(?P<percent>%|%25)2Fvideoplayback(%|%25)3F''', flags=re.IGNORECASE)

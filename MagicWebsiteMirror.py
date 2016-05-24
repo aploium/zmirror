@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.7-dev'
+__VERSION__ = '0.20.8-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############

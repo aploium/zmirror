@@ -1,4 +1,4 @@
-# EasyWebsiteMirror
+# MagicWebsiteMirror
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
 比如国内可以访问的Google镜像/中文维基镜像 请看`more_config_examples`文件夹下的配置文件  
@@ -63,8 +63,8 @@ first install python3
 
 ### HelloWorld Usage  
 1. install or upgrade flask requests and chardet package `python3 -m pip install -U flask requests chardet`  
-2. (recommended) `git clone https://github.com/Aploium/EasyWebsiteMirror.git` or download and unzip this package(not recommend).   
-3. Execute it: `python3 EasyWebsiteMirror.py`  
+2. (recommended) `git clone https://github.com/Aploium/MagicWebsiteMirror.git` or download and unzip this package(not recommend).   
+3. Execute it: `python3 MagicWebsiteMirror.py`  
 4. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
  the `*.kernel.org` is withing the mirror.
 5. Please see the config.py for more information, an google mirror config is also included.
@@ -85,7 +85,7 @@ first install python3
 2. 
   - If your computer can access google directly(outside the GFW), ignore this step
   - If you are inside the GFW, please set your http proxy in the `config.py`
-3. execute `python3 EasyWebsiteMirror.py`
+3. execute `python3 MagicWebsiteMirror.py`
 4. open `http://127.0.0.1/` and see magic happens. (google) and `http://127.0.0.1/wiki` for zh-wikipedia, `http://127.0.0.1/scholar` for google scholar
 
 ### Upgrade 升级

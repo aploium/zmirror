@@ -6,7 +6,7 @@ please copy it to YOUR_EWM_FOLDER/custom_func.py
 Without this file, twitter mirror won't work normally
 """
 import re
-from EasyWebsiteMirror import add_ssrf_allowed_domain, get_group, \
+from MagicWebsiteMirror import add_ssrf_allowed_domain, get_group, \
     force_https_domains, my_host_scheme, my_host_name, convert_to_mirror_url, \
     extract_from_url_may_have_extdomains
 

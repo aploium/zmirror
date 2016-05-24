@@ -96,7 +96,7 @@ def demo__custom_identity_verify(identity_dict):
 # Demo for Twitter
 def demo__handle_expand_url(mobj):
     import config
-    from EasyWebsiteMirror import add_ssrf_allowed_domain, get_group
+    from MagicWebsiteMirror import add_ssrf_allowed_domain, get_group
 
     domain = get_group('domain', mobj)
     if not domain:

@@ -3,7 +3,7 @@
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 #
 # 使用方法:
-#   复制本文件和 config_sample_twitter_pc.py(有些重复选项依赖于它) 两个文件 到 EasyWebsiteMirror.py 同级目录,
+#   复制本文件和 config_sample_twitter_pc.py(有些重复选项依赖于它) 两个文件 到 MagicWebsiteMirror.py 同级目录,
 #       重命名 config_sample_twitter_pc.py 为 config.py
 #
 # 本配置文件假定你的服务器本身在墙外

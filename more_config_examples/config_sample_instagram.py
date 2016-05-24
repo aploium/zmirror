@@ -2,7 +2,7 @@
 # 这是为instagram镜像配置的示例配置文件
 #
 # 使用方法:
-#   复制本文件到 EasyWebsiteMirror.py 同级目录, 并重命名为 config.py
+#   复制本文件到 MagicWebsiteMirror.py 同级目录, 并重命名为 config.py
 #
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 # 本配置文件假定你的服务器本身在墙外
@@ -11,7 +11,7 @@
 # instagram所有功能完整可用(暂时还没发现不能用的功能),
 # 由于instagram官方的设定, 网页版是无法上传文件的, 只能看别人的动态
 #
-# Github: https://github.com/Aploium/EasyWebsiteMirror
+# Github: https://github.com/Aploium/MagicWebsiteMirror
 
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'

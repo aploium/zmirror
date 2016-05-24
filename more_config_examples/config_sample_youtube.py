@@ -2,7 +2,7 @@
 # 这是为Youtube镜像配置的示例配置文件
 #
 # 使用方法:
-#   复制本文件和 custom_func_youtube.py 到 EasyWebsiteMirror.py 同级目录,
+#   复制本文件和 custom_func_youtube.py 到 MagicWebsiteMirror.py 同级目录,
 #     复制后本文件重命名为 config.py, custom_func_youtube.py 重命名为 custom_func.py
 #
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分

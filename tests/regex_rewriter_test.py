@@ -3,10 +3,10 @@ import re
 from time import time,sleep
 import os
 from config import *
-from EasyWebsiteMirror import regex_adv_url_rewriter, regex_url_reassemble, \
+from MagicWebsiteMirror import regex_adv_url_rewriter, regex_url_reassemble, \
     static_file_extensions_list, external_domains_set, allowed_domains_set, myurl_prefix, cdn_domains_number, \
     static_file_extensions_list,prefix_buff
-import EasyWebsiteMirror
+import MagicWebsiteMirror
 from urllib.parse import urljoin
 from ColorfulPyPrint import *
 from pprint import pprint
@@ -281,7 +281,7 @@ ColorfulPyPrint_set_verbose_level(5)
 #     path = "/some23333_/url/"
 #
 #
-# EasyWebsiteMirror.set_request_for_debug(DbgRequest1)
+# MagicWebsiteMirror.set_request_for_debug(DbgRequest1)
 # fail_count = 0
 # for test_case in test_cases:
 #     resp_text = test_case[0]
@@ -303,7 +303,7 @@ class DbgRequest2:
     path = "/extdomains/apis.google.com/some23333_/url/"
 
 
-EasyWebsiteMirror.set_request_for_debug(DbgRequest2)
+MagicWebsiteMirror.set_request_for_debug(DbgRequest2)
 fail_count = 0
 for test_case in test_cases:
     try:
