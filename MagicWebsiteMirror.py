@@ -1454,8 +1454,8 @@ def filter_client_request():
     ):
         if verbose_level >= 3: dbgprint('ip', request.remote_addr, 'is verifying cookies')
         if 'mwm_verify' in request.cookies and \
-                ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('mwm_verify'))) \
-                         or (enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
+                ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('mwm_verify')))
+                 or (enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
                         request.cookies.get('mwm_verify'), request))):
             ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('mwm_verify'))
             if verbose_level >= 3: dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
@@ -1583,6 +1583,7 @@ def ip_ban_verify_page():
             html_escape(human_ip_verification_description), form_body)
 
     elif request.method == 'POST':
+        dbgprint('Verify Request Form', request.form)
         for q_id, _question in enumerate(human_ip_verification_questions):
             if request.form.get(str(q_id)) != _question[1]:
                 return generate_simple_resp_page(b'You Got An Error In ' + _question[0].encode(), 200)
@@ -1593,6 +1594,7 @@ def ip_ban_verify_page():
                 return generate_simple_resp_page(b'Param Missing: ' + rec_explain_string.encode(), 200)
             else:
                 record_dict[rec_name] = request.form.get(rec_name)
+
         origin = '/'
         if 'origin' in request.form:
             try:
@@ -1603,11 +1605,12 @@ def ip_ban_verify_page():
                 netloc = urlsplit(origin).netloc
                 if not netloc and netloc != my_host_name:
                     origin = '/'
-        resp = generate_html_redirect_page(origin, msg=human_ip_verification_success_msg)
 
         if identity_verify_required:
             if not custom_identity_verify(record_dict):
                 return generate_simple_resp_page(b'Verification Failed, please check', 200)
+
+        resp = generate_html_redirect_page(origin, msg=human_ip_verification_success_msg)
 
         if human_ip_verification_whitelist_from_cookies:
             _hash = generate_ip_verify_hash(record_dict)
@@ -1622,20 +1625,26 @@ def ip_ban_verify_page():
             record_dict['__mwm_verify'] = _hash
 
         elif enable_custom_access_cookie_generate_and_verify:
-            _hash = custom_generate_access_cookie(record_dict, request)
+            try:
+                _hash = custom_generate_access_cookie(record_dict, request)
 
-            if _hash is None:
-                return generate_simple_resp_page(b'Verification Failed, please check', 200)
+                dbgprint('SelfGeneratedCookie:', _hash)
 
-            resp.set_cookie(
-                'mwm_verify',
-                _hash,
-                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
-                max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
-                # httponly=True,
-                # domain=my_host_name
-            )
-            record_dict['__mwm_verify'] = _hash
+                if _hash is None:
+                    return generate_simple_resp_page(b'Verification Failed, please check', 200)
+
+                resp.set_cookie(
+                    'mwm_verify',
+                    _hash,
+                    expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
+                    max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
+                    # httponly=True,
+                    # domain=my_host_name
+                )
+                record_dict['__mwm_verify'] = _hash
+            except:
+                traceback.print_exc()
+                return generate_simple_resp_page(b'Server Error, please check', 200)
 
         ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
         return resp
@@ -1648,6 +1657,8 @@ def main_function(input_path='/'):
 
     request_local.start_time = time()  # to display compute time
     request_local.temporary_domain_alias = ()  # init temporary_domain_alias
+
+    infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
 
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
