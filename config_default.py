@@ -211,18 +211,41 @@ human_ip_verification_identity_record = (
 
 # If set to True, will use the custom_identity_verify() function to verify user's input identity.
 # And dict will be passed to that function
-# 请参考 custom_func.sample.py 中的示例验证函数
+# This function is more simple but basic than the following `enable_custom_access_cookie_generate_and_verify`
+#   you could not specify the cookie, and do advanced verification(eg: time control)
 # ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
 # ### 这是一项高级功能, 你需要写自己的验证函数才行 ###
 identity_verify_required = False
 
 # If sets to True, would add an cookie to verified user, automatically whitelist them even if they have different ip
+#   otherwise, only users from the `human_ip_verification_default_whitelist_networks` ip can access
 human_ip_verification_whitelist_from_cookies = True
 human_ip_verification_whitelist_cookies_expires_days = 30
 
 # If set to True, an valid cookie is required, IP white list would be ignored.
 # If set to False, identity will not be verified but just logged to file
 must_verify_cookies = False
+
+# v0.20.9+ Generate and verify access cookie using self-defined function
+#   If this is set to True, the `human_ip_verification_whitelist_from_cookies` would be disabled automatically
+#   self-generate and verify cookies requires two function
+#       custom_generate_access_cookie() and custom_verify_access_cookie()
+#   in custom_func.py (please see custom_func.sample.py for example)
+#   every time user access your website, his/her request(flask request object) would be passed to the verify function.
+#   If custom_generate_access_cookie() returns None, user's access would not be granted
+#   This function is more complex but also more powerful than `identity_verify_required`,
+#       You can control the cookie by yourself, and verify it every time.
+#       If this function is enabled, please disable `identity_verify_required`, though these two can exist the same time,
+#       but enable then both at the same time is unnecessary.
+# 使用自定义函数来生成和验证访问cookie
+# ### 这是一项高级功能, 你需要写自己的验证函数才行 ###
+#   如果这个选项被启用, `human_ip_verification_whitelist_from_cookies` 选项会被自动关闭
+#   这项功能需要自己写两个python函数: custom_generate_access_cookie() 和 custom_verify_access_cookie()
+#   每次用户访问时, 他/她的请求内容(flask request对象)会被传送到验证函数中进行验证
+#   若 custom_generate_access_cookie() 的返回值是None, 那么用户的访问就会被拒绝
+#   与 `identity_verify_required` 的区别是, 这个更加复杂, 但是也支持更加高级的功能
+#       如果打开了这个, 建议把 `identity_verify_required` 关掉(尽管两者可以共存, 但是没必要)
+enable_custom_access_cookie_generate_and_verify = False
 
 # ############## Custom URL Redirect ##############
 # If enabled, server will use an 307 to redirect from the source to the target

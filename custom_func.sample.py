@@ -1,5 +1,6 @@
 # coding=utf-8
 import re
+from MagicWebsiteMirror import *
 
 # regex patton from @stephenhay, via https://mathiasbynens.be/demo/url-regex
 REGEX_OF_URL = r'(https?|ftp):\/\/[^\s/$.?#].[^\s]*'
@@ -40,7 +41,6 @@ def custom_response_text_rewriter(raw_text, content_mime, remote_url):
         # Add to just before the html head
         raw_text = raw_text.replace('</head>', my_statistic_code + '</head>', 1)
 
-
     return raw_text
 
 
@@ -55,6 +55,29 @@ def custom_identity_verify(identity_dict):
     """
     True_or_False = True
     return True_or_False
+
+
+def custom_generate_access_cookie(input_dict, flask_request):
+    """
+    generate access cookies, to identity user (or deny)
+    See option `enable_custom_access_cookie_generate_and_verify`
+    :param input_dict: a dict contains user's input
+    :param flask_request: user's flask request object
+    :return: cookie string or None. If returns None, client's access would be denied.
+    """
+    # example, calling the builtin access cookie generate function
+    return generate_ip_verify_hash(input_dict)
+
+
+def custom_verify_access_cookie(mwm_verify_cookie, flask_request):
+    """
+    verify user's access cookie. return True for access granted, False for denied
+    See option `enable_custom_access_cookie_generate_and_verify`
+    :param flask_request: the flask request object
+    :return: bool
+    """
+    # example, calling the builtin cookie verify function
+    return verify_ip_hash_cookie(mwm_verify_cookie)
 
 
 # just_another_demo_custom_identity_verify

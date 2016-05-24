@@ -60,7 +60,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.8-dev'
+__VERSION__ = '0.20.9-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -151,6 +151,9 @@ else:
             warnprint('An isolated domain:', isolated_domain,
                       'would not have effect because it did not appears in the `external_domains` list')
 
+if enable_custom_access_cookie_generate_and_verify:
+    human_ip_verification_whitelist_from_cookies = False
+
 if not is_use_proxy:
     requests_proxies = None
 if human_ip_verification_enabled:
@@ -166,7 +169,7 @@ else:
     identity_verify_required = False
     human_ip_verification_whitelist_from_cookies = False
     must_verify_cookies = False
-if not human_ip_verification_whitelist_from_cookies:
+if not human_ip_verification_whitelist_from_cookies and not enable_custom_access_cookie_generate_and_verify:
     must_verify_cookies = False
 
 url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
@@ -198,7 +201,7 @@ regex_adv_url_rewriter = re.compile(  # TODO: Add non-standard port support
 )
 
 regex_extract_base64_from_embedded_url = re.compile(
-    r'_ewm0(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._ewm1_\.[a-zA-Z\d]+\b')
+    r'_mwm0(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._mwm1_\.[a-zA-Z\d]+\b')
 
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
@@ -356,25 +359,25 @@ def extract_real_url_from_embedded_url(embedded_url):
     """
 
 
-    eg: https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css
+    eg: https://cdn.domain.com/a.php_mwm0_.cT1zb21ldGhpbmc=._mwm1_.css
         ---> https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
-    eg2: https://cdn.domain.com/a/b/_ewm0_.bG92ZT1saXZl._ewm1_.jpg
+    eg2: https://cdn.domain.com/a/b/_mwm0_.bG92ZT1saXZl._mwm1_.jpg
         ---> https://foo.com/a/b/?love=live (assume it returns an jpg) (base64 only)
-    eg3: https://cdn.domain.com/a/b/_ewm0z_.[some long long base64 encoded string]._ewm1_.jpg
+    eg3: https://cdn.domain.com/a/b/_mwm0z_.[some long long base64 encoded string]._mwm1_.jpg
         ---> https://foo.com/a/b/?love=live[and a long long query string] (assume it returns an jpg) (gzip + base64)
     eg4:https://cdn.domain.com/a  (no change)
         ---> (no query string): https://foo.com/a (assume it returns an png) (no change)
     :param embedded_url: embedded_url
     :return: real url or None
     """
-    if '._ewm1_.' not in embedded_url[-15:]:  # check url mark
+    if '._mwm1_.' not in embedded_url[-15:]:  # check url mark
         return None
     m = regex_extract_base64_from_embedded_url.search(embedded_url)
     b64 = get_group('b64', m)
     if not b64:
         return None
 
-    # 'https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css'
+    # 'https://cdn.domain.com/a.php_mwm0_.cT1zb21ldGhpbmc=._mwm1_.css'
     # real_request_url_no_query ---> 'https://cdn.domain.com/a.php'
     real_request_url_no_query = embedded_url[:m.span()[0]]
 
@@ -412,7 +415,7 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
 
         b64_query = base64.urlsafe_b64encode(byte_query).decode()
         # dbgprint(url_mime)
-        mixed_path = url_sp.path + '_ewm0' + gzip_label + '_.' + b64_query + '._ewm1_.' + mime_to_use_cdn[url_mime]
+        mixed_path = url_sp.path + '_mwm0' + gzip_label + '_.' + b64_query + '._mwm1_.' + mime_to_use_cdn[url_mime]
         result = urlunsplit((url_sp.scheme, url_sp.netloc, mixed_path, '', ''))
     except:
         traceback.print_exc()
@@ -1414,7 +1417,7 @@ def request_remote_site_and_parse(actual_request_url):
         # remote request time should be excluded when calculating total time
         resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
 
-    resp.headers.add('X-EWM-Version', __VERSION__)
+    resp.headers.add('X-MagicWebsiteMirror-Version', __VERSION__)
 
     if developer_dump_all_traffics and not is_streamed:
         if not os.path.exists('traffic'):
@@ -1445,13 +1448,16 @@ def filter_client_request():
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
     if human_ip_verification_enabled and (
-                (human_ip_verification_whitelist_from_cookies and must_verify_cookies)
+                ((human_ip_verification_whitelist_from_cookies or enable_custom_access_cookie_generate_and_verify)
+                 and must_verify_cookies)
             or is_ip_not_in_allow_range(request.remote_addr)
     ):
         if verbose_level >= 3: dbgprint('ip', request.remote_addr, 'is verifying cookies')
-        if human_ip_verification_whitelist_from_cookies and 'ewm_ip_verify' in request.cookies \
-                and verify_ip_hash_cookie(request.cookies.get('ewm_ip_verify')):
-            ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('ewm_ip_verify'))
+        if 'mwm_verify' in request.cookies and \
+                ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('mwm_verify'))) \
+                         or (enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
+                        request.cookies.get('mwm_verify'), request))):
+            ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('mwm_verify'))
             if verbose_level >= 3: dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
@@ -1513,8 +1519,8 @@ def rewrite_client_request():
 
 
 # ################# Begin Flask #################
-@app.route('/ewm_stat')
-def ewm_status():
+@app.route('/mwm_stat')
+def mwm_status():
     if request.remote_addr != '127.0.0.1':
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
     output = ""
@@ -1606,14 +1612,30 @@ def ip_ban_verify_page():
         if human_ip_verification_whitelist_from_cookies:
             _hash = generate_ip_verify_hash(record_dict)
             resp.set_cookie(
-                'ewm_ip_verify',
+                'mwm_verify',
                 _hash,
                 expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
                 max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
                 # httponly=True,
                 # domain=my_host_name
             )
-            record_dict['__ewm_ip_verify'] = _hash
+            record_dict['__mwm_verify'] = _hash
+
+        elif enable_custom_access_cookie_generate_and_verify:
+            _hash = custom_generate_access_cookie(record_dict, request)
+
+            if _hash is None:
+                return generate_simple_resp_page(b'Verification Failed, please check', 200)
+
+            resp.set_cookie(
+                'mwm_verify',
+                _hash,
+                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
+                max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
+                # httponly=True,
+                # domain=my_host_name
+            )
+            record_dict['__mwm_verify'] = _hash
 
         ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
         return resp
@@ -1696,7 +1718,6 @@ if custom_text_rewriter_enable:
         warnprint('Cannot import custom_response_text_rewriter custom_func.py,'
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
         traceback.print_exc()
-        pass
 
 if identity_verify_required:
     try:
@@ -1706,7 +1727,16 @@ if identity_verify_required:
         warnprint('Cannot import custom_identity_verify from custom_func.py,'
                   ' `identity_verify` is now disabled (if it was enabled)')
         traceback.print_exc()
-        pass
+
+if enable_custom_access_cookie_generate_and_verify:
+    try:
+        from custom_func import custom_generate_access_cookie, custom_verify_access_cookie
+    except:
+        enable_custom_access_cookie_generate_and_verify = False
+        errprint('Cannot import custom_generate_access_cookie and custom_generate_access_cookie from custom_func.py,'
+                 ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')
+        traceback.print_exc()
+
 # ################# End Post (auto)Exec Section #################
 
 if __name__ == '__main__':
