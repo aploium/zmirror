@@ -103,6 +103,7 @@ verbose_level = 3
 # ################# ADVANCED Settings #################
 # #####################################################
 
+# ############## Domain Settings ##############
 # v0.20.0+
 # these domains would be regarded as the `target_domain`, and do the same process
 #   eg: kernel.org is the same of www.kernel.org
@@ -111,6 +112,7 @@ verbose_level = 3
 # 可以添加www域名(主站使用裸域名)或者裸域名(主站使用www域名)到这里
 domains_alias_to_target_domain = []
 
+# ############## Misc Settings ##############
 # If client's ua CONTAINS this, it's access will be granted.Only one value allowed.
 # this white name also affects any other client filter (Human/IP verification, etc..)
 # Please don't use this if you don't use filters.
@@ -128,6 +130,9 @@ global_ua_white_name = 'qiniu-imgstg-spider'
 # set None to disable it, 'utf-8' for utf-8
 # 设置为 None 表示关闭显式编码指定, 'utf-8' 代表utf-8
 force_decode_remote_using_encode = None
+
+# v0.21.1+ Keep-Alive Per domain (Experimental)
+enable_keep_alive_per_domain = False
 
 # ############## Cache Settings ##############
 # Cache remote static files to your local storge. And access them directly from local storge if necessary.

@@ -65,7 +65,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.21.0-dev'
+__VERSION__ = '0.21.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -117,6 +117,11 @@ if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', '
     my_host_name_root = target_domain
 else:
     my_host_name_root = '.'.join(temp[1:])
+
+if enable_keep_alive_per_domain:
+    connection_pool_per_domain = {}
+    for _domain in allowed_domains_set:
+        connection_pool_per_domain[_domain] = {'session': requests.Session(),}
 
 # ## thread local var ##
 request_local = threading.local()
@@ -1329,9 +1334,17 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     if not data:
         data = None
 
+    if enable_keep_alive_per_domain:
+        if final_hostname not in connection_pool_per_domain:
+            connection_pool_per_domain[final_hostname] = {'session': requests.Session()}
+        _requester = connection_pool_per_domain[final_hostname]['session']
+        _requester.cookies.clear()
+    else:
+        _requester = requests
+
     # Send real requests
     req_start_time = time()
-    r = requests.request(
+    r = _requester.request(
         method, final_url,
         params=param_get, headers=headers, data=data,
         proxies=requests_proxies, allow_redirects=False,
