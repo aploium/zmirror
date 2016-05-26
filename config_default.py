@@ -81,14 +81,6 @@ enable_automatic_domains_whitelist = True
 # domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')
 domains_whitelist_auto_add_glob_list = ('*.kernel.org',)
 
-# v0.20.0+
-# these domains would be regarded as the `target_domain`, and do the same process
-#   eg: kernel.org is the same of www.kernel.org
-#       format: ('kernel.org',)
-# 列在这里这些域名会被认为是target_domain, 并做同样的处理和修改
-# 可以添加www域名(主站使用裸域名)或者裸域名(主站使用www域名)到这里
-domains_alias_to_target_domain = []
-
 # ############## Proxy Settings ##############
 # Global proxy option, True or False (case sensitive)
 # Tip: If you want to make an GOOGLE mirror in China, you need an foreign proxy.
@@ -103,12 +95,21 @@ requests_proxies = dict(
 )
 
 # ############## Output Settings ##############
-# Verbose level (0~3) 0:important and error 1:info 2:warning 3:debug. Default is 3 (for first time runner)
+# Verbose level (0~4) 0:important and error 1:info 2:warning 3/4:debug. Default is 3 (for first time runner)
+# 注意: 在正式部署到服务器后, 请把这个值修改为2, 如果设置为3或4,会产生非常大量的debug输出
 verbose_level = 3
 
 # #####################################################
 # ################# ADVANCED Settings #################
 # #####################################################
+
+# v0.20.0+
+# these domains would be regarded as the `target_domain`, and do the same process
+#   eg: kernel.org is the same of www.kernel.org
+#       format: ('kernel.org',)
+# 列在这里这些域名会被认为是target_domain, 并做同样的处理和修改
+# 可以添加www域名(主站使用裸域名)或者裸域名(主站使用www域名)到这里
+domains_alias_to_target_domain = []
 
 # If client's ua CONTAINS this, it's access will be granted.Only one value allowed.
 # this white name also affects any other client filter (Human/IP verification, etc..)
@@ -355,6 +356,7 @@ isolated_domains = {'zh.m.wikipedia.org', 'zh.wikipedia.org'}
 # 对于某些类型的服务器响应, 我们可以使用Stream模式来传送给用户. 提升对视频/音频的兼容性
 #   非stream模式下, 我们的服务器必须首先接受整个的远程响应, 然后才能发送给用户
 #   在stream模式下, 我们的程序会首先接受一小部分远程响应, 把它发送给用户, 再接受下一小部分远程响应(重复这个过程)
+#       (v0.21.0+) 如果启用异步模式, 那么在发送给用户的期间, 同时也会下载远程内容, 以提升吞吐量
 #   这样用户感受到的延迟和流畅程度就会显著地改善
 # 注意: 由于本地缓存会在stream模式下失效, 请不要把图片添加到stream模式中
 # 重要: 永远不要把表示文本, 或者可能表示文本的mime关键字添加到stream模式中
@@ -367,8 +369,15 @@ steamed_mime_keywords = (
     'pdf', 'msword', 'powerpoint', 'vnd.ms-excel',
 )
 
-# v0.20.1+ streamed buffer
-stream_transfer_buffer_size = 16384  # 16KB
+# v0.20.1+ streamed content fetch size (per package)
+stream_transfer_buffer_size = 32768  # 32KB
+
+# v0.21.0+ streamed content async preload
+enable_stream_transfer_async_preload = True
+
+# v0.21.0+ streamed content async preload -- max preload packages number
+# 异步加载缓冲区存储的数据包的最大数量, 不要设置得太小
+stream_transfer_async_preload_max_packages_size = 30
 
 # #####################################################
 # ################## EXPERT Settings ##################

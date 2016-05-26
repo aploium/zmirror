@@ -11,13 +11,18 @@ import re
 import base64
 import zlib
 from time import time
+import queue
 from fnmatch import fnmatch
 from html import escape as html_escape
-import threading
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
+
+try:
+    import threading
+except ImportError:
+    import dummy_threading as threading
 
 try:
     from cchardet import detect as c_chardet
@@ -60,7 +65,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.20.9-dev'
+__VERSION__ = '0.21.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -142,6 +147,9 @@ if not url_custom_redirect_enable:
     shadow_url_redirect_regex = ()
     plain_replace_domain_alias = ()
 
+if not enable_stream_content_transfer:
+    enable_stream_transfer_async_preload = False
+
 if not enable_automatic_domains_whitelist:
     domains_whitelist_auto_add_glob_list = tuple()
 
@@ -219,52 +227,6 @@ regex_request_rewriter = re.compile(
 # Flask main app
 app = Flask(__name__)
 
-
-# ###################### Functional Tests ####################### #
-# 0. test environment
-#    0.0 global search keyword: lovelive ,scholar keyword: gravity
-#    0.1 Firefox/46.0 Windows/10 x64
-#
-# 1. www.google.com load  [OK]
-#    1.0 basic [OK]
-#    1.1  search hint [OK]
-#
-# 2. webpage search [OK]
-#    2.0 basic [OK]
-#    2.1 search result page 2,3 [OK]
-#    2.2 search tools [OK]
-#    2.3 result item click [OK]
-#       2.3.0 basic [OK]
-#       2.3.1 result item (left) click, with redirect [OK]
-#       2.3.2 result item (right) click, with top banner [OK]
-#    2.4 search item cache [Not Supported Yet]
-#
-# 3. image search [OK]
-#    3.0 basic [OK]
-#    3.1 all images lazy load [OK]
-#    3.2 image detail banner [OK]
-#       3.2.0 basic [OK]
-#       3.2.1 HD lazy load [OK]
-#       3.2.2 relative images show [OK]
-#       3.2.3 relative images click/HD lazy load  [OK]
-#       3.2.4 view image page [OK]
-#       3.2.5 view raw image (ps: raw image may be blocked by GFW, thus NOT accessible) [OK]
-#    3.3  scroll down lazy load [OK]
-#
-# 5. google scholar (/scholar)
-#    5.0 basic [OK]
-#    5.1 search (gravity) [OK]
-#        5.1.0 basic [OK]
-#        5.1.1 result item click and redirect [OK]
-#        5.1.2 citations click [OK]
-#        5.1.3 search filters ("Since year 2015") [OK]
-#
-# 6. video search (ps: DO NOT support youtube) [OK]
-#    6.0 basic [OK]
-#    6.1 video thumb show [OK]
-#    6.2 result item click redirect [OK]
-#    6.3 page 2,3 [OK]
-#
 
 # ########## Begin Utils #############
 def calc_domain_replace_prefix(_domain):
@@ -905,12 +867,60 @@ def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, i
 
 
 # ################# Begin Server Response Handler #################
+def preload_streamed_response_content_async(requests_response_obj, buffer_queue):
+    """
+
+    :type buffer_queue: queue.Queue
+    """
+    for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
+        try:
+            buffer_queue.put(particle_content, timeout=15)
+        except queue.Full:
+            traceback.print_exc()
+            exit()
+        dbgprint('BufferSize', buffer_queue.qsize())
+    buffer_queue.put(None, timeout=15)
+    exit()
+
+
+def iter_streamed_response_async(requests_response_obj):
+    total_size = 0
+    _start_time = time()
+
+    buffer_queue = queue.Queue(maxsize=stream_transfer_async_preload_max_packages_size)
+
+    t = threading.Thread(target=preload_streamed_response_content_async,
+                         args=(requests_response_obj, buffer_queue))
+    t.start()
+
+    while True:
+        try:
+            particle_content = buffer_queue.get(timeout=15)
+        except queue.Empty:
+            warnprint('WeGotAnSteamTimeout')
+            traceback.print_exc()
+            return
+        buffer_queue.task_done()
+
+        if particle_content is not None:
+            yield particle_content
+        else:
+            return
+
+        if verbose_level >= 4:
+            total_size += len(particle_content)
+            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
+
+
 def iter_streamed_response(requests_response_obj):
     total_size = 0
+    _start_time = time()
+
     for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
         if verbose_level >= 4:
             total_size += len(particle_content)
-            dbgprint('total_size:', total_size)
+            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
+
         yield particle_content
 
 
@@ -925,8 +935,12 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
     """
     if content is None:
         if is_streamed:
-            dbgprint('Transfer Using Stream Mode:', requests_response_obj.url, request_local.cur_mime)
-            content = iter_streamed_response(requests_response_obj)
+            if not enable_stream_transfer_async_preload:
+                dbgprint('TransferUsingStreamMode(basic):', requests_response_obj.url, request_local.cur_mime)
+                content = iter_streamed_response(requests_response_obj)
+            else:
+                dbgprint('TransferUsingStreamMode(async):', requests_response_obj.url, request_local.cur_mime)
+                content = iter_streamed_response_async(requests_response_obj)
         else:
             content = response_content_rewrite(requests_response_obj)
 
