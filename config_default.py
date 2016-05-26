@@ -369,11 +369,15 @@ steamed_mime_keywords = (
     'pdf', 'msword', 'powerpoint', 'vnd.ms-excel',
 )
 
-# v0.20.1+ streamed content fetch size (per package)
-stream_transfer_buffer_size = 32768  # 32KB
-
 # v0.21.0+ streamed content async preload
 enable_stream_transfer_async_preload = True
+
+# v0.20.1+ streamed content fetch size (per package)
+if enable_stream_transfer_async_preload:
+    # if async is enabled, a smaller size buffer may be better
+    stream_transfer_buffer_size = 16384  # 16KB
+else:
+    stream_transfer_buffer_size = 32768  # 32KB
 
 # v0.21.0+ streamed content async preload -- max preload packages number
 # 异步加载缓冲区存储的数据包的最大数量, 不要设置得太小
