@@ -76,6 +76,8 @@ static_file_extensions_list = set(static_file_extensions_list)
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
 allowed_domains_set.add(target_domain)
+for _domain in external_domains:  # for support domain with port
+    allowed_domains_set.add(urlsplit('http://' + _domain).hostname)
 
 domain_alias_to_target_set = set()
 domain_alias_to_target_set.add(target_domain)
@@ -188,7 +190,7 @@ regex_adv_url_rewriter = re.compile(  # TODO: Add non-standard port support
     # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
-    r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+))?""" +  # domain and scheme
+    r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+(?P<port>:\d{1,5})?))?""" +  # domain and scheme
     # url路径, 含参数 可选
     r"""(?P<path>[^\s;+$?#'"\{}]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
@@ -694,6 +696,7 @@ def regex_url_reassemble(match_obj):
     path = get_group('path', match_obj)
     match_domain = get_group('domain', match_obj)
     scheme = get_group('scheme', match_obj)
+
     whole_match_string = match_obj.group()
     # dbgprint('prefix', prefix, 'quote_left', quote_left, 'quote_right', quote_right,
     #          'path', path, 'match_domain', match_domain, 'scheme', scheme, 'whole', whole_match_string)
@@ -739,7 +742,11 @@ def regex_url_reassemble(match_obj):
     # dbgprint('match path', path, v=5)
     path = urljoin(remote_path, path)
     # dbgprint('middle path', path, v=5)
-    url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
+    if ':' not in remote_domain:  # the python's builtin urljoin has a bug, cannot join domain with port correctly
+        url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
+    else:
+        url_no_scheme = domain + '/' + path.lstrip('/')
+
     # dbgprint('url_no_scheme', url_no_scheme)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
@@ -1298,7 +1305,8 @@ def extract_url_path_and_query(full_url):
 # ################# Begin Middle Functions #################
 def send_request(url, method='GET', headers=None, param_get=None, data=None):
     final_url = client_requests_text_rewrite(url)
-    final_hostname = urlsplit(final_url).hostname
+    final_hostname = urlsplit(final_url).netloc
+    dbgprint('FinalUrl', final_url, 'FinalHostname', final_hostname)
     # Only external in-zone domains are allowed (SSRF check layer 2)
     if final_hostname not in allowed_domains_set and not developer_temporary_disable_ssrf_prevention:
         raise ConnectionAbortedError('Tried to access an OUT-OF-ZONE domain:', final_hostname)

@@ -271,6 +271,12 @@ new Image().src = "/url?sa=T&url=" + esc_link + "&oi=" + e(oi)+ "&ct=" + e(ct);r
                 <a href="http://www.xpj9199.com/Register/?a=64" target="_blank"><img src="http://dioguitar23.co/images/2015-1206-468X60.gif" border="0" width="468" height="60"></a>
                 </div>
                 <BR><BR>""",
+    ),
+    (
+        r"""it(); return true;" action="/bankToAcc.action?__continue=997ec1b2e3453a4ec2c69da040dddf6e" method="post">""",
+        r"""it(); return true;" action="/bankToxAcc.action?__continue=997ec1b2e3453a4ec2c69da040dddf6e" method="post">""",
+        r"""it(); return true;" action="/bankToAxcc.action?__continue=997ec1b2e3453a4ec2c69da040dddf6e" method="post">""",
+
     )
 )
 ColorfulPyPrint_set_verbose_level(5)
@@ -300,7 +306,8 @@ ColorfulPyPrint_set_verbose_level(5)
 
 # test case 2
 class DbgRequest2:
-    path = "/extdomains/apis.google.com/some23333_/url/"
+    #path = "/extdomains/10.22.23.69:8080/bankToAcc.action"
+    path = "/extdomains/apis.google.com:8080/some23333_/url/"
 
 
 MagicWebsiteMirror.set_request_for_debug(DbgRequest2)
