@@ -65,7 +65,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.21.2-dev'
+__VERSION__ = '0.21.3-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -122,6 +122,9 @@ if enable_keep_alive_per_domain:
     connection_pool_per_domain = {}
     for _domain in allowed_domains_set:
         connection_pool_per_domain[_domain] = {'session': requests.Session(),}
+
+cdn_url_query_encode_salt = 'mwmx'
+_url_salt = re.escape(cdn_url_query_encode_salt)
 
 # ## thread local var ##
 request_local = threading.local()
@@ -216,7 +219,7 @@ regex_adv_url_rewriter = re.compile(  # TODO: Add non-standard port support
 )
 
 regex_extract_base64_from_embedded_url = re.compile(
-    r'_mwm0(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._mwm1_\.[a-zA-Z\d]+\b')
+    r'_' + _url_salt + r'(?P<gzip>z?)_\.(?P<b64>[a-zA-Z0-9-_]+=*)\._' + _url_salt + r'_\.[a-zA-Z\d]+\b')
 
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
@@ -246,6 +249,12 @@ def calc_domain_replace_prefix(_domain):
         slash_esc=('//' + _domain).replace('/', r'\/'),
         http_esc=('http://' + _domain).replace('/', r'\/'),
         https_esc=('https://' + _domain).replace('/', r'\/'),
+        double_quoted_esc='\\"%s\\"' % _domain,
+        single_quoted_esc="\\'%s\\'" % _domain,
+        # double escape slash
+        slash_double_esc=('//' + _domain).replace('/', r'\\\/'),
+        http_double_esc=('http://' + _domain).replace('/', r'\\\/'),
+        https_double_esc=('https://' + _domain).replace('/', r'\\\/'),
         # urlencoded
         slash_ue=quote_plus('//' + _domain),
         http_ue=quote_plus('http://' + _domain),
@@ -339,7 +348,7 @@ def extract_real_url_from_embedded_url(embedded_url):
     :param embedded_url: embedded_url
     :return: real url or None
     """
-    if '._mwm1_.' not in embedded_url[-15:]:  # check url mark
+    if '._' + cdn_url_query_encode_salt + '_.' not in embedded_url[-15:]:  # check url mark
         return None
     m = regex_extract_base64_from_embedded_url.search(embedded_url)
     b64 = get_group('b64', m)
@@ -384,7 +393,9 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
 
         b64_query = base64.urlsafe_b64encode(byte_query).decode()
         # dbgprint(url_mime)
-        mixed_path = url_sp.path + '_mwm0' + gzip_label + '_.' + b64_query + '._mwm1_.' + mime_to_use_cdn[url_mime]
+        mixed_path = url_sp.path + '_' + _url_salt + gzip_label + '_.' \
+                     + b64_query \
+                     + '._' + _url_salt + '_.' + mime_to_use_cdn[url_mime]
         result = urlunsplit((url_sp.scheme, url_sp.netloc, mixed_path, '', ''))
     except:
         traceback.print_exc()
@@ -968,7 +979,10 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
                 else:
                     resp.headers[header_key] = requests_response_obj.headers[header_key]
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
-                resp.headers[header_key] = myurl_prefix
+                if custom_allowed_origin is None:
+                    resp.headers[header_key] = myurl_prefix
+                else:
+                    resp.headers[header_key] = custom_allowed_origin
             else:
                 resp.headers[header_key] = requests_response_obj.headers[header_key]
 
@@ -1103,6 +1117,7 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     prefix = prefix_buff[domain]
 
     # Explicit HTTPS scheme must be kept
+    resp_text = resp_text.replace(prefix['https_double_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\\/'))
     resp_text = resp_text.replace(prefix['https_esc'], _myurl_prefix_escaped + domain_prefix_https_esc)
     resp_text = resp_text.replace(prefix['https'], _myurl_prefix + domain_prefix_https)
 
@@ -1116,9 +1131,12 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     else:
         _buff = _my_host_name
     _buff_esc = _buff.replace('/', r'\/')
+    _buff_double_esc = _buff.replace('/', r'\\\/')
 
+    resp_text = resp_text.replace(prefix['http_double_esc'], my_host_scheme_escaped + _buff_double_esc)
     resp_text = resp_text.replace(prefix['http_esc'], my_host_scheme_escaped + _buff_esc)
     resp_text = resp_text.replace(prefix['http'], my_host_scheme + _buff)
+    resp_text = resp_text.replace(prefix['slash_double_esc'], r'\\\/\\\/' + _buff_double_esc)
     resp_text = resp_text.replace(prefix['slash_esc'], r'\/\/' + _buff_esc)
     resp_text = resp_text.replace(prefix['slash'], '//' + _buff)
 
@@ -1130,6 +1148,8 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace(prefix['double_quoted'], '"%s"' % _buff)
     resp_text = resp_text.replace(prefix['single_quoted'], "'%s'" % _buff)
+    resp_text = resp_text.replace(prefix['double_quoted_esc'], '\\"%s\\"' % _buff)
+    resp_text = resp_text.replace(prefix['single_quoted_esc'], "\\'%s\\'" % _buff)
     resp_text = resp_text.replace(prefix['double_quoted_ue'], quote_plus('"%s"' % _buff))
     resp_text = resp_text.replace(prefix['single_quoted_ue'], quote_plus("'%s'" % _buff))
 
