@@ -65,7 +65,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.21.1-dev'
+__VERSION__ = '0.21.2-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -1410,6 +1410,10 @@ def request_remote_site_and_parse(actual_request_url):
     # extract response's mime to thread local var
     content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
     request_local.cur_mime = extract_mime_from_content_type(content_type)
+
+    # only_serve_static_resources
+    if only_serve_static_resources and not is_content_type_using_cdn(content_type):
+        return generate_simple_resp_page(b'This site is just for static resources.', error_code=403)
 
     # is streamed
     is_streamed = enable_stream_content_transfer and is_content_type_streamed(content_type)

@@ -588,12 +588,6 @@ CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 # 请参考 custom_func.sample.py 中的示例函数
 custom_text_rewriter_enable = False
 
-# ############## which mime means text ##############
-# v0.20.2+ If mime contains any of these keywords, it would be regarded as text
-#   some websites(such as twitter), would send some strange mime which also represent txt ('x-mpegurl')
-#   in these cases, you can add them here
-text_like_mime_keywords = ('text', 'json', 'javascript', 'xml')
-
 # ############## Misc ##############
 # v0.18.5+
 # eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
@@ -601,6 +595,20 @@ text_like_mime_keywords = ('text', 'json', 'javascript', 'xml')
 # 在默认允许的headers以外添加一些允许被传送到用户的http响应头, 一般不需要添加自定义的. 内置的够用了
 # 必须全部小写
 custom_allowed_remote_headers = {}
+
+# v0.20.2+ If mime contains any of these keywords, it would be regarded as text
+#   some websites(such as twitter), would send some strange mime which also represent txt ('x-mpegurl')
+#   in these cases, you can add them here
+text_like_mime_keywords = ('text', 'json', 'javascript', 'xml')
+
+# v0.21.2+ Only serve static resources (based on mime)
+#   Only if remote response's mime contains in the `mime_to_use_cdn`, would be sent to client
+#       however, any request would be sent to remote
+# 仅镜像静态资源(基于MIME)
+#   仅把MIME包含在 `mime_to_use_cdn` 中的响应发送回用户, 其他响应会被丢弃
+#       但是, 所有用户发送的请求都仍然会被发送到目标服务器, 仅会拦截响应
+#   注意: 视频在默认设置下是不包含在那个列表中的, 如果需要, 请去掉那个选项里视频mime的注释
+only_serve_static_resources = False
 
 # #####################################################
 # ################# DEVELOPER Settings ################
