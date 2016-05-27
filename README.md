@@ -72,16 +72,16 @@ first install python3
 ### Mirror Google or twitter or instagram (include zh-wikipedia) 搭建一个Google镜像(包含中文维基)或twitter镜像或instagram镜像 
 0. assume you have completed the HelloWorld above
 1. 
-  - (google) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_google_and_zhwikipedia.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (google) copy the `YOUR_EWM_FOLDER/more_config_examples/config_google_and_zhwikipedia.py` to `YOUR_EWM_FOLDER/config.py`  
   
-  - (twitter) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_twitter_pc.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (twitter) copy the `YOUR_EWM_FOLDER/more_config_examples/config_twitter_pc.py` to `YOUR_EWM_FOLDER/config.py`  
                 copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_twitter.py` to `YOUR_EWM_FOLDER/custom_func.py`  
                 TwitterMobile is almost the same
 
-  - (Youtube)  copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_youtube.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (Youtube)  copy the `YOUR_EWM_FOLDER/more_config_examples/config_youtube_pc.py` to `YOUR_EWM_FOLDER/config.py`  
                copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_youtube.py` to `YOUR_EWM_FOLDER/custom_func.py`  
   
-  - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_sample_instagram.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_instagram.py` to `YOUR_EWM_FOLDER/config.py`  
 2. 
   - If your computer can access google directly(outside the GFW), ignore this step
   - If you are inside the GFW, please set your http proxy in the `config.py`

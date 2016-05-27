@@ -18,8 +18,8 @@
 #   www.kernel.org 和它的所有子站都被自动地加入到了这个反向代理镜像中.
 #   你可以在网站中随意点击, 随意浏览, 而不会跑到镜像外. (*.kernel.org以外的网站仍然会跑到外面, 因为把它们没有加入镜像)
 #
-# There are config samples for www.google.com+zh.wikipedia.org and twitter.com, please see the 'more_config_examples'
-# 在 'more_config_examples' 文件夹下还有适用于Google(含中文维基)的配置文件和twitter(功能完整)的配置文件
+# There are config samples for www.google.com+zh.wikipedia.org and twitter.com, please see the 'more_configs'
+# 在 'more_configs' 文件夹下还有适用于Google(含中文维基)的配置文件和twitter(功能完整)的配置文件
 #
 # Let Magic Happens !!
 

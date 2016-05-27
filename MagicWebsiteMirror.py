@@ -50,10 +50,10 @@ except:
     warnprint(
         'the config_default.py is missing, fallback to default configs(if we can), '
         'please COPY the config_default.py to config.py, and change it\'s content, '
-        'or use the configs in the more_config_examples folder\n'
+        'or use the configs in the more_configs folder\n'
         '自定义配置文件 config.py 丢失, 将使用默认设置, 请将 config_default.py 复制一份为 config.py, '
         '并根据自己的需求修改里面的设置'
-        '(或者使用 more_config_examples 中的配置文件)'
+        '(或者使用 more_configs 中的配置文件)'
     )
 
 if local_cache_enable:
