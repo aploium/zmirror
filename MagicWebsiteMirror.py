@@ -981,6 +981,9 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
                 if custom_allowed_origin is None:
                     resp.headers[header_key] = myurl_prefix
+                elif custom_allowed_origin == '_*_':
+                    _origin = request.headers.get('origin') or request.headers.get('Origin') or myurl_prefix
+                    resp.headers[header_key] = _origin
                 else:
                     resp.headers[header_key] = custom_allowed_origin
             else:
