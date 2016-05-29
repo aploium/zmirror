@@ -393,21 +393,22 @@ stream_transfer_async_preload_max_packages_size = 30
 # 定时任务, 除非你真的知道你在做什么, 否则请不要关闭本选项
 enable_cron_tasks = True
 
+# functions that would be use below.
+from MagicWebsiteMirror import cache_clean
 
-def cache_clean(is_force_flush=False):
-    # dummy function, will be overrided by the real one in the main py file
-    pass
+# from custom_func import your_own_cron_function
 
-
-# v0.21.4+ If you want to add your own cron tasks, please create an dummy function above in this file, just like `cache_clean`
-#   and then create the real one in 'custom_func.py'
-#   minimum task delay is 5 minutes (300 seconds), any delay that less than 5 minutes would be regarded as 5 minutes
+# v0.21.4+ If you want to add your own cron tasks, please create the function in 'custom_func.py', and then import it above
+#   minimum task delay is 3 minutes (180 seconds), any delay that less than 3 minutes would be regarded as 3 minutes
 cron_tasks_list = [
     # builtin cache flush, if you really know what you are doing, please do not remove these two tasks
+    #   lower priority would be execute first
     # 对内置缓存的清理, 除非你真的知道你在做什么, 否则请不要移除这两个定时任务
-    dict(name='cache_clean_soft', priority=999, interval=60 * 15, target=cache_clean, args=(), kwargs={}),
-    dict(name='cache_clean_force_all', priority=999, interval=3600 * 48, target=cache_clean, args=(),
-         kwargs={'is_force_flush': True}),
+    #   priority值越低, 运行顺序的优先级越高
+    dict(name='cache_clean_soft', priority=42, interval=60 * 15, target=cache_clean),
+    dict(name='cache_clean_force_all', priority=42, interval=3600 * 48, target=cache_clean, kwargs={'is_force_flush': True}),
+    # below is the complete syntax.
+    # dict(name='just a name', priority=10, interval=60 * 10, target=your_own_cron_function, args=(1,2,), kwargs={'a':1}),
 ]
 
 # ############## Misc ##############

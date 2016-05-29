@@ -20,6 +20,13 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
+__VERSION__ = '0.21.6-dev'
+__author__ = 'Aploium <i@z.codes>'
+
+infoprint('MagicWebsiteMirror is starting...')
+infoprint('version:', __VERSION__, 'Author:', __author__, 'from Zhejiang University')
+infoprint('Github: https://github.com/Aploium/MagicWebsiteMirror (welcome contribution)')
+
 try:
     import threading
 except ImportError:
@@ -65,9 +72,6 @@ if local_cache_enable:
     except Exception as e:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
-
-__VERSION__ = '0.21.5-dev'
-__author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
 ColorfulPyPrint_set_verbose_level(verbose_level)
@@ -279,11 +283,18 @@ def cron_task_container(task_dict, add_task_only=False):
     global task_scheduler
     if not add_task_only:
         try:
+            if 'name' in task_dict:
+                _task_name = task_dict['name']
+            else:
+                _task_name = str(task_dict['target'])
+            infoprint('CronTaskExecuting:', _task_name)
+
             target_func = task_dict.get('target')
             target_func(
                 *(task_dict.get('args', ())),
                 **(task_dict.get('kwargs', {}))
             )
+
         except:
             errprint('ErrorWhenProcessingCronTasks')
             traceback.print_exc()
@@ -298,7 +309,7 @@ def cron_task_container(task_dict, add_task_only=False):
 
 def cron_task_host():
     while True:
-        sleep(300)
+        sleep(180)
         try:
             task_scheduler.run()
         except:
@@ -1789,7 +1800,7 @@ def main_function(input_path='/'):
     request_local.start_time = time()  # to display compute time
     request_local.temporary_domain_alias = ()  # init temporary_domain_alias
 
-    infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
+    infoprint(request.method, request.url, request.remote_addr, request.user_agent)
 
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
@@ -1810,14 +1821,14 @@ def main_function(input_path='/'):
             else:
                 return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
-    if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
+    dbgprint('after extract, url:', request.url, '   path:', request.path)
     if hostname not in domain_alias_to_target_set:
         scheme = 'https://' if is_https else 'http://'
         actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
-        if verbose_level >= 3: dbgprint('PreRewritedUrl(ext):', actual_request_url)
+        dbgprint('PreRewritedUrl(ext):', actual_request_url)
     else:
         actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
-        if verbose_level >= 3: dbgprint('PreRewritedUrl(main):', actual_request_url)
+        dbgprint('PreRewritedUrl(main):', actual_request_url)
 
     try:
         resp = request_remote_site_and_parse(actual_request_url)
@@ -1860,6 +1871,7 @@ if custom_text_rewriter_enable:
         warnprint('Cannot import custom_response_text_rewriter custom_func.py,'
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
         traceback.print_exc()
+        raise
 
 if identity_verify_required:
     try:
@@ -1869,6 +1881,7 @@ if identity_verify_required:
         warnprint('Cannot import custom_identity_verify from custom_func.py,'
                   ' `identity_verify` is now disabled (if it was enabled)')
         traceback.print_exc()
+        raise
 
 if enable_custom_access_cookie_generate_and_verify:
     try:
@@ -1878,11 +1891,7 @@ if enable_custom_access_cookie_generate_and_verify:
         errprint('Cannot import custom_generate_access_cookie and custom_generate_access_cookie from custom_func.py,'
                  ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')
         traceback.print_exc()
-
-try:
-    from custom_func import *
-except:
-    pass
+        raise
 
 if enable_cron_tasks:
     for _task_dict in cron_tasks_list:
