@@ -3,9 +3,11 @@ an http reverse proxy designed to automatically and completely mirror a website 
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
 比如国内可以访问的Google镜像/中文维基镜像 请看`more_config_examples`文件夹下的配置文件  
 程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像   
+
+注:虽然程序已经在经受住了实际生产环境的考验  
+(256M OpenVZ VPS, Google:日6kPV,峰值每小时740PV; Youtube:日1wPV, 日发送流量178GB 峰值每小时754PV, 1台主服务器+8台视频服务器)  
   
-  
-`这篇Readme很老了....新添加的功能请看config_default.py中的注释`  
+`这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细`  
   
 
 ## Features 特性
@@ -50,7 +52,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
   
 7. Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly  
   自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  
-
+  
 8. Stream content support (audio/video)  
   流媒体支持(视频/音频)  
   
@@ -93,6 +95,15 @@ first install python3
  - (for users of plain zip download) re-download, unzip, and override all files
  
 
+## Issues Report
+欢迎发issues, 发issues找我聊天都欢迎.  
+(以下只是可选步骤)  
+如果遇到问题需要发issues, 请在`config.py`最下面加上这样两句话, 然后重现一遍问题  
+```python
+developer_dump_all_traffics = True  
+verbose_level = 4
+```
+这样程序会把所有流量dump到程序所在目录的`traffic`文件夹下, 发issues时请将所有程序log和所有dump文件打包发上来, 帮助我debug  
   
 ## Mirror A Website
 Mirror a website is very simple.  
