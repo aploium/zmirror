@@ -6,6 +6,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
 
 注:虽然程序已经在经受住了实际生产环境的考验  
 (256M OpenVZ VPS, Google:日6kPV,峰值每小时740PV; Youtube:日1wPV, 日发送流量178GB 峰值每小时754PV, 1台主服务器+8台视频服务器)  
+但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  
   
 `这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细`  
   
