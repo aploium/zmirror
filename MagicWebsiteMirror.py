@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 import re
 import base64
 import zlib
-from time import time
+import sched
+from time import time, sleep
 import queue
 from fnmatch import fnmatch
 from html import escape as html_escape
@@ -37,7 +38,7 @@ try:
 except:
     from functools import lru_cache
 
-    warnprint('package fastcache not found, fallback to stdlib lru_cache.  '
+    warnprint('package fastcache not found, fallback to stdlib lru_cache, no FUNCTION is effected, only maybe a bit slower. '
               'Considering install it using "pip3 install fastcache"')
 try:
     from config_default import *
@@ -65,7 +66,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.21.3-dev'
+__VERSION__ = '0.21.4-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -133,6 +134,8 @@ request_local.cur_mime = ''
 request_local.cache_control = ''
 request_local.temporary_domain_alias = None
 
+# task_scheduler
+task_scheduler = sched.scheduler(time, sleep)
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
     mime_based_static_resource_CDN = False
@@ -141,8 +144,6 @@ if not mime_based_static_resource_CDN:
     cdn_redirect_code_if_cannot_hard_rewrite = 0  # record incoming urls if we should use cdn on it
 url_to_use_cdn = {}
 if not cdn_redirect_code_if_cannot_hard_rewrite:
-    cdn_redirect_encode_query_str_into_url = False
-if not local_cache_enable:
     cdn_redirect_encode_query_str_into_url = False
 if not isinstance(target_static_domains, set):
     target_static_domains = set()
@@ -237,6 +238,74 @@ app = Flask(__name__)
 
 
 # ########## Begin Utils #############
+
+def cache_clean(is_force_flush=False):
+    global url_rewrite_cache, cache, url_to_use_cdn
+    if len(url_to_use_cdn) > 8000:
+        url_rewrite_cache = {}
+    if len(url_to_use_cdn) > 12000:
+        url_to_use_cdn = {}
+
+    try:
+        if local_cache_enable:
+            cache.check_all_expire(force_flush_all=is_force_flush)
+    except:
+        errprint('ErrorWhenCleaningLocalCache, is_force_flush=', is_force_flush)
+        traceback.print_exc()
+
+    if is_force_flush:
+        try:
+            is_domain_match_glob_whitelist.cache_clear()
+            is_content_type_streamed.cache_clear()
+            extract_real_url_from_embedded_url.cache_clear()
+            embed_real_url_to_embedded_url.cache_clear()
+            check_global_ua_pass.cache_clear()
+            is_mime_represents_text.cache_clear()
+            extract_mime_from_content_type.cache_clear()
+            is_content_type_using_cdn.cache_clear()
+            is_ua_in_whitelist.cache_clear()
+            generate_304_response.cache_clear()
+            verify_ip_hash_cookie.cache_clear()
+            is_denied_because_of_spider.cache_clear()
+            is_ip_not_in_allow_range.cache_clear()
+            client_requests_text_rewrite.cache_clear()
+            extract_url_path_and_query.cache_clear()
+        except:
+            errprint('ErrorWhenCleaningFunctionLruCache')
+            traceback.print_exc()
+
+
+def cron_task_container(task_dict, add_task_only=False):
+    global task_scheduler
+    if not add_task_only:
+        try:
+            target_func = task_dict.get('target')
+            target_func(
+                *(task_dict.get('args', ())),
+                **(task_dict.get('kwargs', {}))
+            )
+        except:
+            errprint('ErrorWhenProcessingCronTasks')
+            traceback.print_exc()
+
+    task_scheduler.enter(
+        task_dict.get('interval', 300),
+        task_dict.get('priority', 999),
+        cron_task_container,
+        (task_dict,)
+    )
+
+
+def cron_task_host():
+    while True:
+        sleep(300)
+        try:
+            task_scheduler.run()
+        except:
+            errprint('ErrorDuringExecutingCronTasks')
+            traceback.print_exc()
+
+
 def calc_domain_replace_prefix(_domain):
     return dict(
         # normal
@@ -1809,6 +1878,18 @@ if enable_custom_access_cookie_generate_and_verify:
         errprint('Cannot import custom_generate_access_cookie and custom_generate_access_cookie from custom_func.py,'
                  ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')
         traceback.print_exc()
+
+try:
+    from custom_func import *
+except:
+    pass
+
+if enable_cron_tasks:
+    for _task_dict in cron_tasks_list:
+        cron_task_container(_task_dict, add_task_only=True)
+
+    th = threading.Thread(target=cron_task_host)
+    th.start()
 
 # ################# End Post (auto)Exec Section #################
 

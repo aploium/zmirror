@@ -7,8 +7,11 @@ from datetime import datetime
 EXPIRE_NOW = 0
 EXPIRE_1MIN = 60
 EXPIRE_5MIN = EXPIRE_1MIN * 5
+EXPIRE_30MIN = EXPIRE_1MIN * 30
 EXPIRE_1HR = EXPIRE_1MIN * 60
 EXPIRE_2HR = EXPIRE_1HR * 2
+EXPIRE_3HR = EXPIRE_1HR * 3
+EXPIRE_4HR = EXPIRE_1HR * 4
 EXPIRE_6HR = EXPIRE_1HR * 6
 EXPIRE_12HR = EXPIRE_1HR * 12
 EXPIRE_1DAY = EXPIRE_1HR * 24
@@ -18,39 +21,40 @@ EXPIRE_1YR = EXPIRE_1DAY * 365
 
 DEFAULT_EXPIRE = EXPIRE_5MIN
 mime_expire_list = {
-    'application/javascript': EXPIRE_1YR,
-    'application/x-javascript': EXPIRE_1YR,
-    'text/javascript': EXPIRE_1YR,
+    'application/javascript': EXPIRE_1DAY,
+    'application/x-javascript': EXPIRE_1DAY,
+    'text/javascript': EXPIRE_1DAY,
 
-    'text/css': EXPIRE_1MOUTH,
+    'text/css': EXPIRE_1DAY,
 
-    'audio/ogg': EXPIRE_1MOUTH,
-    'image/bmp': EXPIRE_1MOUTH,
-    'image/gif': EXPIRE_1MOUTH,
-    'image/jpeg': EXPIRE_1MOUTH,
-    'image/png': EXPIRE_1MOUTH,
-    'image/svg+xml': EXPIRE_1MOUTH,
-    'image/webp': EXPIRE_1MOUTH,
-    'video/mp4': EXPIRE_1MOUTH,
-    'video/ogg': EXPIRE_1MOUTH,
-    'video/webm': EXPIRE_1MOUTH,
+    'text/x-cross-domain-policy': EXPIRE_1DAY,
 
-    'application/vnd.ms-fontobject': EXPIRE_1MOUTH,
-    'font/eot': EXPIRE_1MOUTH,
-    'font/opentype': EXPIRE_1MOUTH,
-    'application/x-font-ttf': EXPIRE_1MOUTH,
-    'application/font-woff': EXPIRE_1MOUTH,
-    'application/x-font-woff': EXPIRE_1MOUTH,
-    'font/woff': EXPIRE_1MOUTH,
-    'application/font-woff2': EXPIRE_1MOUTH,
+    'application/vnd.ms-fontobject': EXPIRE_1DAY,
+    'font/eot': EXPIRE_1DAY,
+    'font/opentype': EXPIRE_1DAY,
+    'application/x-font-ttf': EXPIRE_1DAY,
+    'application/font-woff': EXPIRE_1DAY,
+    'application/x-font-woff': EXPIRE_1DAY,
+    'font/woff': EXPIRE_1DAY,
+    'application/font-woff2': EXPIRE_1DAY,
 
-    'image/vnd.microsoft.icon': EXPIRE_1WEEK,
-    'image/x-icon': EXPIRE_1WEEK,
-    'application/manifest+json': EXPIRE_1WEEK,
-    'text/x-cross-domain-policy': EXPIRE_1WEEK,
+    'audio/ogg': EXPIRE_1HR,
+    'image/bmp': EXPIRE_1HR,
+    'image/gif': EXPIRE_4HR,
+    'image/jpeg': EXPIRE_4HR,
+    'image/png': EXPIRE_4HR,
+    'image/svg+xml': EXPIRE_4HR,
+    'image/webp': EXPIRE_4HR,
+    'video/mp4': EXPIRE_30MIN,
+    'video/ogg': EXPIRE_30MIN,
+    'video/webm': EXPIRE_30MIN,
 
-    'application/atom+xml': EXPIRE_1HR,
-    'application/rss+xml': EXPIRE_1HR,
+    'image/vnd.microsoft.icon': EXPIRE_12HR,
+    'image/x-icon': EXPIRE_12HR,
+    'application/manifest+json': EXPIRE_12HR,
+
+    'application/atom+xml': EXPIRE_NOW,
+    'application/rss+xml': EXPIRE_NOW,
 
     'application/json': EXPIRE_NOW,
     'application/ld+json': EXPIRE_NOW,
@@ -116,10 +120,10 @@ class FileCache:
             self.items_dict[key][0].close()
             del self.items_dict[key]
 
-    def check_all_expire(self):
+    def check_all_expire(self, force_flush_all=False):
         keys_to_delete = []
         for item_key in self.items_dict:
-            if self.is_expires(item_key):
+            if self.is_expires(item_key) or force_flush_all:
                 keys_to_delete.append(item_key)
         for key in keys_to_delete:
             self.delete(key)
@@ -148,7 +152,6 @@ class FileCache:
             return None
 
     def is_unchanged(self, key, last_modified=None):
-
         if not self._is_item_exist(key) or last_modified is None:
             return False
         else:

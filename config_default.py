@@ -388,7 +388,29 @@ else:
 # 异步加载缓冲区存储的数据包的最大数量, 不要设置得太小
 stream_transfer_async_preload_max_packages_size = 30
 
+# ############## Cron Tasks ##############
+# v0.21.4+ Cron Tasks, if you really know what you are doing, please do not disable this option
+# 定时任务, 除非你真的知道你在做什么, 否则请不要关闭本选项
+enable_cron_tasks = True
 
+
+def cache_clean(is_force_flush=False):
+    # dummy function, will be overrided by the real one in the main py file
+    pass
+
+
+# v0.21.4+ If you want to add your own cron tasks, please create an dummy function above in this file, just like `cache_clean`
+#   and then create the real one in 'custom_func.py'
+#   minimum task delay is 5 minutes (300 seconds), any delay that less than 5 minutes would be regarded as 5 minutes
+cron_tasks_list = [
+    # builtin cache flush, if you really know what you are doing, please do not remove these two tasks
+    # 对内置缓存的清理, 除非你真的知道你在做什么, 否则请不要移除这两个定时任务
+    dict(name='cache_clean_soft', priority=999, interval=60 * 15, target=cache_clean, args=(), kwargs={}),
+    dict(name='cache_clean_force_all', priority=999, interval=3600 * 48, target=cache_clean, args=(),
+         kwargs={'is_force_flush': True}),
+]
+
+# ############## Misc ##############
 custom_allowed_origin = None
 
 # #####################################################
