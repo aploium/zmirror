@@ -66,7 +66,7 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
 
-__VERSION__ = '0.21.4-dev'
+__VERSION__ = '0.21.5-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 # ########## Basic Init #############
@@ -1894,4 +1894,5 @@ if enable_cron_tasks:
 # ################# End Post (auto)Exec Section #################
 
 if __name__ == '__main__':
-    app.run(debug=True, port=80, threaded=True)
+    errprint('After version 0.21.5, please use `python3 wsgi.py` to run')
+    exit()

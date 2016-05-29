@@ -10,14 +10,28 @@
 # 如果服务器本身在墙内(或者在本地环境下测试, 请修改`Proxy Settings`中的设置
 #
 # Youtube的功能非常复杂...而且有大量不常规的技术, 这个配置的镜像还有一些bug,
-#   暂时只支持基础的看视频功能, 评论区很多时候无法正常加载, 无法登陆
+#   暂时只支持基础的看视频功能, 评论区很多时候无法正常加载. 可以登录
+#   支持视频服务器与网页服务器分离, 请看 custom_func_youtube.py 中的第12行附近的注释
+#
+# ######### 重要 重要 重要 重要 重要 #########
+# ######### 重要 重要 重要 重要 重要 #########
+# ######### 重要 重要 重要 重要 重要 #########
+# Youtube 镜像无法在`my_host_name`为 127.0.0.1 时运行, 并且在非ssl环境下, 可能会存在未知的bug
+#   请自行修改host文件, 把域名 www.localhost.com 指向127.0.0.1
+#
+# Youtube 的PC端镜像和手机端必须分成两个域名, 分别建立独立的镜像才行. 并且如果网页与视频服务器分离, 两者不可共用同一套加速域名
+#   总之, 虽然YoutubePC和YoutubeMobile的配置文件只相差一点点(下文有说明), 但是它们必须分别被架设为独立的镜像
+# ######### 重要 重要 重要 重要 重要 #########
+# ######### 重要 重要 重要 重要 重要 #########
+# ######### 重要 重要 重要 重要 重要 #########
 
 # ############## Local Domain Settings ##############
-my_host_name = '127.0.0.1'
+my_host_name = 'www.localhost.com'
 my_host_scheme = 'http://'
 
 # ############## Target Domain Settings ##############
 target_domain = 'www.youtube.com'
+# target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第42行还有一处
 target_scheme = 'https://'
 
 # 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
@@ -25,14 +39,27 @@ target_scheme = 'https://'
 # 自动采集会不断告诉你新域名
 external_domains = [
     'm.youtube.com',
+    # 'www.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第34行还有一处
     's.youtube.com',
+    'accounts.youtube.com',
 
     'apis.google.com',
     'plus.google.com',
     'accounts.google.com',
     'content.google.com',
     'apis.google.com',
+    'ajax.googleapis.com',
     'www.googletagservices.com',
+    'partner.googleadservices.com',
+    'tpc.googlesyndication.com',
+    'pagead2.googlesyndication.com',
+    'video.google.com',
+    'fonts.googleapis.com',
+    'maps.googleapis.com',
+    'maps.google.com',
+    'maps-api-ssl.google.com',
+    'support.google.com',
+    'csi.gstatic.com',
 
     'clients1.google.com',
     'clients6.google.com',
@@ -52,13 +79,16 @@ external_domains = [
 force_https_domains = 'ALL'
 
 enable_automatic_domains_whitelist = True
-domains_whitelist_auto_add_glob_list = ('*.google.com', '*.google.com.hk', '*.gstatic.com',
-                                        '*.googleusercontent.com', '*.youtube.com', '*.ytimg.com', '*.ggpht.com',
-                                        '*.googlevideo.com',)
+domains_whitelist_auto_add_glob_list = ['*.google.com', '*.google.com.hk', '*.gstatic.com',
+                                        '*.googleusercontent.com', '*.youtube.com', '*.ytimg.com',
+                                        '*.ggpht.com', '*.googleapis.com', '*.googlevideo.com',
+                                        ]
+
+force_decode_remote_using_encode = 'utf-8'
 
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
-is_use_proxy = False
+is_use_proxy = True
 requests_proxies = dict(
     http='http://127.0.0.1:8123',
     https='https://127.0.0.1:8123',
@@ -67,8 +97,6 @@ requests_proxies = dict(
 # ############## Misc ##############
 
 custom_text_rewriter_enable = True
-
-stream_transfer_buffer_size = 32768  # 32KB
 
 url_custom_redirect_enable = True
 url_custom_redirect_regex = (

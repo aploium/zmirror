@@ -64,7 +64,7 @@ first install python3
 ### HelloWorld Usage  
 1. install or upgrade flask requests and chardet package `python3 -m pip install -U flask requests chardet`  
 2. (recommended) `git clone https://github.com/Aploium/MagicWebsiteMirror.git` or download and unzip this package(not recommend).   
-3. Execute it: `python3 MagicWebsiteMirror.py`  
+3. Execute it: `python3 wsgi.py`  
 4. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
  the `*.kernel.org` is withing the mirror.
 5. Please see the config.py for more information, an google mirror config is also included.
@@ -78,14 +78,14 @@ first install python3
                 copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_twitter.py` to `YOUR_EWM_FOLDER/custom_func.py`  
                 TwitterMobile is almost the same
 
-  - (Youtube)  copy the `YOUR_EWM_FOLDER/more_config_examples/config_youtube_pc.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (Youtube)  copy the `YOUR_EWM_FOLDER/more_config_examples/config_youtube.py` to `YOUR_EWM_FOLDER/config.py`  
                copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_youtube.py` to `YOUR_EWM_FOLDER/custom_func.py`  
   
   - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_instagram.py` to `YOUR_EWM_FOLDER/config.py`  
 2. 
   - If your computer can access google directly(outside the GFW), ignore this step
   - If you are inside the GFW, please set your http proxy in the `config.py`
-3. execute `python3 MagicWebsiteMirror.py`
+3. execute `python3 wsgi.py`
 4. open `http://127.0.0.1/` and see magic happens. (google) and `http://127.0.0.1/wiki` for zh-wikipedia, `http://127.0.0.1/scholar` for google scholar
 
 ### Upgrade 升级
