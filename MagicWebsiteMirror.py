@@ -1734,7 +1734,7 @@ def ip_ban_verify_page():
             if request.form.get(str(q_id)) != _question[1]:
                 if not human_ip_verification_answer_any_one_questions_is_ok:
                     return generate_simple_resp_page(b'You got an error in ' + _question[0].encode(), 200)
-            elif not human_ip_verification_answer_any_one_questions_is_ok:
+            elif human_ip_verification_answer_any_one_questions_is_ok:
                 break
         else:
             if human_ip_verification_answer_any_one_questions_is_ok:
