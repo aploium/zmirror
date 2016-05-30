@@ -208,7 +208,7 @@ human_ip_verification_questions = (
 )
 
 # v0.21.8+ if answer any of questions above, access would be granted
-human_ip_verification_answer_any_one_questions_is_ok = True
+human_ip_verification_answer_any_one_questions_is_ok = False
 
 # user's identity information that should given. Would be logged in to log file.
 human_ip_verification_identity_record = (
