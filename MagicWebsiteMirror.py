@@ -20,12 +20,11 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.21.6-dev'
+__VERSION__ = '0.21.7-dev'
 __author__ = 'Aploium <i@z.codes>'
 
-infoprint('MagicWebsiteMirror is starting...')
-infoprint('version:', __VERSION__, 'Author:', __author__, 'from Zhejiang University')
-infoprint('Github: https://github.com/Aploium/MagicWebsiteMirror (welcome contribution)')
+infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
+infoprint('Github: ', __VERSION__, 'from', __author__)
 
 try:
     import threading
@@ -245,9 +244,9 @@ app = Flask(__name__)
 
 def cache_clean(is_force_flush=False):
     global url_rewrite_cache, cache, url_to_use_cdn
-    if len(url_to_use_cdn) > 8000:
+    if len(url_to_use_cdn) > 4096:
         url_rewrite_cache = {}
-    if len(url_to_use_cdn) > 12000:
+    if len(url_to_use_cdn) > 4096:
         url_to_use_cdn = {}
 
     try:
@@ -272,8 +271,8 @@ def cache_clean(is_force_flush=False):
             verify_ip_hash_cookie.cache_clear()
             is_denied_because_of_spider.cache_clear()
             is_ip_not_in_allow_range.cache_clear()
-            client_requests_text_rewrite.cache_clear()
-            extract_url_path_and_query.cache_clear()
+            # client_requests_text_rewrite.cache_clear()
+            # extract_url_path_and_query.cache_clear()
         except:
             errprint('ErrorWhenCleaningFunctionLruCache')
             traceback.print_exc()
@@ -285,18 +284,18 @@ def cron_task_container(task_dict, add_task_only=False):
         try:
             if 'name' in task_dict:
                 _task_name = task_dict['name']
+                infoprint('CronTaskExecuting:', _task_name, 'Target:', str(task_dict['target']))
             else:
                 _task_name = str(task_dict['target'])
-            infoprint('CronTaskExecuting:', _task_name)
+                infoprint('CronTaskExecuting:', _task_name)
 
             target_func = task_dict.get('target')
             target_func(
                 *(task_dict.get('args', ())),
                 **(task_dict.get('kwargs', {}))
             )
-
         except:
-            errprint('ErrorWhenProcessingCronTasks')
+            errprint('ErrorWhenProcessingCronTasks', task_dict)
             traceback.print_exc()
 
     task_scheduler.enter(
@@ -309,7 +308,7 @@ def cron_task_container(task_dict, add_task_only=False):
 
 def cron_task_host():
     while True:
-        sleep(180)
+        sleep(100)
         try:
             task_scheduler.run()
         except:
@@ -360,7 +359,7 @@ def add_temporary_domain_alias(source_domain, target_domain):
              request_local.temporary_domain_alias)
 
 
-@lru_cache(maxsize=8192)
+@lru_cache(maxsize=1024)
 def is_domain_match_glob_whitelist(domain):
     for domain_glob in domains_whitelist_auto_add_glob_list:
         if fnmatch(domain, domain_glob):
@@ -412,7 +411,7 @@ def current_line_number():
     return inspect.currentframe().f_back.f_lineno
 
 
-@lru_cache(maxsize=8192)
+@lru_cache(maxsize=1024)
 def extract_real_url_from_embedded_url(embedded_url):
     """
 
@@ -453,7 +452,7 @@ def extract_real_url_from_embedded_url(embedded_url):
     return result
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=1024)
 def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
     # dbgprint(real_url_raw, url_mime, escape_slash)
     if escape_slash:
@@ -651,7 +650,7 @@ def generate_ip_verify_hash(input_dict):
     return input_key_hash + output_hash
 
 
-@lru_cache(maxsize=2048)
+@lru_cache(maxsize=1024)
 def verify_ip_hash_cookie(hash_cookie_value):
     """
 
@@ -1336,7 +1335,6 @@ def extract_client_header():
     return outgoing_head
 
 
-@lru_cache(maxsize=8192)
 def client_requests_text_rewrite(raw_text):
     """
     Rewrite proxy domain to origin domain, extdomains supported.
@@ -1405,7 +1403,6 @@ def client_requests_bin_rewrite(raw_bin, max_len=8192):
         return raw_bin
 
 
-@lru_cache(maxsize=8192)
 def extract_url_path_and_query(full_url):
     """
     Convert http://foo.bar.com/aaa/p.html?x=y to /aaa/p.html?x=y
@@ -1679,8 +1676,8 @@ def mwm_status():
     output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
     output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())
     output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
-    output += strx('\nclient_requests_text_rewrite', client_requests_text_rewrite.cache_info())
-    output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
+    # output += strx('\nclient_requests_text_rewrite', client_requests_text_rewrite.cache_info())
+    # output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
     output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache),
                    'Hits:', url_rewrite_cache_hit_count, 'Misses:', url_rewrite_cache_miss_count)
 
@@ -1800,7 +1797,7 @@ def main_function(input_path='/'):
     request_local.start_time = time()  # to display compute time
     request_local.temporary_domain_alias = ()  # init temporary_domain_alias
 
-    infoprint(request.method, request.url, request.remote_addr, request.user_agent)
+    infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
 
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
@@ -1821,14 +1818,14 @@ def main_function(input_path='/'):
             else:
                 return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
-    dbgprint('after extract, url:', request.url, '   path:', request.path)
+    if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
     if hostname not in domain_alias_to_target_set:
         scheme = 'https://' if is_https else 'http://'
         actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
-        dbgprint('PreRewritedUrl(ext):', actual_request_url)
+        if verbose_level >= 3: dbgprint('PreRewritedUrl(ext):', actual_request_url)
     else:
         actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
-        dbgprint('PreRewritedUrl(main):', actual_request_url)
+        if verbose_level >= 3: dbgprint('PreRewritedUrl(main):', actual_request_url)
 
     try:
         resp = request_remote_site_and_parse(actual_request_url)
@@ -1893,11 +1890,22 @@ if enable_custom_access_cookie_generate_and_verify:
         traceback.print_exc()
         raise
 
+try:
+    from custom_func import *
+except:
+    pass
+
 if enable_cron_tasks:
     for _task_dict in cron_tasks_list:
-        cron_task_container(_task_dict, add_task_only=True)
+        try:
+            _task_dict['target'] = globals()[_task_dict['target']]
+            cron_task_container(_task_dict, add_task_only=True)
+        except Exception as e:
+            errprint('UnableToInitCronTask', e)
+            traceback.print_exc()
+            raise
 
-    th = threading.Thread(target=cron_task_host)
+    th = threading.Thread(target=cron_task_host, daemon=True)
     th.start()
 
 # ################# End Post (auto)Exec Section #################
