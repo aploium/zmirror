@@ -1836,6 +1836,10 @@ def main_function(input_path='/'):
     hostname, is_https, extpath = extract_from_url_may_have_extdomains()
     dbgprint('ResolveRequestUrl hostname:', hostname, 'is_https', is_https, 'extpath:', extpath)
 
+    if hostname in domain_alias_to_target_set:
+        request.path = extpath
+        request.url = myurl_prefix + extpath
+
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if hostname not in allowed_domains_set:
         if not try_match_and_add_domain_to_rewrite_white_list(hostname):
