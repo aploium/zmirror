@@ -389,7 +389,7 @@ else:
 
 # v0.21.0+ streamed content async preload -- max preload packages number
 # 异步加载缓冲区存储的数据包的最大数量, 不要设置得太小
-stream_transfer_async_preload_max_packages_size = 30
+stream_transfer_async_preload_max_packages_size = 15
 
 # ############## Cron Tasks ##############
 # v0.21.4+ Cron Tasks, if you really know what you are doing, please do not disable this option
