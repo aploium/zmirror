@@ -201,11 +201,14 @@ human_ip_verification_answers_hash_str = 'AploiumLoveLuciazForever'
 
 # questions and answer that users from non-permitted ip should answer. Can have several questions
 human_ip_verification_questions = (
-    ('Please write your question here', 'CorrectAnswer'),
-    # ('Another question', 'AnotherAnswer'),
+    ('Please write your question here', 'CorrectAnswer', 'Placeholder (Optional)'),
+    # ('Another question', 'AnotherAnswer', 'YourPlaceholder (Optional)'),
     # ('最好是一些只有内部人员才知道答案的问题, 比如说 "英译中:zdlgmygdwg"', '[略]'),
     # ('能被轻易百度到答案的问题是很不好的,比如:浙江大学的校长是谁', '竺可桢'),
 )
+
+# v0.21.8+ if answer any of questions above, access would be granted
+human_ip_verification_answer_any_one_questions_is_ok = True
 
 # user's identity information that should given. Would be logged in to log file.
 human_ip_verification_identity_record = (

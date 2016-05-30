@@ -20,7 +20,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.21.7-dev'
+__VERSION__ = '0.21.8-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
@@ -1693,14 +1693,17 @@ def ip_ban_verify_page():
         dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
         for q_id, _question in enumerate(human_ip_verification_questions):
-            form_body += r"""%s <input type="text" name="%d" /><br/>""" % (_question[0], q_id)
+            form_body += r"""%s <input type="text" name="%d" placeholder="%s" style="width: 190px;" /><br/>""" \
+                         % (_question[0], q_id, (html_escape(_question[2]) if len(_question) >= 3 else ""))
 
         for rec_explain_string, rec_name, input_type in human_ip_verification_identity_record:
-            form_body += r"""%s <input type="%s" name="%s" /><br/>""" % (
-                rec_explain_string, html_escape(input_type), html_escape(rec_name))
+            form_body += r"""%s %s<input type="%s" name="%s" /><br/>""" % (
+                rec_explain_string,
+                ('<span style="color: red;">(必填)<span> ' if human_ip_verification_answer_any_one_questions_is_ok else ""),
+                html_escape(input_type), html_escape(rec_name))
 
         if 'origin' in request.args:
-            form_body += r"""<input type="hidden" name="origin" value="%s" />""" % html_escape(
+            form_body += r"""<input type="hidden" name="origin" value="%s" style="width: 190px;" />""" % html_escape(
                 request.args.get('origin'))
 
         return r"""<!doctype html>
@@ -1711,21 +1714,31 @@ def ip_ban_verify_page():
         </head>
         <body>
           <h1>%s</h1>
-          <p>这样的验证只会出现一次，通过后您会被加入白名单，之后相同设备的访问不会再需要验证。<br/>
+          <p>这样的验证只会出现一次，通过后您会被加入白名单，之后相同IP的访问不会再需要验证。<br/>
           提示: 由于手机和宽带IP经常会发生改变，您可能会多次看到这一页面。</p>
+          %s <br>
           <pre style="border: 1px dashed;">%s</pre>
           <form method='post'>%s<button type='submit'>递交</button>
           </form>
         </body>
         </html>""" % (
             html_escape(human_ip_verification_title), html_escape(human_ip_verification_title),
-            html_escape(human_ip_verification_description), form_body)
+            ("只需要回答出以下<b>任意一个</b>问题即可" if human_ip_verification_answer_any_one_questions_is_ok
+             else "你需要回答出以下<b>所有问题</b>"),
+            human_ip_verification_description, form_body)
 
     elif request.method == 'POST':
         dbgprint('Verify Request Form', request.form)
+
         for q_id, _question in enumerate(human_ip_verification_questions):
             if request.form.get(str(q_id)) != _question[1]:
-                return generate_simple_resp_page(b'You Got An Error In ' + _question[0].encode(), 200)
+                if not human_ip_verification_answer_any_one_questions_is_ok:
+                    return generate_simple_resp_page(b'You got an error in ' + _question[0].encode(), 200)
+            elif not human_ip_verification_answer_any_one_questions_is_ok:
+                break
+        else:
+            if human_ip_verification_answer_any_one_questions_is_ok:
+                return generate_simple_resp_page(b'Please answer at least ONE questsion', 200)
 
         record_dict = {}
         for rec_explain_string, rec_name, form_type in human_ip_verification_identity_record:
