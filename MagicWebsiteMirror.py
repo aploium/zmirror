@@ -969,12 +969,13 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
     """
     for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
         try:
-            buffer_queue.put(particle_content, timeout=15)
+            buffer_queue.put(particle_content, timeout=10)
         except queue.Full:
             traceback.print_exc()
+            buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
             exit()
-        dbgprint('BufferSize', buffer_queue.qsize())
-    buffer_queue.put(None, timeout=15)
+        if verbose_level >= 3: dbgprint('BufferSize', buffer_queue.qsize())
+    buffer_queue.put(None, timeout=10)
     exit()
 
 
@@ -985,7 +986,8 @@ def iter_streamed_response_async(requests_response_obj):
     buffer_queue = queue.Queue(maxsize=stream_transfer_async_preload_max_packages_size)
 
     t = threading.Thread(target=preload_streamed_response_content_async,
-                         args=(requests_response_obj, buffer_queue))
+                         args=(requests_response_obj, buffer_queue),
+                         daemon=True)
     t.start()
 
     while True:
@@ -994,12 +996,22 @@ def iter_streamed_response_async(requests_response_obj):
         except queue.Empty:
             warnprint('WeGotAnSteamTimeout')
             traceback.print_exc()
+            buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
+            try:
+                t._stop()
+            except:
+                pass
             return
         buffer_queue.task_done()
 
         if particle_content is not None:
             yield particle_content
         else:
+            try:
+                t._stop()
+            except:
+                pass
+            buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
             return
 
         if verbose_level >= 4:
@@ -1676,9 +1688,10 @@ def mwm_status():
     output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
     output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())
     output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
+    output += strx('\n\ncurrent_threads_number', threading.active_count())
     # output += strx('\nclient_requests_text_rewrite', client_requests_text_rewrite.cache_info())
     # output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
-    output += strx('\nurl_rewriter_cache len: ', len(url_rewrite_cache),
+    output += strx('\n\nurl_rewriter_cache len: ', len(url_rewrite_cache),
                    'Hits:', url_rewrite_cache_hit_count, 'Misses:', url_rewrite_cache_miss_count)
 
     output += strx('\n----------------\n')
