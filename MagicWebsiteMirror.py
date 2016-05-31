@@ -1836,7 +1836,7 @@ def main_function(input_path='/'):
     hostname, is_https, extpath = extract_from_url_may_have_extdomains()
     dbgprint('ResolveRequestUrl hostname:', hostname, 'is_https', is_https, 'extpath:', extpath)
 
-    if hostname in domain_alias_to_target_set:
+    if 'extdomains' in request.url and hostname in domain_alias_to_target_set:
         request.path = extpath
         request.url = myurl_prefix + extpath
 
