@@ -21,7 +21,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.21.9-dev'
+__VERSION__ = '0.21.10-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
@@ -781,7 +781,8 @@ def regex_url_reassemble(match_obj):
         # in javascript, those 'path' contains one or only two slash, should not be rewrited (for potential error)
         # or (request_local.cur_mime == 'application/javascript' and path.count('/') < 2)
         # in javascript, we only rewrite those with explicit scheme ones.
-        or (('javascript' in request_local.cur_mime) and not scheme)
+        # v0.21.10+ in "key":"value" format, we should ignore those path without scheme
+        or (not scheme and ('javascript' in request_local.cur_mime or '"' in prefix))
         ):
         # dbgprint('returned_un_touch', whole_match_string)
         return whole_match_string
