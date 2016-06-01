@@ -396,7 +396,6 @@ stream_transfer_async_preload_max_packages_size = 15
 # 定时任务, 除非你真的知道你在做什么, 否则请不要关闭本选项
 enable_cron_tasks = True
 
-
 # from custom_func import your_own_cron_function
 
 # v0.21.4+ If you want to add your own cron tasks, please create the function in 'custom_func.py', and add it's name in `target`
@@ -411,6 +410,19 @@ cron_tasks_list = [
     # below is the complete syntax.
     # dict(name='just a name', priority=10, interval=60 * 10, target='your_own_cron_function', args=(1,2,), kwargs={'a':1}),
 ]
+
+# ############## Response Cookies Setting ##############
+#
+# 0.21.9+ Aggressive cookies path rewrite (for HttpOnly cookies)
+# 启用暴力cookies重写, 将所有HttpOnly的Cookies的path重写为 / ,(应该能)确保所有cookies都被发送出去
+#   优点:兼容性比较强, 并且能兼容 shadow_url_redirect_regex
+#   缺点:每次发送的请求都会带有一个非常巨大的头部
+# 若关闭暴力cookies重写, 会试图把所有HttpOnly的Cookies的path重写为对应子站,
+#   如 (/extdomains/https-a.foobar.com): path=/verify -> path=/extdomains/https-a.foobar.com/verify
+#   优点: 可以减少每次发送的请求的头部大小
+#   缺点: 兼容性可能不如暴力重写强, 而且可能与 shadow_url_redirect_regex 会出现兼容性问题.
+#   如果不使用暴力重写, 请将 shadow_url_redirect_regex 中的重定向移到 url_custom_redirect_regex 中
+enable_aggressive_cookies_path_rewrite = False
 
 # ############## Misc ##############
 custom_allowed_origin = None

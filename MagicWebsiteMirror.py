@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 import os
+from itertools import count
 
 if os.path.dirname(__file__) != '':
     os.chdir(os.path.dirname(__file__))
@@ -20,7 +21,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.21.8-dev'
+__VERSION__ = '0.21.9-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
@@ -227,6 +228,7 @@ regex_extract_base64_from_embedded_url = re.compile(
 
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
+regex_cookie_path_rewriter = re.compile(r'(?P<prefix>[pP]ath)=(?P<path>[\w\._/-]+?;)')
 # Request Domains Rewriter, see client_requests_text_rewrite()
 if my_host_port is not None:
     temp = r'(' + re.escape(my_host_name) + r'|' + re.escape(my_host_name_no_port) + r')'
@@ -517,7 +519,12 @@ def extract_from_url_may_have_extdomains(extdomains_url=None):
         return target_domain, target_scheme == 'https://', extdomains_url
 
 
-def get_ext_domain_inurl_scheme_prefix(ext_domain):
+def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
+    if is_https is not None:
+        if is_https:
+            return 'https-'
+        else:
+            return ''
     if force_https_domains == 'NONE':
         return ''
     if force_https_domains == 'ALL':
@@ -1121,6 +1128,19 @@ def response_cookies_deep_copy(req_obj):
                 value = value.replace('Secure;', '')
                 value = value.replace(';Secure', ';')
                 value = value.replace('; Secure', ';')
+            if 'httponly' in value.lower():
+                if enable_aggressive_cookies_path_rewrite:
+                    # 暴力cookie path重写, 把所有path都重写为 /
+                    value = regex_cookie_path_rewriter.sub('path=/;', value)
+                else:
+                    # 重写HttpOnly Cookies的path到当前url下
+                    # eg(/extdomains/https-a.foobar.com): path=/verify; -> path=/extdomains/https-a.foobar.com/verify
+                    real_domain, is_https, real_path = extract_from_url_may_have_extdomains()
+                    if real_domain not in domain_alias_to_target_set:  # do not rewrite main domains
+                        _scheme_prefix = get_ext_domain_inurl_scheme_prefix(real_domain, is_https=is_https)
+                        value = regex_cookie_path_rewriter.sub(
+                            '\g<prefix>=/extdomains/' + _scheme_prefix + real_domain + '\g<path>', value)
+
             header_cookies_string_list.append(value)
     return header_cookies_string_list
 
