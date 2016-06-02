@@ -1080,6 +1080,7 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
     """
     if content is None:
         if is_streamed:
+            req_time_body = 0
             if not enable_stream_transfer_async_preload:
                 dbgprint('TransferUsingStreamMode(basic):', requests_response_obj.url, this_request.cur_mime)
                 content = iter_streamed_response(requests_response_obj)
@@ -1087,9 +1088,11 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
                 dbgprint('TransferUsingStreamMode(async):', requests_response_obj.url, this_request.cur_mime)
                 content = iter_streamed_response_async(requests_response_obj)
         else:
-            content = response_content_rewrite(requests_response_obj)
+            content, req_time_body = response_content_rewrite(requests_response_obj)
+    else:
+        req_time_body = 0
 
-    if verbose_level >= 3: dbgprint('RemoteRespHeader', requests_response_obj.headers)
+    if verbose_level >= 3: dbgprint('RemoteRespHeaders', requests_response_obj.headers)
     resp = Response(content, status=requests_response_obj.status_code)
 
     for header_key in requests_response_obj.headers:
@@ -1104,7 +1107,7 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
                 if is_mime_represents_text(requests_response_obj.headers[header_key]) \
                         and 'utf-8' not in requests_response_obj.headers[header_key]:
                     resp.headers[header_key] = extract_mime_from_content_type(
-                        requests_response_obj.headers[header_key]) + ';charset=utf-8'
+                        requests_response_obj.headers[header_key]) + '; charset=utf-8'
                 else:
                     resp.headers[header_key] = requests_response_obj.headers[header_key]
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
@@ -1129,7 +1132,7 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
 
     if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
 
-    return resp
+    return resp, req_time_body
 
 
 # noinspection PyProtectedMember
@@ -1182,20 +1185,24 @@ def response_content_rewrite(remote_resp_obj):
     Rewrite requests response's content's url. Auto skip binary (based on MIME).
     :type remote_resp_obj: requests.models.Response
     :param remote_resp_obj: requests response object
-    :return: bytes
+    :return: (bytes, float)
     """
     # Skip if response is binary
     content_type = remote_resp_obj.headers.get('content-type', '') or remote_resp_obj.headers.get('Content-Type', '')
     content_mime = extract_mime_from_content_type(content_type)
 
+    start_time = time()
+    _content = remote_resp_obj.content
+    req_time_body = time() - start_time
+
     if content_mime and is_mime_represents_text(content_mime):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
-        if verbose_level >= 3: dbgprint('Text-like', content_mime, remote_resp_obj.text[:15], remote_resp_obj.content[:15])
+        if verbose_level >= 3: dbgprint('Text-like', content_mime, remote_resp_obj.text[:15], _content[:15])
 
         if force_decode_remote_using_encode is not None:
             remote_resp_obj.encoding = force_decode_remote_using_encode
         elif cchardet_available:  # detect the encoding using cchardet (if we have)
-            remote_resp_obj.encoding = c_chardet(remote_resp_obj.content)
+            remote_resp_obj.encoding = c_chardet(_content)
 
         # simply copy the raw text, for custom rewriter function first.
         resp_text = remote_resp_obj.text
@@ -1230,11 +1237,11 @@ def response_content_rewrite(remote_resp_obj):
             if developer_string_trace is not None and developer_string_trace in resp_text:
                 infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
 
-        return resp_text.encode(encoding='utf-8')  # return bytes
+        return resp_text.encode(encoding='utf-8'), req_time_body  # return bytes
     else:
         # simply don't touch binary response content
-        if verbose_level >= 3: dbgprint('Binary', content_mime)
-        return remote_resp_obj.content
+        dbgprint('Binary', content_mime)
+        return _content, req_time_body
 
 
 def response_text_basic_rewrite(resp_text, domain, domain_id=None):
@@ -1556,13 +1563,14 @@ def request_remote_site_and_parse(actual_request_url):
         if resp is not None:
             dbgprint('CacheHit,Return')
             if this_request.start_time is not None:
-                resp.headers.set('X-CP-Time', "%.4f" % (time() - this_request.start_time))
+                resp.headers.set('X-Compute-Time', "%.4f" % (time() - this_request.start_time))
+                resp.headers.set('X-Req-Time', "0.0000")
             return resp  # If cache hit, just skip the next steps
 
     try:  # send request to remote server
         data = client_requests_bin_rewrite(request.get_data())
         # server's request won't follow 301 or 302 redirection
-        r, req_time = send_request(
+        r, req_time_headers = send_request(
             actual_request_url,
             method=request.method,
             headers=client_header,
@@ -1588,10 +1596,11 @@ def request_remote_site_and_parse(actual_request_url):
     this_request.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
     _response_no_cache = 'no-store' in this_request.cache_control or 'must-revalidate' in this_request.cache_control
 
-    dbgprint('Response Content-Type:', content_type,
-             'IsStreamed:', is_streamed,
-             'is_no_cache:', _response_no_cache,
-             'Line', current_line_number(), v=4)
+    if verbose_level >= 4:
+        dbgprint('Response Content-Type:', content_type,
+                 'IsStreamed:', is_streamed,
+                 'is_no_cache:', _response_no_cache,
+                 'Line', current_line_number(), v=4)
 
     # add url's MIME info to record, for MIME-based CDN rewrite,
     #   next time we access this url, we would know it's mime
@@ -1612,7 +1621,7 @@ def request_remote_site_and_parse(actual_request_url):
                 url_to_use_cdn[url_no_scheme] = [False, '']
 
     # copy and parse remote response
-    resp = copy_response(r, is_streamed=is_streamed)
+    resp, req_time_body = copy_response(r, is_streamed=is_streamed)
 
     # storge entire our server's response (headers included)
     if local_cache_enable and not _response_no_cache and not is_streamed:
@@ -1620,7 +1629,8 @@ def request_remote_site_and_parse(actual_request_url):
 
     if this_request.start_time is not None and not is_streamed:
         # remote request time should be excluded when calculating total time
-        resp.headers.add('X-CP-Time', "%.4f" % (time() - this_request.start_time - req_time))
+        resp.headers.add('X-Req-Time', "%.4f" % (req_time_headers + req_time_body))
+        resp.headers.add('X-Compute-Time', "%.4f" % (time() - this_request.start_time - req_time_headers - req_time_body))
 
     resp.headers.add('X-MagicWebsiteMirror-Version', __VERSION__)
 
