@@ -1133,7 +1133,7 @@ def response_cookies_deep_copy(req_obj):
                 if enable_aggressive_cookies_path_rewrite:
                     # 暴力cookie path重写, 把所有path都重写为 /
                     value = regex_cookie_path_rewriter.sub('path=/;', value)
-                else:
+                elif enable_aggressive_cookies_path_rewrite is not None:
                     # 重写HttpOnly Cookies的path到当前url下
                     # eg(/extdomains/https-a.foobar.com): path=/verify; -> path=/extdomains/https-a.foobar.com/verify
                     real_domain, is_https, real_path = extract_from_url_may_have_extdomains()

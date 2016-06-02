@@ -414,15 +414,16 @@ cron_tasks_list = [
 # ############## Response Cookies Setting ##############
 #
 # 0.21.9+ Aggressive cookies path rewrite (for HttpOnly cookies)
-# 启用暴力cookies重写, 将所有HttpOnly的Cookies的path重写为 / ,(应该能)确保所有cookies都被发送出去
+# 设置为True启用暴力cookies重写, 将所有HttpOnly的Cookies的path重写为 / ,(应该能)确保所有cookies都被发送出去
 #   优点:兼容性比较强, 并且能兼容 shadow_url_redirect_regex
 #   缺点:每次发送的请求都会带有一个非常巨大的头部
-# 若关闭暴力cookies重写, 会试图把所有HttpOnly的Cookies的path重写为对应子站,
+# 设置为False关闭暴力cookies path重写, 会试图把所有HttpOnly的Cookies的path重写为对应子站,
 #   如 (/extdomains/https-a.foobar.com): path=/verify -> path=/extdomains/https-a.foobar.com/verify
 #   优点: 可以减少每次发送的请求的头部大小
 #   缺点: 兼容性可能不如暴力重写强, 而且可能与 shadow_url_redirect_regex 会出现兼容性问题.
 #   如果不使用暴力重写, 请将 shadow_url_redirect_regex 中的重定向移到 url_custom_redirect_regex 中
-enable_aggressive_cookies_path_rewrite = False
+# 设置为None则关闭cookies path重写, cookies的path属性会被保持原样(默认值)
+enable_aggressive_cookies_path_rewrite = None
 
 # ############## Misc ##############
 custom_allowed_origin = None
