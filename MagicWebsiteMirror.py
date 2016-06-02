@@ -21,11 +21,11 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.21.10-dev'
+__VERSION__ = '0.22.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
-infoprint('Github: ', __VERSION__, 'from', __author__)
+infoprint('Github: https://github.com/Aploium/MagicWebsiteMirror')
 
 try:
     import threading
@@ -132,11 +132,15 @@ cdn_url_query_encode_salt = 'mwmx'
 _url_salt = re.escape(cdn_url_query_encode_salt)
 
 # ## thread local var ##
-request_local = threading.local()
-request_local.start_time = None
-request_local.cur_mime = ''
-request_local.cache_control = ''
-request_local.temporary_domain_alias = None
+this_request = threading.local()
+this_request.start_time = None  # 请求开始的时间, unix
+this_request.cur_mime = ''
+this_request.cache_control = ''
+this_request.temporary_domain_alias = None  # 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
+this_request.remote_domain = ''  # 当前请求对应的远程域名
+this_request.is_https = ''  # 是否需要用https来请求远程域名
+this_request.remote_path = ''  # 对应的远程path
+this_request.remote_path_query = ''  # 对应的远程path+query string
 
 # task_scheduler
 task_scheduler = sched.scheduler(time, sleep)
@@ -350,15 +354,15 @@ def calc_domain_replace_prefix(_domain):
 
 
 def add_temporary_domain_alias(source_domain, target_domain):
-    if request_local.temporary_domain_alias is None:
-        request_local.temporary_domain_alias = []
+    if this_request.temporary_domain_alias is None:
+        this_request.temporary_domain_alias = []
     else:
-        request_local.temporary_domain_alias = list(request_local.temporary_domain_alias)
+        this_request.temporary_domain_alias = list(this_request.temporary_domain_alias)
 
-    request_local.temporary_domain_alias.append((source_domain, target_domain))
-    request_local.temporary_domain_alias = tuple(request_local.temporary_domain_alias)
+    this_request.temporary_domain_alias.append((source_domain, target_domain))
+    this_request.temporary_domain_alias = tuple(this_request.temporary_domain_alias)
     dbgprint('A domain', source_domain, 'to', target_domain, 'added to temporary_domain_alias',
-             request_local.temporary_domain_alias)
+             this_request.temporary_domain_alias)
 
 
 @lru_cache(maxsize=1024)
@@ -489,34 +493,58 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
 
 
 def extract_from_url_may_have_extdomains(extdomains_url=None):
-    """[http://foo.bar]/extdomains/foobar.com/path --> ('foboar.com', False), JSON supported. return:(real_domain, is_https, real_path)
-
-        :rtype: (real_domain, is_https, real_path)
     """
+    return: dict(domain, is_https, path, path_query)
+    JSON supported. return:{'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
+
+    :param extdomains_url:
+    :return: dict(domain, is_https, path, path_query)
+    :rtype: {'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
+    """
+    _is_escaped_dot = False
+    _is_escaped_slash = False
+    result = {}
+
     if extdomains_url is None:
-        extdomains_url = request.path
-    extdomains_pos = extdomains_url.find('extdomains')
-    if extdomains_pos != -1:
-        # 10 == len('extdomains')
-        if extdomains_url[extdomains_pos + 10] == '\\':
-            domain_end_pos = extdomains_url.find('\\', extdomains_pos + 12)
-            real_domain = extdomains_url[extdomains_pos + 12:domain_end_pos]
-            real_domain.replace('\\.', '.')
-        else:
-            domain_end_pos = extdomains_url.find('/', extdomains_pos + 11)
-            real_domain = extdomains_url[extdomains_pos + 11:domain_end_pos]
-        remote_path = extdomains_url[domain_end_pos:]
+        input_path_query = extract_url_path_and_query()
+    else:
+        if r'\/' in extdomains_url:
+            _is_escaped_slash = True
+            extdomains_url = extdomains_url.replace(r'\/', '/')
+
+        if r'\.' in extdomains_url:
+            _is_escaped_dot = True
+            extdomains_url = extdomains_url.replace(r'\.', '.')
+
+        input_path_query = extract_url_path_and_query(extdomains_url)
+
+    if input_path_query[:12] == '/extdomains/':
+        # 12 == len('/extdomains/')
+        domain_end_pos = input_path_query.find('/', 12)
+        real_domain = input_path_query[12:domain_end_pos]
+        real_path_query = input_path_query[domain_end_pos:]
 
         if real_domain[:6] == 'https-':
             real_domain = real_domain[6:]
             is_https = True
         else:
             is_https = False
-        # dbgprint(extdomains_url,'extract_from_url_may_have_extdomains', real_domain, is_https)
-        return real_domain, is_https, remote_path
 
-    else:
-        return target_domain, target_scheme == 'https://', extdomains_url
+        if _is_escaped_dot: real_path_query = real_path_query.replace('.', r'\.')
+        if _is_escaped_slash: real_path_query = real_path_query.replace('/', r'\/')
+        result['domain'] = real_domain
+        result['is_https'] = is_https
+        result['path_query'] = real_path_query
+        result['path'] = urlsplit(result['path_query']).path
+        return result
+
+    if _is_escaped_dot: input_path_query = input_path_query.replace('.', r'\.')
+    if _is_escaped_slash: input_path_query = input_path_query.replace('/', r'\/')
+    result['domain'] = target_domain
+    result['is_https'] = (target_scheme == 'https://')
+    result['path_query'] = input_path_query
+    result['path'] = urlsplit(result['path_query']).path
+    return result
 
 
 def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
@@ -555,7 +583,7 @@ def strx(*args, sep=' '):
 
 @lru_cache(maxsize=1024)
 def check_global_ua_pass(ua_str):
-    if ua_str is None:
+    if ua_str is None or not global_ua_white_name:
         return False
     ua_str = ua_str.lower()
     if global_ua_white_name in ua_str:
@@ -779,10 +807,10 @@ def regex_url_reassemble(match_obj):
         # if we have quote_left, it must equals to the right
         or (quote_left and quote_left != quote_right)
         # in javascript, those 'path' contains one or only two slash, should not be rewrited (for potential error)
-        # or (request_local.cur_mime == 'application/javascript' and path.count('/') < 2)
+        # or (this_request.cur_mime == 'application/javascript' and path.count('/') < 2)
         # in javascript, we only rewrite those with explicit scheme ones.
         # v0.21.10+ in "key":"value" format, we should ignore those path without scheme
-        or (not scheme and ('javascript' in request_local.cur_mime or '"' in prefix))
+        or (not scheme and ('javascript' in this_request.cur_mime or '"' in prefix))
         ):
         # dbgprint('returned_un_touch', whole_match_string)
         return whole_match_string
@@ -791,12 +819,11 @@ def regex_url_reassemble(match_obj):
     if enable_automatic_domains_whitelist:
         try_match_and_add_domain_to_rewrite_white_list(match_domain)
 
-    remote_domain, _is_remote_https, remote_path = extract_from_url_may_have_extdomains()
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
     # dbgprint(match_obj.groups(), v=5)
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
 
-    domain = match_domain or remote_domain
+    domain = match_domain or this_request.remote_domain
     # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
@@ -805,9 +832,9 @@ def regex_url_reassemble(match_obj):
 
     # this resource's absolute url path to the domain root.
     # dbgprint('match path', path, v=5)
-    path = urljoin(remote_path, path)
+    path = urljoin(this_request.remote_path, path)
     # dbgprint('middle path', path, v=5)
-    if ':' not in remote_domain:  # the python's builtin urljoin has a bug, cannot join domain with port correctly
+    if ':' not in this_request.remote_domain:  # the python's builtin urljoin has a bug, cannot join domain with port correctly
         url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
     else:
         url_no_scheme = domain + '/' + path.lstrip('/')
@@ -841,7 +868,7 @@ def regex_url_reassemble(match_obj):
         # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
         replace_to_scheme_domain = my_host_scheme + CDN_domains[zlib.adler32(path.encode()) % cdn_domains_number]
 
-    # else:  # request_local.cur_mime == 'application/javascript':
+    # else:  # this_request.cur_mime == 'application/javascript':
     #     replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
     elif not scheme:
         replace_to_scheme_domain = ''
@@ -877,9 +904,9 @@ def is_denied_because_of_spider(ua_str):
     ua_str = ua_str.lower()
     if 'spider' in ua_str or 'bot' in ua_str:
         if is_ua_in_whitelist(ua_str):
-            dbgprint('A Spider/Bot\'s access was granted', ua_str)
+            infoprint('A Spider/Bot\'s access was granted', ua_str)
             return False
-        dbgprint('A Spider/Bot was denied, UA is:', ua_str)
+        infoprint('A Spider/Bot was denied, UA is:', ua_str)
         return True
     else:
         return False
@@ -943,7 +970,7 @@ def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, i
     sp = urlsplit(_raw_url_or_path)
     if '/extdomains/' == sp.path[:12]:
         return raw_url_or_path
-    domain = remote_domain or sp.netloc or extract_from_url_may_have_extdomains(request.path)[0] or target_domain
+    domain = remote_domain or sp.netloc or this_request.remote_domain or target_domain
     if domain not in allowed_domains_set:
         return raw_url_or_path
 
@@ -1051,10 +1078,10 @@ def copy_response(requests_response_obj, content=None, is_streamed=False):
     if content is None:
         if is_streamed:
             if not enable_stream_transfer_async_preload:
-                dbgprint('TransferUsingStreamMode(basic):', requests_response_obj.url, request_local.cur_mime)
+                dbgprint('TransferUsingStreamMode(basic):', requests_response_obj.url, this_request.cur_mime)
                 content = iter_streamed_response(requests_response_obj)
             else:
-                dbgprint('TransferUsingStreamMode(async):', requests_response_obj.url, request_local.cur_mime)
+                dbgprint('TransferUsingStreamMode(async):', requests_response_obj.url, this_request.cur_mime)
                 content = iter_streamed_response_async(requests_response_obj)
         else:
             content = response_content_rewrite(requests_response_obj)
@@ -1136,11 +1163,12 @@ def response_cookies_deep_copy(req_obj):
                 elif enable_aggressive_cookies_path_rewrite is not None:
                     # 重写HttpOnly Cookies的path到当前url下
                     # eg(/extdomains/https-a.foobar.com): path=/verify; -> path=/extdomains/https-a.foobar.com/verify
-                    real_domain, is_https, real_path = extract_from_url_may_have_extdomains()
-                    if real_domain not in domain_alias_to_target_set:  # do not rewrite main domains
-                        _scheme_prefix = get_ext_domain_inurl_scheme_prefix(real_domain, is_https=is_https)
+
+                    if this_request.remote_domain not in domain_alias_to_target_set:  # do not rewrite main domains
+                        _scheme_prefix = get_ext_domain_inurl_scheme_prefix(this_request.remote_domain,
+                                                                            is_https=this_request.is_https)
                         value = regex_cookie_path_rewriter.sub(
-                            '\g<prefix>=/extdomains/' + _scheme_prefix + real_domain + '\g<path>', value)
+                            '\g<prefix>=/extdomains/' + _scheme_prefix + this_request.remote_domain + '\g<path>', value)
 
             header_cookies_string_list.append(value)
     return header_cookies_string_list
@@ -1280,7 +1308,7 @@ def response_text_rewrite(resp_text):
     """
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
-        for before_replace, after_replace in (plain_replace_domain_alias + request_local.temporary_domain_alias):
+        for before_replace, after_replace in (plain_replace_domain_alias + this_request.temporary_domain_alias):
             # _before_e = before_replace.replace('/', r'\/')
             # _after_e = after_replace.replace('/', r'\/')
             # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
@@ -1362,7 +1390,6 @@ def extract_client_header():
                     outgoing_head[head_name_l] = _str_buff
             else:
                 outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
-    # outgoing_head['host'] = extract_from_url_may_have_extdomains()[0]
 
     if verbose_level >= 3: dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
@@ -1436,7 +1463,7 @@ def client_requests_bin_rewrite(raw_bin, max_len=8192):
         return raw_bin
 
 
-def extract_url_path_and_query(full_url):
+def extract_url_path_and_query(full_url=None, no_query=False):
     """
     Convert http://foo.bar.com/aaa/p.html?x=y to /aaa/p.html?x=y
 
@@ -1444,9 +1471,11 @@ def extract_url_path_and_query(full_url):
     :param full_url: full url
     :return: str
     """
+    if full_url is None:
+        full_url = request.url
     split = urlsplit(full_url)
     result = split.path
-    if split.query:
+    if not no_query and split.query:
         result += '?' + split.query
     return result
 
@@ -1522,8 +1551,8 @@ def request_remote_site_and_parse(actual_request_url):
         resp = try_get_cached_response(actual_request_url, client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
-            if request_local.start_time is not None:
-                resp.headers.set('X-CP-Time', "%.4f" % (time() - request_local.start_time))
+            if this_request.start_time is not None:
+                resp.headers.set('X-CP-Time', "%.4f" % (time() - this_request.start_time))
             return resp  # If cache hit, just skip the next steps
 
     try:  # send request to remote server
@@ -1542,7 +1571,7 @@ def request_remote_site_and_parse(actual_request_url):
 
     # extract response's mime to thread local var
     content_type = r.headers.get('Content-Type', '') or r.headers.get('content-type', '')
-    request_local.cur_mime = extract_mime_from_content_type(content_type)
+    this_request.cur_mime = extract_mime_from_content_type(content_type)
 
     # only_serve_static_resources
     if only_serve_static_resources and not is_content_type_using_cdn(content_type):
@@ -1552,8 +1581,8 @@ def request_remote_site_and_parse(actual_request_url):
     is_streamed = enable_stream_content_transfer and is_content_type_streamed(content_type)
 
     # extract cache control header, if not cache, we should disable local cache
-    request_local.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
-    _response_no_cache = 'no-store' in request_local.cache_control or 'must-revalidate' in request_local.cache_control
+    this_request.cache_control = r.headers.get('Cache-Control', '') or r.headers.get('cache-control', '')
+    _response_no_cache = 'no-store' in this_request.cache_control or 'must-revalidate' in this_request.cache_control
 
     dbgprint('Response Content-Type:', content_type,
              'IsStreamed:', is_streamed,
@@ -1568,11 +1597,11 @@ def request_remote_site_and_parse(actual_request_url):
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
         if url_no_scheme not in url_to_use_cdn:
-            if is_content_type_using_cdn(request_local.cur_mime):
+            if is_content_type_using_cdn(this_request.cur_mime):
                 # mark it to use cdn, and record it's url without scheme.
                 # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
                 # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                url_to_use_cdn[url_no_scheme] = [True, request_local.cur_mime]
+                url_to_use_cdn[url_no_scheme] = [True, this_request.cur_mime]
                 if verbose_level >= 3: dbgprint('CDN enabled for:', url_no_scheme)
             else:
                 if verbose_level >= 3: dbgprint('CDN disabled for:', url_no_scheme)
@@ -1585,9 +1614,9 @@ def request_remote_site_and_parse(actual_request_url):
     if local_cache_enable and not _response_no_cache and not is_streamed:
         put_response_to_local_cache(actual_request_url, resp, request, r)
 
-    if request_local.start_time is not None and not is_streamed:
+    if this_request.start_time is not None and not is_streamed:
         # remote request time should be excluded when calculating total time
-        resp.headers.add('X-CP-Time', "%.4f" % (time() - request_local.start_time - req_time))
+        resp.headers.add('X-CP-Time', "%.4f" % (time() - this_request.start_time - req_time))
 
     resp.headers.add('X-MagicWebsiteMirror-Version', __VERSION__)
 
@@ -1609,7 +1638,7 @@ def filter_client_request():
 
     # crossdomain.xml
     if os.path.basename(request.path) == 'crossdomain.xml':
-        dbgprint('Crossdomain.xml hit from', request.url)
+        dbgprint('crossdomain.xml hit from', request.url)
         return crossdomain_xml()
 
     # Global whitelist ua
@@ -1634,33 +1663,41 @@ def filter_client_request():
         else:
             return redirect(
                 "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(),
-                code=307)
+                code=302)
 
     return None
 
 
 def is_client_request_need_redirect():
-    if enable_individual_sites_isolation and 'extdomains' not in request.path and request.headers.get('referer'):
-        reference_domain, _is_https, _rp = extract_from_url_may_have_extdomains(request.headers.get('referer'))
+    _temp = extract_from_url_may_have_extdomains()
+    hostname, extpath_query = _temp['domain'], _temp['path_query']
+    if hostname in domain_alias_to_target_set and '/extdomains/' == request.path[:12]:
+        dbgprint('Requesting main domain in extdomains, redirect back.')
+        return redirect(extpath_query, code=307)
+
+    if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
+        reference_domain = extract_from_url_may_have_extdomains(request.headers.get('referer'))['domain']
         if reference_domain in isolated_domains:
-            return redirect('/extdomains/' + ('https-' if _is_https else '')
-                            + reference_domain + extract_url_path_and_query(request.url),
-                            code=307)
+            return redirect(convert_to_mirror_url(extract_url_path_and_query(), reference_domain), code=307)
 
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
-            redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path])
+            redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path], count=1)
             if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
             return redirect(redirect_to, code=307)
 
         for regex_match, regex_replace in url_custom_redirect_regex:
-            if re.match(regex_match, extract_url_path_and_query(request.url), flags=re.IGNORECASE) is not None:
-                redirect_to = re.sub(regex_match, regex_replace, extract_url_path_and_query(request.url), flags=re.IGNORECASE)
+            if re.match(regex_match, extract_url_path_and_query(), flags=re.IGNORECASE) is not None:
+                redirect_to = re.sub(regex_match, regex_replace, extract_url_path_and_query(), flags=re.IGNORECASE)
                 if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)
 
 
 def rewrite_client_request():
+    """
+    在这里的所有重写都只作用程序内部, 对请求者不可见
+    :return:
+    """
     has_been_rewrited = False
     if cdn_redirect_encode_query_str_into_url:
         if is_ua_in_whitelist(str(request.user_agent)):
@@ -1675,14 +1712,17 @@ def rewrite_client_request():
                 has_been_rewrited = True
 
     if url_custom_redirect_enable and shadow_url_redirect_regex:
-        _path = request.path
+        _path_query = extract_url_path_and_query()
+        _path_query_raw = _path_query
+
         for before, after in shadow_url_redirect_regex:
-            _path = re.sub(before, after, extract_url_path_and_query(request.url))
-        if _path != request.path:
-            dbgprint('ShadowUrlRedirect:', extract_url_path_and_query(request.url), 'to', _path)
-            request.url = myurl_prefix + _path
-            request.path = _path
-            has_been_rewrited = True
+            _path_query = re.sub(before, after, _path_query)
+            if _path_query != _path_query_raw:
+                dbgprint('ShadowUrlRedirect:', _path_query_raw, 'to', _path_query)
+                request.url = myurl_prefix + _path_query
+                request.path = urlsplit(_path_query).path
+                has_been_rewrited = True
+                break
 
     return has_been_rewrited
 
@@ -1841,45 +1881,54 @@ def ip_ban_verify_page():
 def main_function(input_path='/'):
     dbgprint('-----BeginRequest-----')
 
-    request_local.start_time = time()  # to display compute time
-    request_local.temporary_domain_alias = ()  # init temporary_domain_alias
+    this_request.start_time = time()  # to display compute time
+    this_request.temporary_domain_alias = ()  # init temporary_domain_alias
 
     infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
+
+    _temp = extract_from_url_may_have_extdomains()
+    this_request.remote_domain = _temp['domain']
+    this_request.is_https = _temp['is_https']
+    this_request.remote_path = _temp['path']
+    this_request.remote_path_query = _temp['path_query']
 
     # pre-filter client's request
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
     if filter_or_rewrite_result is not None:
-        dbgprint('-----EndRequest(Rewrite)-----')
+        dbgprint('-----EndRequest(redirect)-----')
         return filter_or_rewrite_result  # Ban or redirect if need
 
-    rewrite_client_request()  # this process may change the global flask request object
+    has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
 
-    hostname, is_https, extpath = extract_from_url_may_have_extdomains()
-    dbgprint('ResolveRequestUrl hostname:', hostname, 'is_https', is_https, 'extpath:', extpath)
+    if has_been_rewrited:
+        _temp = extract_from_url_may_have_extdomains()
+        this_request.remote_domain = _temp['domain']
+        this_request.is_https = _temp['is_https']
+        this_request.remote_path = _temp['path']
+        this_request.remote_path_query = _temp['path_query']
 
-    if '/extdomains/' == request.path[:12] and hostname in domain_alias_to_target_set:
-        request.path = extpath
-        request.url = myurl_prefix + extpath
+    dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
+             'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
-    if hostname not in allowed_domains_set:
-        if not try_match_and_add_domain_to_rewrite_white_list(hostname):
+    if this_request.remote_domain not in allowed_domains_set:
+        if not try_match_and_add_domain_to_rewrite_white_list(this_request.remote_domain):
             if developer_temporary_disable_ssrf_prevention:
-                add_ssrf_allowed_domain(hostname)
+                add_ssrf_allowed_domain(this_request.remote_domain)
             else:
                 return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
-    if hostname not in domain_alias_to_target_set:
-        scheme = 'https://' if is_https else 'http://'
-        actual_request_url = urljoin(urljoin(scheme + hostname, extpath), '?' + urlsplit(request.url).query)
-        if verbose_level >= 3: dbgprint('PreRewritedUrl(ext):', actual_request_url)
+    if this_request.remote_domain not in domain_alias_to_target_set:
+        scheme = 'https://' if this_request.is_https else 'http://'
+        initial_rewrite_url = urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
+        dbgprint('initial_rewrite_url(ext):', initial_rewrite_url)
     else:
-        actual_request_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
-        if verbose_level >= 3: dbgprint('PreRewritedUrl(main):', actual_request_url)
+        initial_rewrite_url = urljoin(target_scheme + target_domain, extract_url_path_and_query(request.url))
+        dbgprint('initial_rewrite_url(main):', initial_rewrite_url)
 
     try:
-        resp = request_remote_site_and_parse(actual_request_url)
+        resp = request_remote_site_and_parse(initial_rewrite_url)
     except:
         traceback.print_exc()
         return generate_simple_resp_page()

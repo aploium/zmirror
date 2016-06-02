@@ -11,7 +11,12 @@
 # 由于twitterPC和twitterMobile实际上是相互独立的, 而且由于逻辑非常复杂, 即使使用镜像隔离功能, 也会导致手机站不正常
 #   所以把twitterPC和twitterMobile分成两个配置文件
 # 使用本配置文件运行的twitter镜像, 支持所有的twitter功能(暂时还没发现不能用的功能)
-
+#
+# ########################################
+# 警告: twitter镜像在非https环境下可能会无法注册, 其他功能也可能会出现问题, 请在https环境下部署twitter镜像
+# ########################################
+#
+#
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'
 my_host_scheme = 'http://'
