@@ -123,8 +123,8 @@ if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', '
 else:
     my_host_name_root = '.'.join(temp[1:])
 
+connection_pool_per_domain = {}
 if enable_keep_alive_per_domain:
-    connection_pool_per_domain = {}
     for _domain in allowed_domains_set:
         connection_pool_per_domain[_domain] = {'session': requests.Session(),}
 
@@ -251,12 +251,12 @@ app = Flask(__name__)
 def cache_clean(is_force_flush=False):
     global url_rewrite_cache, cache, url_to_use_cdn, connection_pool_per_domain
     if len(url_rewrite_cache) > 16384:
-        url_rewrite_cache = {}
+        url_rewrite_cache.clear()
     if len(url_to_use_cdn) > 40960:
-        url_to_use_cdn = {}
+        url_to_use_cdn.clear()
 
     if enable_keep_alive_per_domain:
-        connection_pool_per_domain = {}
+        connection_pool_per_domain.clear()
 
     try:
         if local_cache_enable:
