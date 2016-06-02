@@ -249,11 +249,14 @@ app = Flask(__name__)
 # ########## Begin Utils #############
 
 def cache_clean(is_force_flush=False):
-    global url_rewrite_cache, cache, url_to_use_cdn
+    global url_rewrite_cache, cache, url_to_use_cdn, connection_pool_per_domain
     if len(url_rewrite_cache) > 16384:
         url_rewrite_cache = {}
     if len(url_to_use_cdn) > 40960:
         url_to_use_cdn = {}
+
+    if enable_keep_alive_per_domain:
+        connection_pool_per_domain = {}
 
     try:
         if local_cache_enable:
@@ -1410,7 +1413,7 @@ def client_requests_text_rewrite(raw_text):
     # replaced = replaced.replace(my_host_name_urlencoded, target_domain)
     # replaced = replaced.replace(my_host_name_no_port, target_domain)
 
-    dbgprint('after regex_request_rewriter', replaced)
+    # dbgprint('after regex_request_rewriter', replaced)
 
     # 32MB == 33554432
     replaced = client_requests_bin_rewrite(replaced.encode(), max_len=33554432).decode()
@@ -1420,9 +1423,10 @@ def client_requests_text_rewrite(raw_text):
     return replaced
 
 
-def client_requests_bin_rewrite(raw_bin, max_len=8192):
+def client_requests_bin_rewrite(raw_bin, max_len=2097152):  # 2097152=2MB
     """
 
+    :type max_len: int
     :type raw_bin: byte
     """
     if raw_bin is None or len(raw_bin) > max_len:
@@ -1490,7 +1494,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     dbgprint('FinalUrl', final_url, 'FinalHostname', final_hostname)
     # Only external in-zone domains are allowed (SSRF check layer 2)
     if final_hostname not in allowed_domains_set and not developer_temporary_disable_ssrf_prevention:
-        raise ConnectionAbortedError('Tried to access an OUT-OF-ZONE domain:', final_hostname)
+        raise ConnectionAbortedError('Trying to access an OUT-OF-ZONE domain(SSRF Layer 2):', final_hostname)
 
     # set zero data to None instead of b''
     if not data:
