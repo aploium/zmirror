@@ -406,7 +406,7 @@ cron_tasks_list = [
     # 对内置缓存的清理, 除非你真的知道你在做什么, 否则请不要移除这两个定时任务
     #   priority值越低, 运行顺序的优先级越高
     dict(name='cache_clean_soft', priority=42, interval=60 * 15, target='cache_clean'),
-    dict(name='cache_clean_force_all', priority=42, interval=3600 * 72, target='cache_clean', kwargs={'is_force_flush': True}),
+    dict(name='cache_clean_force_all', priority=42, interval=3600 * 24 * 7, target='cache_clean', kwargs={'is_force_flush': True}),
     # below is the complete syntax.
     # dict(name='just a name', priority=10, interval=60 * 10, target='your_own_cron_function', args=(1,2,), kwargs={'a':1}),
 ]

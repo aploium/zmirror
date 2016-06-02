@@ -250,9 +250,9 @@ app = Flask(__name__)
 
 def cache_clean(is_force_flush=False):
     global url_rewrite_cache, cache, url_to_use_cdn
-    if len(url_to_use_cdn) > 4096:
+    if len(url_rewrite_cache) > 16384:
         url_rewrite_cache = {}
-    if len(url_to_use_cdn) > 4096:
+    if len(url_to_use_cdn) > 40960:
         url_to_use_cdn = {}
 
     try:

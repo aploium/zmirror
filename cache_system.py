@@ -15,39 +15,41 @@ EXPIRE_4HR = EXPIRE_1HR * 4
 EXPIRE_6HR = EXPIRE_1HR * 6
 EXPIRE_12HR = EXPIRE_1HR * 12
 EXPIRE_1DAY = EXPIRE_1HR * 24
+EXPIRE_2DAY = EXPIRE_1DAY * 2
+EXPIRE_4DAY = EXPIRE_1DAY * 4
 EXPIRE_1WEEK = EXPIRE_1DAY * 7
 EXPIRE_1MOUTH = EXPIRE_1DAY * 31
 EXPIRE_1YR = EXPIRE_1DAY * 365
 
 DEFAULT_EXPIRE = EXPIRE_5MIN
 mime_expire_list = {
-    'application/javascript': EXPIRE_1DAY,
-    'application/x-javascript': EXPIRE_1DAY,
-    'text/javascript': EXPIRE_1DAY,
+    'application/javascript': EXPIRE_2DAY,
+    'application/x-javascript': EXPIRE_2DAY,
+    'text/javascript': EXPIRE_2DAY,
 
-    'text/css': EXPIRE_1DAY,
+    'text/css': EXPIRE_2DAY,
 
-    'text/x-cross-domain-policy': EXPIRE_1DAY,
+    'text/x-cross-domain-policy': EXPIRE_2DAY,
 
-    'application/vnd.ms-fontobject': EXPIRE_1DAY,
-    'font/eot': EXPIRE_1DAY,
-    'font/opentype': EXPIRE_1DAY,
-    'application/x-font-ttf': EXPIRE_1DAY,
-    'application/font-woff': EXPIRE_1DAY,
-    'application/x-font-woff': EXPIRE_1DAY,
-    'font/woff': EXPIRE_1DAY,
-    'application/font-woff2': EXPIRE_1DAY,
+    'application/vnd.ms-fontobject': EXPIRE_4DAY,
+    'font/eot': EXPIRE_4DAY,
+    'font/opentype': EXPIRE_4DAY,
+    'application/x-font-ttf': EXPIRE_4DAY,
+    'application/font-woff': EXPIRE_4DAY,
+    'application/x-font-woff': EXPIRE_4DAY,
+    'font/woff': EXPIRE_4DAY,
+    'application/font-woff2': EXPIRE_4DAY,
 
     'audio/ogg': EXPIRE_1HR,
     'image/bmp': EXPIRE_1HR,
-    'image/gif': EXPIRE_4HR,
-    'image/jpeg': EXPIRE_4HR,
-    'image/png': EXPIRE_4HR,
-    'image/svg+xml': EXPIRE_4HR,
-    'image/webp': EXPIRE_4HR,
-    'video/mp4': EXPIRE_30MIN,
-    'video/ogg': EXPIRE_30MIN,
-    'video/webm': EXPIRE_30MIN,
+    'image/gif': EXPIRE_12HR,
+    'image/jpeg': EXPIRE_12HR,
+    'image/png': EXPIRE_12HR,
+    'image/svg+xml': EXPIRE_12HR,
+    'image/webp': EXPIRE_12HR,
+    'video/mp4': EXPIRE_1HR,
+    'video/ogg': EXPIRE_1HR,
+    'video/webm': EXPIRE_1HR,
 
     'image/vnd.microsoft.icon': EXPIRE_12HR,
     'image/x-icon': EXPIRE_12HR,
@@ -81,7 +83,7 @@ def _time_str_to_unix(timestring):
 
 
 class FileCache:
-    def __init__(self, max_size_kb=2048):
+    def __init__(self, max_size_kb=8192):
         self.cachedir = tempfile.TemporaryDirectory(prefix='mirror_')
         self.items_dict = {}
         self.max_size_byte = max_size_kb * 1024
