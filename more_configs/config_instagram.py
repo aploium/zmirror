@@ -50,6 +50,8 @@ external_domains = (
     'vupload-edge.facebook.com',
     'staticxx.facebook.com',
     'external.xx.fbcdn.net',
+
+    'fonts.googleapis.com',
 )
 
 force_https_domains = 'ALL'

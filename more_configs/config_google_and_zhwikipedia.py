@@ -72,6 +72,7 @@ external_domains = (
     'encrypted-tbn2.gstatic.com',
     'encrypted-tbn3.gstatic.com',
     'csi.gstatic.com',
+    'fonts.googleapis.com',
 
     # Google登陆支持, 因为现在登陆还bug多多, 注释掉它们也没关系
     'accounts.google.com',

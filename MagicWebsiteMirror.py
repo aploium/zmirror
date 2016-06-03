@@ -21,7 +21,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.22.0-dev'
+__VERSION__ = '0.22.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
@@ -68,7 +68,7 @@ if local_cache_enable:
     try:
         from cache_system import FileCache, get_expire_from_mime
 
-        cache = FileCache(max_size_kb=8192)
+        cache = FileCache()
     except Exception as e:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
@@ -128,7 +128,7 @@ if enable_keep_alive_per_domain:
     for _domain in allowed_domains_set:
         connection_pool_per_domain[_domain] = {'session': requests.Session(),}
 
-cdn_url_query_encode_salt = 'mwmx'
+cdn_url_query_encode_salt = 'mwm22'
 _url_salt = re.escape(cdn_url_query_encode_salt)
 
 # ## thread local var ##
@@ -333,6 +333,9 @@ def calc_domain_replace_prefix(_domain):
         https='https://' + _domain,
         double_quoted='"%s"' % _domain,
         single_quoted="'%s'" % _domain,
+        # hex
+        hex_lower=('//' + _domain).replace('/', r'\x2f'),
+        hex_upper=('//' + _domain).replace('/', r'\x2F'),
         # escape slash
         slash_esc=('//' + _domain).replace('/', r'\/'),
         http_esc=('http://' + _domain).replace('/', r'\/'),
@@ -1298,6 +1301,9 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     resp_text = resp_text.replace(prefix['slash_esc_ue'], quote_plus(r'\/\/' + _buff_esc))
     resp_text = resp_text.replace(prefix['slash_ue'], quote_plus('//' + _buff))
 
+    resp_text = resp_text.replace(prefix['hex_lower'], ('//' + _my_host_name).replace('/', r'\x2f'))
+    resp_text = resp_text.replace(prefix['hex_upper'], ('//' + _my_host_name).replace('/', r'\x2F'))
+
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace(prefix['double_quoted'], '"%s"' % _buff)
     resp_text = resp_text.replace(prefix['single_quoted'], "'%s'" % _buff)
@@ -1324,7 +1330,7 @@ def response_text_rewrite(resp_text):
             # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
             # resp_text = resp_text.replace(_before_e, _after_e)
             # resp_text = resp_text.replace(quote_plus(before_replace), quote_plus(after_replace))
-            dbgprint('plain_replace_domain_alias', before_replace, after_replace)
+            dbgprint('plain_replace_domain_alias', before_replace, after_replace, v=4)
             resp_text = resp_text.replace(before_replace, after_replace)
 
     # v0.9.2+: advanced url rewrite engine

@@ -85,6 +85,7 @@ external_domains = [
     'encrypted-tbn3.gstatic.com',
     'accounts.google.com',
     'accounts.youtube.com',
+    'fonts.googleapis.com',
 ]
 
 force_https_domains = 'ALL'

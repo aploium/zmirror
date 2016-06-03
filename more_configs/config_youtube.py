@@ -74,6 +74,7 @@ external_domains = [
     'fonts.gstatic.com',
     'ssl.gstatic.com',
     'yt3.ggpht.com',
+    'fonts.googleapis.com',
 ]
 
 force_https_domains = 'ALL'

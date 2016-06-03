@@ -105,7 +105,7 @@ class FileCache:
             return False
 
         temp_file = tempfile.TemporaryFile(dir=self.cachedir.name)
-        pickle.dump(obj, temp_file)
+        pickle.dump(obj, temp_file, protocol=pickle.HIGHEST_PROTOCOL)
 
         cache_item = (
             temp_file,  # 0 cache file object
