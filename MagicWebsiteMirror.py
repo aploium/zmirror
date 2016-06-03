@@ -1103,7 +1103,17 @@ def copy_response(content=None, is_streamed=False):
         # Add necessary response headers from the origin site, drop other headers
         if header_key_lower in allowed_remote_response_headers:
             if header_key_lower == 'location':
-                resp.headers[header_key] = convert_to_mirror_url(this_request.remote_response.headers[header_key])
+                _location = this_request.remote_response.headers[header_key]
+                # try to apply custom rewrite function
+                try:
+                    if custom_text_rewriter_enable:
+                        _loc_rewrite = custom_response_text_rewriter(_location, 'mwm/headers-location', this_request.remote_url)
+                        if isinstance(_loc_rewrite, str):
+                            _location = _loc_rewrite
+                except Exception as _e:  # just print err and fallback to normal rewrite
+                    errprint('(LCOATION) Custom Rewrite Function ERROR', _e)
+                    traceback.print_exc()
+                resp.headers[header_key] = convert_to_mirror_url(_location)
 
             elif header_key_lower == 'content-type':
                 # force add utf-8 to content-type if it is text
