@@ -1,0 +1,2 @@
+requests>=2.10.0
+flask>=0.11
