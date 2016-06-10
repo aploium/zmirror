@@ -12,6 +12,7 @@ import re
 import base64
 import zlib
 import sched
+import copy
 from time import time, sleep
 import queue
 from fnmatch import fnmatch
@@ -21,7 +22,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.22.2-dev'
+__VERSION__ = '0.23.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
@@ -718,26 +719,50 @@ def verify_ip_hash_cookie(hash_cookie_value):
         return False
 
 
-def put_response_to_local_cache(url, our_resp):
+def update_content_in_local_cache(url, content, method='GET'):
+    if local_cache_enable and method == 'GET' and cache.is_cached(url):
+        info_dict = cache.get_info(url)
+        resp = cache.get_obj(url)
+        resp.set_data(content)
+        info_dict['without_content'] = False
+        if verbose_level >= 4: dbgprint('LocalCache_UpdateCache', url, content[:30], len(content))
+        cache.put_obj(
+            url,
+            resp,
+            obj_size=len(content),
+            expires=get_expire_from_mime(this_request.mime),
+            last_modified=info_dict.get('last_modified'),
+            info_dict=info_dict,
+        )
+
+
+def put_response_to_local_cache(url, _our_resp, without_content=False):
     """
     put our response object(headers included) to local cache
+    :param without_content: for stream mode use
     :param url: client request url
-    :param our_resp: our response(flask response object) to client, would be storged
+    :param _our_resp: our response(flask response object) to client, would be storge
     :return: None
     """
     # Only cache GET method, and only when remote returns 200(OK) status
     if local_cache_enable and request.method == 'GET' and this_request.remote_response.status_code == 200:
+        if without_content:
+            our_resp = copy.copy(_our_resp)
+            our_resp.response = None  # delete iterator
+        else:
+            our_resp = _our_resp
         # the header's character cases are different in flask/apache(win)/apache(linux)
         last_modified = this_request.remote_response.headers.get('last-modified', None) \
                         or this_request.remote_response.headers.get('Last-Modified', None)
+        dbgprint('PuttingCache:', url)
         cache.put_obj(
             url,
             our_resp,
             expires=get_expire_from_mime(this_request.mime),
-            obj_size=len(this_request.remote_response.content),
+            obj_size=0 if without_content else len(this_request.remote_response.content),
             last_modified=last_modified,
-            info_dict={'content-type': this_request.content_type,  # storge extra info for future use
-                       'last-modified': last_modified
+            info_dict={'without_content': without_content,
+                       'last_modified': last_modified,
                        },
         )
 
@@ -752,10 +777,12 @@ def try_get_cached_response(url, client_header=None):
     if local_cache_enable and request.method == 'GET' and cache.is_cached(url):
         if client_header is not None and 'if-modified-since' in client_header and \
                 cache.is_unchanged(url, client_header.get('if-modified-since', None)):
-            cached_info = cache.get_info(url)
-            dbgprint('FileCacheHit-304', cached_info, url)
+            dbgprint('FileCacheHit-304', url)
             return generate_304_response()
         else:
+            cached_info = cache.get_info(url)
+            if cached_info.get('without_content', False):
+                return None
             # dbgprint('FileCacheHit-200')
             resp = cache.get_obj(url)
             assert isinstance(resp, Response)
@@ -1029,11 +1056,16 @@ def iter_streamed_response_async():
     total_size = 0
     _start_time = time()
 
+    _content_buffer = b''
+    _disable_cache_temporary = False
+
     buffer_queue = queue.Queue(maxsize=stream_transfer_async_preload_max_packages_size)
 
-    t = threading.Thread(target=preload_streamed_response_content_async,
-                         args=(this_request.remote_response, buffer_queue),
-                         daemon=True)
+    t = threading.Thread(
+        target=preload_streamed_response_content_async,
+        args=(this_request.remote_response, buffer_queue),
+        daemon=True,
+    )
     t.start()
 
     while True:
@@ -1051,9 +1083,20 @@ def iter_streamed_response_async():
         buffer_queue.task_done()
 
         if particle_content is not None:
+            # 由于stream的特性, content会被消耗掉, 所以需要额外储存起来
+            if local_cache_enable and not _disable_cache_temporary:
+                if len(_content_buffer) > 8 * 1024 * 1024:  # 8MB
+                    _disable_cache_temporary = True
+                    _content_buffer = None
+                else:
+                    _content_buffer += particle_content
+
             yield particle_content
         else:
             buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
+            if local_cache_enable and not _disable_cache_temporary:
+                update_content_in_local_cache(this_request.remote_url, _content_buffer,
+                                              method=this_request.remote_response.request.method)
             return
 
         if verbose_level >= 4:
@@ -1065,12 +1108,28 @@ def iter_streamed_response():
     total_size = 0
     _start_time = time()
 
+    _content_buffer = b''
+    _disable_cache_temporary = False
+
     for particle_content in this_request.remote_response.iter_content(stream_transfer_buffer_size):
         if verbose_level >= 4:
             total_size += len(particle_content)
             dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
 
+        if particle_content is not None:
+            # 由于stream的特性, content会被消耗掉, 所以需要额外储存起来
+            if local_cache_enable and not _disable_cache_temporary:
+                if len(_content_buffer) > 8 * 1024 * 1024:  # 8MB
+                    _disable_cache_temporary = True
+                    _content_buffer = None
+                else:
+                    _content_buffer += particle_content
+
         yield particle_content
+
+    if local_cache_enable and not _disable_cache_temporary:
+        update_content_in_local_cache(this_request.remote_url, _content_buffer,
+                                      method=this_request.remote_response.request.method)
 
 
 def copy_response(content=None, is_streamed=False):
@@ -1637,8 +1696,8 @@ def request_remote_site_and_parse():
     resp, req_time_body = copy_response(is_streamed=is_streamed)
 
     # storge entire our server's response (headers included)
-    if local_cache_enable and not _response_no_cache and not is_streamed:
-        put_response_to_local_cache(this_request.remote_url, resp)
+    if local_cache_enable and not _response_no_cache:
+        put_response_to_local_cache(this_request.remote_url, resp, without_content=is_streamed)
 
     if this_request.start_time is not None and not is_streamed:
         # remote request time should be excluded when calculating total time

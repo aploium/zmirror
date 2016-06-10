@@ -99,10 +99,10 @@ class FileCache:
         :type info_dict: dict or None
         :type obj: object
         """
-        if expires <= 0:
+        if expires <= 0 or obj_size > self.max_size_byte:
             return False
-        if obj_size > self.max_size_byte:
-            return False
+
+        self.delete(key)
 
         temp_file = tempfile.TemporaryFile(dir=self.cachedir.name)
         pickle.dump(obj, temp_file, protocol=pickle.HIGHEST_PROTOCOL)

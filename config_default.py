@@ -366,7 +366,7 @@ isolated_domains = {'zh.m.wikipedia.org', 'zh.wikipedia.org'}
 #   在stream模式下, 我们的程序会首先接受一小部分远程响应, 把它发送给用户, 再接受下一小部分远程响应(重复这个过程)
 #       (v0.21.0+) 如果启用异步模式, 那么在发送给用户的期间, 同时也会下载远程内容, 以提升吞吐量
 #   这样用户感受到的延迟和流畅程度就会显著地改善
-# 注意: 由于本地缓存会在stream模式下失效, 请不要把图片添加到stream模式中
+# v0.23.0+ stream模式下传输的内容也可以使用本地缓存了, 图片被添加到stream模式
 # 重要: 永远不要把表示文本, 或者可能表示文本的mime关键字添加到stream模式中
 enable_stream_content_transfer = True
 
@@ -375,6 +375,7 @@ steamed_mime_keywords = (
     'video', 'audio', 'binary', 'octet-stream',
     'x-compress', 'application/zip',
     'pdf', 'msword', 'powerpoint', 'vnd.ms-excel',
+    'image',  # v0.23.0+ image can use stream mode, too (experimental)
 )
 
 # v0.21.0+ streamed content async preload
@@ -406,7 +407,8 @@ cron_tasks_list = [
     # 对内置缓存的清理, 除非你真的知道你在做什么, 否则请不要移除这两个定时任务
     #   priority值越低, 运行顺序的优先级越高
     dict(name='cache_clean_soft', priority=42, interval=60 * 15, target='cache_clean'),
-    dict(name='cache_clean_force_all', priority=42, interval=3600 * 24 * 7, target='cache_clean', kwargs={'is_force_flush': True}),
+    dict(name='cache_clean_force_all', priority=42, interval=3600 * 24 * 7, target='cache_clean',
+         kwargs={'is_force_flush': True}),
     # below is the complete syntax.
     # dict(name='just a name', priority=10, interval=60 * 10, target='your_own_cron_function', args=(1,2,), kwargs={'a':1}),
 ]
