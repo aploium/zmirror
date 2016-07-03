@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>zmirror by Aploium</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">zmirror</h1>
+      <h2 class="project-tagline">reverse http proxy designed to automatically and completely mirror a website (eg. google/twitter/youtube)</h2>
+      <a href="https://github.com/Aploium/zmirror" class="btn">View on GitHub</a>
+      <a href="https://github.com/Aploium/zmirror/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/Aploium/zmirror/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="zmirror" class="anchor" href="#zmirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>zmirror</h1>
+
+<p>an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN<br>
+一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持<br>
+比如国内可以访问的Google镜像/中文维基镜像 请看<code>more_config_examples</code>文件夹下的配置文件<br>
+程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像   </p>
+
+<h2>
+<a id="特性" class="anchor" href="#%E7%89%B9%E6%80%A7" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>特性</h2>
+
+<ol>
+<li>
+<p>Completely mirror, provide some (almost) out-of-box configs<br>
+创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站<br>
+提供几个(几乎)开箱即用的网站镜像配置文件<br>
+以下是例子(样例配置文件中的, 并不代表程序只能镜像这几个, 程序支持<strong>任意</strong>网站的镜像, 这些只是样例配置)    </p>
+
+<ul>
+<li>Google镜像(整合中文维基镜像)
+
+<ul>
+<li>以下google服务完全可用:
+
+<ul>
+<li>google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...</li>
+<li>google搜索与中文维基百科无缝结合</li>
+</ul>
+</li>
+<li>以下服务部分可用:
+
+<ul>
+<li>gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)</li>
+</ul>
+</li>
+<li>以下服务暂不可用(因为目前google登陆还存在问题):
+
+<ul>
+<li>所有需要登录的东西, docs之类的</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>twitter镜像(PC站/Mobile站)
+
+<ul>
+<li>几乎所有功能完整可用(一部分视频可以加载, 但是无法播放, 原因未知)</li>
+</ul>
+</li>
+<li>instagram镜像
+
+<ul>
+<li>所有功能完整可用, 包括视频(暂时还没发现不能用的功能)</li>
+</ul>
+</li>
+<li>Youtube镜像
+
+<ul>
+<li>只有基础看视频功能可用, 评论区很多时候无法加载, 无法登陆 </li>
+</ul>
+</li>
+<li>需要访问demo站点的请联系我, 不在此公开</li>
+</ul>
+</li>
+<li>
+<p>Mirror ANY website, highly compatible<br>
+非常高的兼容性和通用性, 可以镜像<strong>任意</strong>网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整<br>
+并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站<br>
+(现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进)  </p>
+
+<p>附带的一个好处就是在一个网站上修复程序bug, 对所有网站的兼容性都能得到提升  </p>
+</li>
+<li><p>(MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)<br>
+(基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  </p></li>
+<li><p>CDN Support, hot statistic resource can serve by CDN, dramatically increase speed<br>
+CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  </p></li>
+<li><p>Easy to config and deploy, highly automatic<br>
+非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  </p></li>
+<li><p>Access control(IP, user-agent), visitor verification(question answer, or custom verification function)<br>
+访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  </p></li>
+<li><p>Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly<br>
+自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  </p></li>
+<li><p>Stream content support (audio/video)<br>
+流媒体支持(视频/音频)  </p></li>
+</ol>
+
+<h2>
+<a id="install-and-usage" class="anchor" href="#install-and-usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Install and Usage</h2>
+
+<p>It only support python3, based on flask and requests<br>
+first install python3<br>
+    - (Debian/Ubuntu) <code>apt-get install python3</code>
+    - (CentOS/RHEL) <code>yum install python3</code>
+    - (Windows) go to <a href="https://www.python.org/downloads/">python's homepage</a> and download python3.5 (or newer)  </p>
+
+<h3>
+<a id="helloworld-usage" class="anchor" href="#helloworld-usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>HelloWorld Usage</h3>
+
+<ol>
+<li>install or upgrade flask requests and chardet package <code>python3 -m pip install -U flask requests chardet</code><br>
+</li>
+<li>(recommended) <code>git clone https://github.com/Aploium/zmirror.git</code> or download and unzip this package(not recommend).<br>
+</li>
+<li>Execute it: <code>python3 wsgi.py</code><br>
+</li>
+<li>Open your browser and enter <code>http://127.0.0.1/</code>, you will see exactly the <code>www.kernel.org</code>, and you can click and browse around. everything of
+the <code>*.kernel.org</code> is withing the mirror.</li>
+<li>Please see the config.py for more information, an google mirror config is also included.</li>
+</ol>
+
+<h3>
+<a id="使用内置镜像" class="anchor" href="#%E4%BD%BF%E7%94%A8%E5%86%85%E7%BD%AE%E9%95%9C%E5%83%8F" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>使用内置镜像</h3>
+
+<ol>
+<li>assume you have completed the HelloWorld above</li>
+<li><ul>
+<li><p>(google) copy the <code>YOUR_EWM_FOLDER/more_config_examples/config_google_and_zhwikipedia.py</code> to <code>YOUR_EWM_FOLDER/config.py</code>  </p></li>
+<li><p>(twitter) copy the <code>YOUR_EWM_FOLDER/more_config_examples/config_twitter_pc.py</code> to <code>YOUR_EWM_FOLDER/config.py</code><br>
+          copy the <code>YOUR_EWM_FOLDER/more_config_examples/custom_func_twitter.py</code> to <code>YOUR_EWM_FOLDER/custom_func.py</code><br>
+          TwitterMobile is almost the same</p></li>
+<li><p>(Youtube)  copy the <code>YOUR_EWM_FOLDER/more_config_examples/config_youtube.py</code> to <code>YOUR_EWM_FOLDER/config.py</code><br>
+         copy the <code>YOUR_EWM_FOLDER/more_config_examples/custom_func_youtube.py</code> to <code>YOUR_EWM_FOLDER/custom_func.py</code>  </p></li>
+<li><p>(instagram) copy the <code>YOUR_EWM_FOLDER/more_config_examples/config_instagram.py</code> to <code>YOUR_EWM_FOLDER/config.py</code>  </p></li>
+</ul></li>
+<li>
+
+<ul>
+<li>If your computer can access google directly(outside the GFW), ignore this step</li>
+<li>If you are inside the GFW, please set your http proxy in the <code>config.py</code>
+</li>
+</ul>
+</li>
+<li>execute <code>python3 wsgi.py</code>
+</li>
+<li>open <code>http://127.0.0.1/</code> and see magic happens. (google) and <code>http://127.0.0.1/wiki</code> for zh-wikipedia, <code>http://127.0.0.1/scholar</code> for google scholar</li>
+</ol>
+
+<h3>
+<a id="upgrade-升级" class="anchor" href="#upgrade-%E5%8D%87%E7%BA%A7" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Upgrade 升级</h3>
+
+<ul>
+<li>(for users of git) <code>cd YOUR_EWM_FOLDER</code> and <code>git pull</code>
+</li>
+<li>(for users of plain zip download) re-download, unzip, and override all files</li>
+</ul>
+
+<h2>
+<a id="issues-report" class="anchor" href="#issues-report" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Issues Report</h2>
+
+<p>欢迎发issues, 发issues找我聊天都欢迎.<br>
+(以下只是可选步骤)<br>
+如果遇到问题需要发issues, 请在<code>config.py</code>最下面加上这样两句话, 然后重现一遍问题  </p>
+
+<div class="highlight highlight-source-python"><pre>developer_dump_all_traffics <span class="pl-k">=</span> <span class="pl-c1">True</span>  
+verbose_level <span class="pl-k">=</span> <span class="pl-c1">4</span></pre></div>
+
+<p>这样程序会把所有流量dump到程序所在目录的<code>traffic</code>文件夹下, 发issues时请将所有程序log和所有dump文件打包发上来, 帮助我debug  </p>
+
+<h2>
+<a id="mirror-a-website" class="anchor" href="#mirror-a-website" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Mirror A Website</h2>
+
+<p>Mirror a website is very simple.  </p>
+
+<p>Just set the <code>target_domain</code> to it's domain, the <code>external_domains</code> to it's external domain and sub domains 
+such as static resource domains (If it has)<br>
+save and run, the program will do the other works!   </p>
+
+<p>All detects and rewrites are completely AUTOMATICALLY  </p>
+
+<p><code>tips:</code> you can find a website's external domains by using the developer tools of your browser, it will log all network traffics for you  </p>
+
+<h2>
+<a id="performance-enchance" class="anchor" href="#performance-enchance" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Performance Enchance</h2>
+
+<h4>
+<a id="local-cache" class="anchor" href="#local-cache" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Local Cache</h4>
+
+<p>Local file cache (along with 304 support) is implanted and enabled by default
+  If cache hits, you will see an <code>X-Cache: FileHit</code> in the response header.
+  Local cache will be deleted and cleaned once program exit.</p>
+
+<h4>
+<a id="cdn-support" class="anchor" href="#cdn-support" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CDN Support</h4>
+
+<p>If you have an CDN service (like qiniu(七牛), cloudflare, etc..), you are able to storge static resource in CDN domains.<br>
+CDN will dramatically increase your clients' access speed if you have many of them  </p>
+
+<p>Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name). And then add the CDN domain to the config <code>CDN_domains</code> section. Program support many CDN domains.
+Oh, dont't forget to turn <code>enable_static_resource_CDN</code> to True (case senstive)</p>
+
+<p>And, as you think, CDN rewrite is also completely automatically.
+Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN.</p>
+
+<p>If your CDN storge your file permanently (like qiniu), you can disable local cache to save space, but if your CDN is temporarily storge (like cloudflare), please keep local cache enabled.</p>
+
+<h2>
+<a id="custom-rewriter-advanced-function" class="anchor" href="#custom-rewriter-advanced-function" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Custom Rewriter (advanced function)</h2>
+
+<p>You can write your own html rewriter to do more things. Server's response html will be pass to this function, you can do some rewrite.  </p>
+
+<p>Notice: program will apply your rewriter before it's normal rewriter. So, what your rewriter got is exactly the same html from server. This may bring some advantage to you. you don't have to care or konw about the program's rewriter.  </p>
+
+<p>You can see an example rewriter in th <code>custom_func.sample.py</code>, rename it to <code>custom_func.py</code> to apply.<br>
+It will rewrite UBB image mark to html img tag<br>
+<code>[upload=jpg]http://foo.bar/blah.jpg[/upload]</code> --&gt; <code>&lt;img src="http://foo.bar/blah.jpg"&gt;&lt;/img&gt;</code> </p>
+
+<h2>
+<a id="deploy-to-server" class="anchor" href="#deploy-to-server" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy To Server</h2>
+
+<p>(From flask offical)<br>
+    You can use the builtin server during development, but you should use a full deployment option for production applications. (Do not use the builtin development server in production.)<br>
+Please see flask's deploy guide: <a href="http://flask.pocoo.org/docs/0.10/deploying/">http://flask.pocoo.org/docs/0.10/deploying/</a>  </p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/Aploium/zmirror">zmirror</a> is maintained by <a href="https://github.com/Aploium">Aploium</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
