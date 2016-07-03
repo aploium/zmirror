@@ -25,8 +25,8 @@ from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 __VERSION__ = '0.23.0-dev'
 __author__ = 'Aploium <i@z.codes>'
 
-infoprint('MagicWebsiteMirror version: ', __VERSION__, 'from', __author__)
-infoprint('Github: https://github.com/Aploium/MagicWebsiteMirror')
+infoprint('zmirror version: ', __VERSION__, 'from', __author__)
+infoprint('Github: https://github.com/Aploium/zmirror')
 
 try:
     import threading
@@ -1705,7 +1705,7 @@ def request_remote_site_and_parse():
         resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
         resp.headers.add('X-Compute-Time', "%.4f" % (time() - this_request.start_time - req_time_headers - req_time_body))
 
-    resp.headers.add('X-MagicWebsiteMirror-Version', __VERSION__)
+    resp.headers.add('X-zmirror-Version', __VERSION__)
 
     if developer_dump_all_traffics and not is_streamed:
         if not os.path.exists('traffic'):

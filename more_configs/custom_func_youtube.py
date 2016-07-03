@@ -8,7 +8,7 @@ Without this file, twitter mirror won't work normally
 import re
 from random import randint
 import traceback
-from MagicWebsiteMirror import *
+from zmirror import *
 
 
 # 如果你想视频服务器和网页服务器分开, 通过多个视频服务器来进行负载均衡,

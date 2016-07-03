@@ -1,4 +1,4 @@
-# MagicWebsiteMirror
+# zmirror
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
 比如国内可以访问的Google镜像/中文维基镜像 请看`more_config_examples`文件夹下的配置文件  
@@ -66,7 +66,7 @@ first install python3
 
 ### HelloWorld Usage  
 1. install or upgrade flask requests and chardet package `python3 -m pip install -U flask requests chardet`  
-2. (recommended) `git clone https://github.com/Aploium/MagicWebsiteMirror.git` or download and unzip this package(not recommend).   
+2. (recommended) `git clone https://github.com/Aploium/zmirror.git` or download and unzip this package(not recommend).   
 3. Execute it: `python3 wsgi.py`  
 4. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
  the `*.kernel.org` is withing the mirror.

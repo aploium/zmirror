@@ -2,7 +2,7 @@
 # 这是为Google和中文维基(无缝整合)镜像配置的示例配置文件
 #
 # 使用方法:
-#   复制本文件到 MagicWebsiteMirror.py 同级目录, 并重命名为 config.py
+#   复制本文件到 zmirror.py 同级目录, 并重命名为 config.py
 #
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 # 本配置文件假定你的服务器本身在墙外
@@ -33,7 +33,7 @@
 #   全功能: 0.167秒
 #   轻量版: 0.045秒
 
-# Github: https://github.com/Aploium/MagicWebsiteMirror
+# Github: https://github.com/Aploium/zmirror
 
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'
