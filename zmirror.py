@@ -30,30 +30,33 @@ infoprint('Github: https://github.com/Aploium/zmirror')
 
 try:
     import threading
-except ImportError:
+except ImportError:  # 在某些罕见的系统环境下,threading包可能失效,用dummy代替
     import dummy_threading as threading
 
-try:
+try:  # 用于检测html的文本编码, cchardet是chardet的c语言实现, 非常快
     from cchardet import detect as c_chardet
 except:
     cchardet_available = False
 else:
     cchardet_available = True
-try:
-    from fastcache import lru_cache
 
-    infoprint('lru_cache loaded from fastcache')
+try:  # lru_cache的c语言实现, 比Python内置lru_cache更快
+    from fastcache import lru_cache  # lru_cache用于缓存函数的执行结果
 except:
     from functools import lru_cache
 
     warnprint('package fastcache not found, fallback to stdlib lru_cache, no FUNCTION is effected, only maybe a bit slower. '
               'Considering install it using "pip3 install fastcache"')
-try:
+else:
+    infoprint('lru_cache loaded successfully from fastcache')
+
+try:  # 加载默认设置
     from config_default import *
 except:
     warnprint('the config_default.py is missing, this program may not works normally\n'
               'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
-try:
+
+try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
     from config import *
 except:
     warnprint(
@@ -64,6 +67,8 @@ except:
         '并根据自己的需求修改里面的设置'
         '(或者使用 more_configs 中的配置文件)'
     )
+else:
+    infoprint('config file found')
 
 if local_cache_enable:
     try:
@@ -73,14 +78,17 @@ if local_cache_enable:
     except Exception as e:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
+    else:
+        infoprint('Local file cache enabled')
 
 # ########## Basic Init #############
+# 开始从配置文件加载配置, 在读代码时可以先跳过这部分, 从 main_function() 开始看
 ColorfulPyPrint_set_verbose_level(verbose_level)
-my_host_name_no_port = my_host_name
+my_host_name_no_port = my_host_name  # 不带有端口号的本机域名
 
 if my_host_port is not None:
-    my_host_name += ':' + str(my_host_port)
-    my_host_name_urlencoded = quote_plus(my_host_name)
+    my_host_name += ':' + str(my_host_port)  # 带有端口号的本机域名, 如果为标准端口则不带显式端口号
+    my_host_name_urlencoded = quote_plus(my_host_name)  # url编码后的
 else:
     my_host_name_urlencoded = my_host_name
 static_file_extensions_list = set(static_file_extensions_list)
@@ -90,7 +98,7 @@ allowed_domains_set.add(target_domain)
 for _domain in external_domains:  # for support domain with port
     allowed_domains_set.add(urlsplit('http://' + _domain).hostname)
 
-domain_alias_to_target_set = set()
+domain_alias_to_target_set = set()  # 那些被视为主域名的域名, 如 www.google.com和google.com可以都被视为主域名
 domain_alias_to_target_set.add(target_domain)
 domains_alias_to_target_domain = list(domains_alias_to_target_domain)
 if domains_alias_to_target_domain:
@@ -101,7 +109,7 @@ if domains_alias_to_target_domain:
 else:
     domains_alias_to_target_domain = [target_domain]
 my_host_scheme_escaped = my_host_scheme.replace('/', r'\/')
-myurl_prefix = my_host_scheme + my_host_name
+myurl_prefix = my_host_scheme + my_host_name  # http(s)://www.my-mirror-site.com  末尾没有反斜线
 myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
 cdn_domains_number = len(CDN_domains)
 allowed_remote_response_headers = {
@@ -113,6 +121,9 @@ allowed_remote_response_headers = {
 }
 allowed_remote_response_headers.update(custom_allowed_remote_headers)
 # ## Get Target Domain and MyHostName's Root Domain ##
+# 解析目标域名和本机域名的根域名, 如 www.foobar.com 的根域名为 foobar.com
+# 但是 www.aaa.foobar.com 的根域名会被认为是 aaa.foobar.com
+# 支持二级顶级域名, 如 www.white.ac.cn
 temp = target_domain.split('.')
 if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
     target_domain_root = target_domain
@@ -124,15 +135,19 @@ if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', '
 else:
     my_host_name_root = '.'.join(temp[1:])
 
+# keep-alive的连接池, 每个域名保持一个keep-alive连接
+# 借用requests在同一session中, 自动保持keep-alive的特性
 connection_pool_per_domain = {}
 if enable_keep_alive_per_domain:
     for _domain in allowed_domains_set:
         connection_pool_per_domain[_domain] = {'session': requests.Session(),}
 
-cdn_url_query_encode_salt = 'mwm22'
+# 在 cdn_redirect_encode_query_str_into_url 中用于标示编码进url的分隔串
+cdn_url_query_encode_salt = 'zm24'
 _url_salt = re.escape(cdn_url_query_encode_salt)
 
 # ## thread local var ##
+# 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
 this_request = threading.local()
 this_request.start_time = None  # 处理请求开始的时间, unix
 this_request.content_type = ''  # 远程服务器响应头中的content_type
@@ -253,6 +268,12 @@ app = Flask(__name__)
 # ########## Begin Utils #############
 
 def cache_clean(is_force_flush=False):
+    """
+    清理程序运行中产生的垃圾, 在程序运行期间会被自动定期调用
+    包括各种重写缓存, 文件缓存等
+    默认仅清理过期的
+    :param is_force_flush: 是否无视有效期, 清理所有缓存
+    """
     global url_rewrite_cache, cache, url_to_use_cdn, connection_pool_per_domain
     if len(url_rewrite_cache) > 16384:
         url_rewrite_cache.clear()
@@ -292,25 +313,37 @@ def cache_clean(is_force_flush=False):
 
 
 def cron_task_container(task_dict, add_task_only=False):
+    """
+    定时任务容器. 调用目标函数, 并在运行结束后创建下一次定时
+
+    :param task_dict: 定时任务的相关参数, dict
+      { "target":目标函数(可调用的函数对象,不是函数名字符串) 必须,
+        "iterval":任务延时(秒) 可选,
+        "priority":优先级 可选,
+        "name":定时任务别名 可选
+        "args":位置型参数 (arg1,arg2) 可选,
+        "kwargs":键值型参数 {key:value,} 可选,
+      }
+    :param add_task_only: 是否只添加定时任务而不执行
+    """
     global task_scheduler
     if not add_task_only:
+        # 执行任务
         try:
-            if 'name' in task_dict:
-                _task_name = task_dict['name']
-                infoprint('CronTaskExecuting:', _task_name, 'Target:', str(task_dict['target']))
-            else:
-                _task_name = str(task_dict['target'])
-                infoprint('CronTaskExecuting:', _task_name)
+            infoprint('CronTask:', task_dict.get('name', str(task_dict['target'])), 'Target:', str(task_dict['target']))
 
             target_func = task_dict.get('target')
+            if target_func is None:
+                raise ValueError("target is not given in " + str(task_dict))
             target_func(
-                *(task_dict.get('args', ())),
+                *(task_dict.get('args', ())),  # 解开参数以后传递
                 **(task_dict.get('kwargs', {}))
             )
         except:
             errprint('ErrorWhenProcessingCronTasks', task_dict)
             traceback.print_exc()
 
+    # 添加下一次定时任务
     task_scheduler.enter(
         task_dict.get('interval', 300),
         task_dict.get('priority', 999),
@@ -320,8 +353,11 @@ def cron_task_container(task_dict, add_task_only=False):
 
 
 def cron_task_host():
+    """
+    定时任务宿主, 每分钟检查一次列表, 运行时间到了的定时任务
+    """
     while True:
-        sleep(100)
+        sleep(60)
         try:
             task_scheduler.run()
         except:
@@ -330,6 +366,9 @@ def cron_task_host():
 
 
 def calc_domain_replace_prefix(_domain):
+    """
+    生成各种形式的scheme变体
+    """
     return dict(
         # normal
         slash='//' + _domain,
@@ -364,6 +403,12 @@ def calc_domain_replace_prefix(_domain):
 
 
 def add_temporary_domain_alias(source_domain, target_domain):
+    """
+    添加临时域名替换列表
+    用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
+    :param source_domain: 被替换的域名
+    :param target_domain: 替换成这个域名
+    """
     if this_request.temporary_domain_alias is None:
         this_request.temporary_domain_alias = []
     else:
@@ -377,6 +422,9 @@ def add_temporary_domain_alias(source_domain, target_domain):
 
 @lru_cache(maxsize=1024)
 def is_domain_match_glob_whitelist(domain):
+    """
+    域名是否匹配 `domains_whitelist_auto_add_glob_list` 中设置的通配符
+    """
     for domain_glob in domains_whitelist_auto_add_glob_list:
         if fnmatch(domain, domain_glob):
             return True
@@ -385,6 +433,10 @@ def is_domain_match_glob_whitelist(domain):
 
 @lru_cache(maxsize=128)
 def is_content_type_streamed(content_type):
+    """
+    根据content-type判断是否应该用stream模式传输(服务器下载的同时发送给用户)
+     视频/音频/图片等二进制内容默认用stream模式传输
+    """
     for streamed_keyword in steamed_mime_keywords:
         if streamed_keyword in content_type:
             return True
@@ -392,6 +444,13 @@ def is_content_type_streamed(content_type):
 
 
 def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
+    """
+    若域名与`domains_whitelist_auto_add_glob_list`中的通配符匹配, 则加入 external_domains 列表
+    被加入 external_domains 列表的域名, 会被应用重写机制
+    用于在程序运行过程中动态添加域名到external_domains中
+    也可在外部函数(custom_func.py)中使用
+    关于 external_domains 更详细的说明, 请看 default_config.py 中对应的文档
+    """
     global external_domains, external_domains_set, allowed_domains_set, prefix_buff
 
     if domain is None or not domain:
@@ -401,11 +460,11 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     if not force_add and not is_domain_match_glob_whitelist(domain):
         return False
     else:
-        infoprint('A domain:', domain, 'was added to whitelist')
+        infoprint('A domain:', domain, 'was added to external_domains list')
 
-        _buff = list(external_domains)
+        _buff = list(external_domains)  # external_domains是tuple类型, 添加前需要先转换
         _buff.append(domain)
-        external_domains = tuple(_buff)
+        external_domains = tuple(_buff)  # 转换回tuple, tuple有一些性能优势
         external_domains_set.add(domain)
         allowed_domains_set.add(domain)
 
@@ -430,7 +489,8 @@ def current_line_number():
 @lru_cache(maxsize=1024)
 def extract_real_url_from_embedded_url(embedded_url):
     """
-
+    将 embed_real_url_to_embedded_url() 编码后的url转换为原来的带有参数的url
+    `cdn_redirect_encode_query_str_into_url`设置依赖于本函数, 详细说明请看配置文件中这个参数的部分
 
     eg: https://cdn.domain.com/a.php_mwm0_.cT1zb21ldGhpbmc=._mwm1_.css
         ---> https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
@@ -470,6 +530,12 @@ def extract_real_url_from_embedded_url(embedded_url):
 
 @lru_cache(maxsize=1024)
 def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
+    """
+    将url的参数(?q=some&foo=bar)编码到url路径中, 并在url末添加一个文件扩展名
+    在某些对url参数支持不好的CDN中, 可以减少错误
+    `cdn_redirect_encode_query_str_into_url`设置依赖于本函数, 详细说明可以看配置文件中的对应部分
+    解码由 extract_real_url_from_embedded_url() 函数进行, 对应的例子也请看这个函数
+    """
     # dbgprint(real_url_raw, url_mime, escape_slash)
     if escape_slash:
         real_url = real_url_raw.replace(r'\/', '/')
@@ -480,8 +546,8 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
         return real_url_raw
     try:
         byte_query = url_sp.query.encode()
-        if len(byte_query) > 128:
-            gzip_label = 'z'
+        if len(byte_query) > 128:  # 当查询参数太长时, 进行gzip压缩
+            gzip_label = 'z'  # 进行压缩后的参数, 会在标识区中添加一个z
             byte_query = zlib.compress(byte_query)
         else:
             gzip_label = ''
@@ -504,6 +570,7 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
 
 def extract_from_url_may_have_extdomains(extdomains_url=None):
     """
+    解析镜像url(可能含有extdomains), 并提取出原始url信息
     return: dict(domain, is_https, path, path_query)
     JSON supported. return:{'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
 
