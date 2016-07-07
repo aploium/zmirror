@@ -1139,7 +1139,7 @@ def is_ip_not_in_allow_range(ip_address):
 # ################# Begin Server Response Handler #################
 def preload_streamed_response_content_async(requests_response_obj, buffer_queue):
     """
-
+    stream模式下, 预读远程响应的content
     :type buffer_queue: queue.Queue
     """
     for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
@@ -1155,6 +1155,7 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
 
 
 def iter_streamed_response_async():
+    """异步, 一边读取远程响应, 一边发送给用户"""
     total_size = 0
     _start_time = time()
 
@@ -1207,6 +1208,7 @@ def iter_streamed_response_async():
 
 
 def iter_streamed_response():
+    """非异步, 读取一小部分远程响应, 发送给用户, 再读取下一小部分. 已不推荐使用"""
     total_size = 0
     _start_time = time()
 
@@ -1282,6 +1284,7 @@ def copy_response(content=None, is_streamed=False):
                     resp.headers[header_key] = this_request.mime + '; charset=utf-8'
                 else:
                     resp.headers[header_key] = this_request.remote_response.headers[header_key]
+
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
                 if custom_allowed_origin is None:
                     resp.headers[header_key] = myurl_prefix
@@ -1290,6 +1293,7 @@ def copy_response(content=None, is_streamed=False):
                     resp.headers[header_key] = _origin
                 else:
                     resp.headers[header_key] = custom_allowed_origin
+
             else:
                 resp.headers[header_key] = this_request.remote_response.headers[header_key]
 
@@ -1666,6 +1670,8 @@ def extract_url_path_and_query(full_url=None, no_query=False):
 
 # ################# Begin Middle Functions #################
 def send_request(url, method='GET', headers=None, param_get=None, data=None):
+    """实际发送请求到目标服务器, 对于重定向, 原样返回给用户
+    被request_remote_site_and_parse()调用"""
     final_hostname = urlsplit(url).netloc
     dbgprint('FinalRequestUrl', url, 'FinalHostname', final_hostname)
     # Only external in-zone domains are allowed (SSRF check layer 2)
@@ -1828,6 +1834,7 @@ def request_remote_site_and_parse():
 
 
 def filter_client_request():
+    """过滤用户请求, 视情况拒绝用户的访问"""
     if verbose_level >= 3: dbgprint('Client Request Url: ', request.url)
 
     # crossdomain.xml
@@ -1863,6 +1870,10 @@ def filter_client_request():
 
 
 def is_client_request_need_redirect():
+    """对用户的请求进行按需重定向处理
+    与rewrite_client_request()不同, 使用301/307等进行外部重定向, 不改变服务器内部数据
+    遇到任意一个需要重定向的, 即跳出本函数
+    """
     _temp = decode_mirror_url()
     hostname, extpath_query = _temp['domain'], _temp['path_query']
     if hostname in domain_alias_to_target_set and '/extdomains/' == request.path[:12]:
@@ -1890,7 +1901,10 @@ def is_client_request_need_redirect():
 def rewrite_client_request():
     """
     在这里的所有重写都只作用程序内部, 对请求者不可见
-    :return:
+    与 is_client_request_need_redirect() 的外部301/307重定向不同,
+    本函数通过改变程序内部变量来起到重定向作用
+    返回True表示进行了重定向, 需要重载某些设置, 返回False表示未重定向
+    遇到重写后, 不会跳出本函数, 而是会继续下一项. 所以重写顺序很重要
     """
     has_been_rewrited = False
     if cdn_redirect_encode_query_str_into_url:
@@ -1927,6 +1941,7 @@ def rewrite_client_request():
 # ################# Begin Flask #################
 @app.route('/mwm_stat')
 def mwm_status():
+    """返回服务器的一些状态信息"""
     if request.remote_addr != '127.0.0.1':
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
     output = ""
@@ -1939,7 +1954,6 @@ def mwm_status():
     output += strx('\nis_ua_in_whitelist', is_content_type_using_cdn.cache_info())
     output += strx('\nis_mime_represents_text', is_mime_represents_text.cache_info())
     output += strx('\nis_domain_match_glob_whitelist', is_domain_match_glob_whitelist.cache_info())
-    output += strx('\ngenerate_304_response', generate_304_response.cache_info())
     output += strx('\nverify_ip_hash_cookie', verify_ip_hash_cookie.cache_info())
     output += strx('\nis_denied_because_of_spider', is_denied_because_of_spider.cache_info())
     output += strx('\nis_ip_not_in_allow_range', is_ip_not_in_allow_range.cache_info())
@@ -1957,6 +1971,7 @@ def mwm_status():
 
 @app.route('/ip_ban_verify_page', methods=['GET', 'POST'])
 def ip_ban_verify_page():
+    """生成一个身份验证页面"""
     if request.method == 'GET':
         dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
@@ -2073,6 +2088,7 @@ def ip_ban_verify_page():
 @app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 def main_function(input_path='/'):
+    """本程序的实际入口函数"""
     dbgprint('-----BeginRequest-----')
 
     this_request.start_time = time()  # to display compute time
