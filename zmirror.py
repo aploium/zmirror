@@ -491,11 +491,11 @@ def extract_real_url_from_embedded_url(embedded_url):
     将 embed_real_url_to_embedded_url() 编码后的url转换为原来的带有参数的url
     `cdn_redirect_encode_query_str_into_url`设置依赖于本函数, 详细说明请看配置文件中这个参数的部分
 
-    eg: https://cdn.domain.com/a.php_mwm0_.cT1zb21ldGhpbmc=._mwm1_.css
+    eg: https://cdn.domain.com/a.php_zm24_.cT1zb21ldGhpbmc=._zm24_.css
         ---> https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
-    eg2: https://cdn.domain.com/a/b/_mwm0_.bG92ZT1saXZl._mwm1_.jpg
+    eg2: https://cdn.domain.com/a/b/_zm24_.bG92ZT1saXZl._zm24_.jpg
         ---> https://foo.com/a/b/?love=live (assume it returns an jpg) (base64 only)
-    eg3: https://cdn.domain.com/a/b/_mwm0z_.[some long long base64 encoded string]._mwm1_.jpg
+    eg3: https://cdn.domain.com/a/b/_zm24z_.[some long long base64 encoded string]._zm24_.jpg
         ---> https://foo.com/a/b/?love=live[and a long long query string] (assume it returns an jpg) (gzip + base64)
     eg4:https://cdn.domain.com/a  (no change)
         ---> (no query string): https://foo.com/a (assume it returns an png) (no change)
@@ -509,7 +509,7 @@ def extract_real_url_from_embedded_url(embedded_url):
     if not b64:
         return None
 
-    # 'https://cdn.domain.com/a.php_mwm0_.cT1zb21ldGhpbmc=._mwm1_.css'
+    # 'https://cdn.domain.com/a.php_zm24_.cT1zb21ldGhpbmc=._zm24_.css'
     # real_request_url_no_query ---> 'https://cdn.domain.com/a.php'
     real_request_url_no_query = embedded_url[:m.span()[0]]
 
@@ -1861,11 +1861,11 @@ def filter_client_request():
             or is_ip_not_in_allow_range(request.remote_addr)
     ):
         if verbose_level >= 3: dbgprint('ip', request.remote_addr, 'is verifying cookies')
-        if 'mwm_verify' in request.cookies and \
-                ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('mwm_verify')))
+        if 'zmirror_verify' in request.cookies and \
+                ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('zmirror_verify')))
                  or (enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
-                        request.cookies.get('mwm_verify'), request))):
-            ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('mwm_verify'))
+                        request.cookies.get('zmirror_verify'), request))):
+            ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('zmirror_verify'))
             if verbose_level >= 3: dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
@@ -1945,8 +1945,8 @@ def rewrite_client_request():
 
 
 # ################# Begin Flask #################
-@app.route('/mwm_stat')
-def mwm_status():
+@app.route('/zmirror_stat')
+def zmirror_status():
     """返回服务器的一些状态信息"""
     if request.remote_addr != '127.0.0.1':
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
@@ -2056,14 +2056,14 @@ def ip_ban_verify_page():
         if human_ip_verification_whitelist_from_cookies:
             _hash = generate_ip_verify_hash(record_dict)
             resp.set_cookie(
-                'mwm_verify',
+                'zmirror_verify',
                 _hash,
                 expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
                 max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
                 # httponly=True,
                 # domain=my_host_name
             )
-            record_dict['__mwm_verify'] = _hash
+            record_dict['__zmirror_verify'] = _hash
 
         elif enable_custom_access_cookie_generate_and_verify:
             try:
@@ -2075,14 +2075,14 @@ def ip_ban_verify_page():
                     return generate_simple_resp_page(b'Verification Failed, please check', 200)
 
                 resp.set_cookie(
-                    'mwm_verify',
+                    'zmirror_verify',
                     _hash,
                     expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
                     max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
                     # httponly=True,
                     # domain=my_host_name
                 )
-                record_dict['__mwm_verify'] = _hash
+                record_dict['__zmirror_verify'] = _hash
             except:
                 traceback.print_exc()
                 return generate_simple_resp_page(b'Server Error, please check', 200)

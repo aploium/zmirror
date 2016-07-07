@@ -69,7 +69,7 @@ def custom_generate_access_cookie(input_dict, flask_request):
     return generate_ip_verify_hash(input_dict)
 
 
-def custom_verify_access_cookie(mwm_verify_cookie, flask_request):
+def custom_verify_access_cookie(zmirror_verify_cookie, flask_request):
     """
     verify user's access cookie. return True for access granted, False for denied
     See option `enable_custom_access_cookie_generate_and_verify`
@@ -77,7 +77,7 @@ def custom_verify_access_cookie(mwm_verify_cookie, flask_request):
     :return: bool
     """
     # example, calling the builtin cookie verify function
-    return verify_ip_hash_cookie(mwm_verify_cookie)
+    return verify_ip_hash_cookie(zmirror_verify_cookie)
 
 
 # just_another_demo_custom_identity_verify
