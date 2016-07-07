@@ -8,7 +8,7 @@ Without this file, twitter mirror won't work normally
 import re
 from zmirror import add_ssrf_allowed_domain, get_group, \
     force_https_domains, my_host_scheme, my_host_name, convert_to_mirror_url, \
-    extract_from_url_may_have_extdomains
+    decode_mirror_url
 
 regex_twitter_data_expanded = re.compile(
     r'''data-expanded-url\s*=\s*'''
@@ -37,7 +37,7 @@ def custom_response_text_rewriter(raw_text, content_mime, remote_url):
     raw_text = raw_text.replace('https://t.co/', my_host_scheme + my_host_name + '/extdomains/https-t.co/')
 
     # For twitter video
-    if extract_from_url_may_have_extdomains()[0] == 'video.twimg.com':
+    if decode_mirror_url()[0] == 'video.twimg.com':
         raw_text = raw_text.replace('/ext_tw_video/',
                                     convert_to_mirror_url('/ext_tw_video/', remote_domain='video.twimg.com', is_scheme=False))
 

@@ -568,13 +568,14 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
         return result
 
 
-def extract_from_url_may_have_extdomains(extdomains_url=None):
+def decode_mirror_url(mirror_url=None):
     """
     解析镜像url(可能含有extdomains), 并提取出原始url信息
+    若参数留空, 则使用当前用户正在请求的url
     return: dict(domain, is_https, path, path_query)
     JSON supported. return:{'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
 
-    :param extdomains_url:
+    :param mirror_url:
     :return: dict(domain, is_https, path, path_query)
     :rtype: {'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
     """
@@ -582,18 +583,18 @@ def extract_from_url_may_have_extdomains(extdomains_url=None):
     _is_escaped_slash = False
     result = {}
 
-    if extdomains_url is None:
+    if mirror_url is None:
         input_path_query = extract_url_path_and_query()
     else:
-        if r'\/' in extdomains_url:
+        if r'\/' in mirror_url:
             _is_escaped_slash = True
-            extdomains_url = extdomains_url.replace(r'\/', '/')
+            mirror_url = mirror_url.replace(r'\/', '/')
 
-        if r'\.' in extdomains_url:
+        if r'\.' in mirror_url:
             _is_escaped_dot = True
-            extdomains_url = extdomains_url.replace(r'\.', '.')
+            mirror_url = mirror_url.replace(r'\.', '.')
 
-        input_path_query = extract_url_path_and_query(extdomains_url)
+        input_path_query = extract_url_path_and_query(mirror_url)
 
     if input_path_query[:12] == '/extdomains/':
         # 12 == len('/extdomains/')
@@ -626,6 +627,9 @@ def extract_from_url_may_have_extdomains(extdomains_url=None):
     result['path_query'] = input_path_query
     result['path'] = urlsplit(result['path_query']).path
     return result
+
+# 本函数的别名, 为了兼容一些老旧的代码
+extract_from_url_may_have_extdomains = decode_mirror_url
 
 
 def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
@@ -1828,14 +1832,14 @@ def filter_client_request():
 
 
 def is_client_request_need_redirect():
-    _temp = extract_from_url_may_have_extdomains()
+    _temp = decode_mirror_url()
     hostname, extpath_query = _temp['domain'], _temp['path_query']
     if hostname in domain_alias_to_target_set and '/extdomains/' == request.path[:12]:
         dbgprint('Requesting main domain in extdomains, redirect back.')
         return redirect(extpath_query, code=307)
 
     if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
-        reference_domain = extract_from_url_may_have_extdomains(request.headers.get('referer'))['domain']
+        reference_domain = decode_mirror_url(request.headers.get('referer'))['domain']
         if reference_domain in isolated_domains:
             return redirect(convert_to_mirror_url(extract_url_path_and_query(), reference_domain), code=307)
 
@@ -2045,7 +2049,7 @@ def main_function(input_path='/'):
 
     infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
 
-    _temp = extract_from_url_may_have_extdomains()
+    _temp = decode_mirror_url()
     this_request.remote_domain = _temp['domain']
     this_request.is_https = _temp['is_https']
     this_request.remote_path = _temp['path']
@@ -2060,7 +2064,7 @@ def main_function(input_path='/'):
     has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
 
     if has_been_rewrited:
-        _temp = extract_from_url_may_have_extdomains()
+        _temp = decode_mirror_url()
         this_request.remote_domain = _temp['domain']
         this_request.is_https = _temp['is_https']
         this_request.remote_path = _temp['path']
