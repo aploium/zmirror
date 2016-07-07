@@ -626,8 +626,45 @@ def decode_mirror_url(mirror_url=None):
     return result
 
 
-# 本函数的别名, 为了兼容一些老旧的代码
+# 函数别名, 为了兼容早期版本的配置文件
 extract_from_url_may_have_extdomains = decode_mirror_url
+
+
+def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_escape=False):
+    """convert url from remote to mirror url"""
+
+    if is_escape:
+        _raw_url_or_path = raw_url_or_path.replace('r\/', r'/')
+    else:
+        _raw_url_or_path = raw_url_or_path
+    sp = urlsplit(_raw_url_or_path)
+    if '/extdomains/' == sp.path[:12]:
+        return raw_url_or_path
+    domain = remote_domain or sp.netloc or this_request.remote_domain or target_domain
+    if domain not in allowed_domains_set:
+        return raw_url_or_path
+
+    if is_scheme or ((sp.scheme or _raw_url_or_path[:2] == '//') and is_scheme is not False):
+        our_prefix = myurl_prefix
+    else:
+        our_prefix = ''
+
+    if domain not in domain_alias_to_target_set:
+        remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
+        middle_part = '/extdomains/' + remote_scheme + domain
+    else:
+        middle_part = ''
+
+    result = urljoin(our_prefix + middle_part + '/',
+                     extract_url_path_and_query(_raw_url_or_path).lstrip('/'))
+    if is_escape:
+        result = result.replace('/', r'\/')
+
+    return response_text_rewrite(result)
+
+
+# 函数别名, 为了兼容早期版本的配置文件
+convert_to_mirror_url = encode_mirror_url
 
 
 def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
@@ -1096,39 +1133,6 @@ def is_ip_not_in_allow_range(ip_address):
     return True
 
 
-def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_escape=False):
-    """convert url from remote to mirror url"""
-
-    if is_escape:
-        _raw_url_or_path = raw_url_or_path.replace('r\/', r'/')
-    else:
-        _raw_url_or_path = raw_url_or_path
-    sp = urlsplit(_raw_url_or_path)
-    if '/extdomains/' == sp.path[:12]:
-        return raw_url_or_path
-    domain = remote_domain or sp.netloc or this_request.remote_domain or target_domain
-    if domain not in allowed_domains_set:
-        return raw_url_or_path
-
-    if is_scheme or ((sp.scheme or _raw_url_or_path[:2] == '//') and is_scheme is not False):
-        our_prefix = myurl_prefix
-    else:
-        our_prefix = ''
-
-    if domain not in domain_alias_to_target_set:
-        remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
-        middle_part = '/extdomains/' + remote_scheme + domain
-    else:
-        middle_part = ''
-
-    result = urljoin(our_prefix + middle_part + '/',
-                     extract_url_path_and_query(_raw_url_or_path).lstrip('/'))
-    if is_escape:
-        result = result.replace('/', r'\/')
-
-    return response_text_rewrite(result)
-
-
 # ########## End utils ###############
 
 
@@ -1270,7 +1274,7 @@ def copy_response(content=None, is_streamed=False):
                 except Exception as _e:  # just print err and fallback to normal rewrite
                     errprint('(LCOATION) Custom Rewrite Function ERROR', _e)
                     traceback.print_exc()
-                resp.headers[header_key] = convert_to_mirror_url(_location)
+                resp.headers[header_key] = encode_mirror_url(_location)
 
             elif header_key_lower == 'content-type':
                 # force add utf-8 to content-type if it is text
@@ -1868,7 +1872,7 @@ def is_client_request_need_redirect():
     if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
         reference_domain = decode_mirror_url(request.headers.get('referer'))['domain']
         if reference_domain in isolated_domains:
-            return redirect(convert_to_mirror_url(extract_url_path_and_query(), reference_domain), code=307)
+            return redirect(encode_mirror_url(extract_url_path_and_query(), reference_domain), code=307)
 
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
