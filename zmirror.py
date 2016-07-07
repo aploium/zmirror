@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import re
 import base64
 import zlib
+import random
 import sched
 import copy
 from time import time, sleep
@@ -353,9 +354,7 @@ def cron_task_container(task_dict, add_task_only=False):
 
 
 def cron_task_host():
-    """
-    定时任务宿主, 每分钟检查一次列表, 运行时间到了的定时任务
-    """
+    """定时任务宿主, 每分钟检查一次列表, 运行时间到了的定时任务"""
     while True:
         sleep(60)
         try:
@@ -366,9 +365,7 @@ def cron_task_host():
 
 
 def calc_domain_replace_prefix(_domain):
-    """
-    生成各种形式的scheme变体
-    """
+    """生成各种形式的scheme变体"""
     return dict(
         # normal
         slash='//' + _domain,
@@ -571,9 +568,9 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
 def decode_mirror_url(mirror_url=None):
     """
     解析镜像url(可能含有extdomains), 并提取出原始url信息
+    可以不是完整的url, 只需要有 path 部分即可(query_string也可以有)
     若参数留空, 则使用当前用户正在请求的url
-    return: dict(domain, is_https, path, path_query)
-    JSON supported. return:{'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
+    支持json (处理 \/ 和 \. 的转义)
 
     :param mirror_url:
     :return: dict(domain, is_https, path, path_query)
@@ -586,11 +583,11 @@ def decode_mirror_url(mirror_url=None):
     if mirror_url is None:
         input_path_query = extract_url_path_and_query()
     else:
-        if r'\/' in mirror_url:
+        if r'\/' in mirror_url:  # 如果 \/ 在url中, 先反转义, 处理完后再转义回来
             _is_escaped_slash = True
             mirror_url = mirror_url.replace(r'\/', '/')
 
-        if r'\.' in mirror_url:
+        if r'\.' in mirror_url:  # 如果 \. 在url中, 先反转义, 处理完后再转义回来
             _is_escaped_dot = True
             mirror_url = mirror_url.replace(r'\.', '.')
 
@@ -628,11 +625,13 @@ def decode_mirror_url(mirror_url=None):
     result['path'] = urlsplit(result['path_query']).path
     return result
 
+
 # 本函数的别名, 为了兼容一些老旧的代码
 extract_from_url_may_have_extdomains = decode_mirror_url
 
 
 def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
+    """根据域名返回其在镜像url中的https中缀(或没有)"""
     if is_https is not None:
         if is_https:
             return 'https-'
@@ -649,6 +648,7 @@ def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
 
 
 def add_ssrf_allowed_domain(domain):
+    """添加域名到ssrf白名单, 不支持通配符"""
     global allowed_domains_set
     allowed_domains_set.add(domain)
 
@@ -668,6 +668,7 @@ def strx(*args, sep=' '):
 
 @lru_cache(maxsize=1024)
 def check_global_ua_pass(ua_str):
+    """该user-agent是否满足全局白名单"""
     if ua_str is None or not global_ua_white_name:
         return False
     ua_str = ua_str.lower()
@@ -693,6 +694,7 @@ def is_mime_represents_text(input_mime):
 
 @lru_cache(maxsize=128)
 def extract_mime_from_content_type(content_type):
+    """从content-type中提取出mime, 如 'text/html; encoding=utf-8' --> 'text/html' """
     c = content_type.find(';')
     if c == -1:
         return content_type
@@ -702,28 +704,14 @@ def extract_mime_from_content_type(content_type):
 
 @lru_cache(maxsize=128)
 def is_content_type_using_cdn(content_type):
-    mime = extract_mime_from_content_type(content_type)
-    if mime in mime_to_use_cdn:
+    """根据content-type确定该资源是否使用CDN"""
+    _mime = extract_mime_from_content_type(content_type)
+    if _mime in mime_to_use_cdn:
         # dbgprint(content_type, 'Should Use CDN')
-        return mime
+        return _mime
     else:
         # dbgprint(content_type, 'Should NOT CDN')
         return False
-
-
-@lru_cache(maxsize=256)
-def is_ua_in_whitelist(ua_str):
-    """
-
-    :type ua_str: str
-    """
-    ua_str = ua_str.lower()
-    if global_ua_white_name in ua_str:
-        return True
-    for allowed_ua in spider_ua_white_list:
-        if allowed_ua in ua_str:
-            return True
-    return False
 
 
 def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=500):
@@ -731,6 +719,8 @@ def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=50
 
 
 def generate_html_redirect_page(target_url, msg='', delay_sec=1):
+    """生成一个HTML重定向页面
+    某些浏览器在301/302页面不接受cookies, 所以需要用html重定向页面来传cookie"""
     resp_content = r"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -752,7 +742,6 @@ You are now redirecting to <a href="%s">%s</a>, if it didn't redirect automatica
     return Response(response=resp_content)
 
 
-@lru_cache(maxsize=32)
 def generate_304_response(content_type=None):
     r = Response(content_type=content_type, status=304)
     r.headers.add('X-Cache', 'FileHit-304')
@@ -760,20 +749,31 @@ def generate_304_response(content_type=None):
 
 
 def generate_ip_verify_hash(input_dict):
+    """
+    生成一个标示用户身份的hash
+    在 human_ip_verification 功能中使用
+    hash一共14位
+    hash(前7位+salt) = 后7位 以此来进行验证
+    """
     strbuff = human_ip_verification_answers_hash_str
     for key in input_dict:
-        strbuff += key + input_dict[key]
+        strbuff += key + input_dict[key] + str(random.randint(0, 9000000))
     input_key_hash = hex(zlib.adler32(strbuff.encode(encoding='utf-8')))[2:]
-    output_hash = hex(zlib.adler32(
-        (input_key_hash + human_ip_verification_answers_hash_str).encode(encoding='utf-8')
-    ))[2:]
+    while len(input_key_hash) < 7:
+        input_key_hash += '0'
+    output_hash = hex(zlib.adler32((input_key_hash + human_ip_verification_answers_hash_str).encode(encoding='utf-8')))[2:]
+    while len(output_hash) < 7:
+        output_hash += '0'
     return input_key_hash + output_hash
 
 
 @lru_cache(maxsize=1024)
 def verify_ip_hash_cookie(hash_cookie_value):
     """
-
+    根据cookie中的hash判断是否允许用户访问
+    在 human_ip_verification 功能中使用
+    hash一共14位
+    hash(前7位+salt) = 后7位 以此来进行验证
     :type hash_cookie_value: str
     """
     try:
@@ -791,11 +791,19 @@ def verify_ip_hash_cookie(hash_cookie_value):
 
 
 def update_content_in_local_cache(url, content, method='GET'):
+    """更新 local_cache 中缓存的资源, 追加content
+    在stream模式中使用"""
     if local_cache_enable and method == 'GET' and cache.is_cached(url):
         info_dict = cache.get_info(url)
         resp = cache.get_obj(url)
         resp.set_data(content)
+
+        # 当存储的资源没有完整的content时, without_content 被设置为true
+        # 此时该缓存不会生效, 只有当content被添加后, 缓存才会实际生效
+        # 在stream模式中, 因为是先接收http头, 然后再接收内容, 所以会出现只有头而没有内容的情况
+        # 此时程序会先将只有头部的响应添加到本地缓存, 在内容实际接收完成后再追加内容
         info_dict['without_content'] = False
+
         if verbose_level >= 4: dbgprint('LocalCache_UpdateCache', url, content[:30], len(content))
         cache.put_obj(
             url,
@@ -840,7 +848,7 @@ def put_response_to_local_cache(url, _our_resp, without_content=False):
 
 def try_get_cached_response(url, client_header=None):
     """
-
+    尝试从本地缓存中取出响应
     :param url: real url with query string
     :type client_header: dict
     """
@@ -853,19 +861,19 @@ def try_get_cached_response(url, client_header=None):
         else:
             cached_info = cache.get_info(url)
             if cached_info.get('without_content', False):
+                # 关于 without_content 的解释, 请看update_content_in_local_cache()函数
                 return None
             # dbgprint('FileCacheHit-200')
             resp = cache.get_obj(url)
             assert isinstance(resp, Response)
-            resp.headers.set('X-Cache', 'FileHit')
+            resp.headers.set('x-zmirror-cache', 'FileHit')
             return resp
     else:
         return None
 
 
 def get_group(name, match_obj):
-    """return a blank string if the match group is None
-    """
+    """return a blank string if the match group is None"""
     try:
         obj = match_obj.group(name)
     except:
@@ -1009,11 +1017,28 @@ def regex_url_reassemble(match_obj):
 
 
 @lru_cache(maxsize=256)
+def is_ua_in_whitelist(ua_str):
+    """
+    当机器人或蜘蛛的请求被ban时, 检查它是否处在允许的白名单内
+    被 is_denied_because_of_spider() 调用
+    :type ua_str: str
+    """
+    ua_str = ua_str.lower()
+    if global_ua_white_name in ua_str:
+        return True
+    for allowed_ua in spider_ua_white_list:
+        if allowed_ua in ua_str:
+            return True
+    return False
+
+
+@lru_cache(maxsize=256)
 def is_denied_because_of_spider(ua_str):
+    """检查user-agent是否因为是蜘蛛或机器人而需要ban掉"""
     ua_str = ua_str.lower()
     if 'spider' in ua_str or 'bot' in ua_str:
         if is_ua_in_whitelist(ua_str):
-            infoprint('A Spider/Bot\'s access was granted', ua_str)
+            infoprint("A Spider/Bot's access was granted", ua_str)
             return False
         infoprint('A Spider/Bot was denied, UA is:', ua_str)
         return True
@@ -1022,7 +1047,8 @@ def is_denied_because_of_spider(ua_str):
 
 
 def load_ip_whitelist_file():
-    set_buff = set([])
+    """从文件加载ip白名单"""
+    set_buff = set()
     if os.path.exists(human_ip_verification_whitelist_file_path):
         with open(human_ip_verification_whitelist_file_path, 'r', encoding='utf-8') as fp:
             set_buff.add(fp.readline().strip())
@@ -1030,6 +1056,7 @@ def load_ip_whitelist_file():
 
 
 def append_ip_whitelist_file(ip_to_allow):
+    """写入ip白名单到文件"""
     try:
         with open(human_ip_verification_whitelist_file_path, 'a', encoding='utf-8') as fp:
             fp.write(ip_to_allow + '\n')
@@ -1039,6 +1066,7 @@ def append_ip_whitelist_file(ip_to_allow):
 
 
 def ip_whitelist_add(ip_to_allow, info_record_dict=None):
+    """添加ip到白名单, 并写入文件"""
     if ip_to_allow in single_ip_allowed_set:
         return
     dbgprint('ip white added', ip_to_allow, 'info:', info_record_dict)
@@ -1058,6 +1086,7 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
 
 @lru_cache(maxsize=256)
 def is_ip_not_in_allow_range(ip_address):
+    """判断ip是否在白名单中"""
     if ip_address in single_ip_allowed_set:
         return False
     ip_address_obj = ipaddress.ip_address(ip_address)
@@ -1068,9 +1097,7 @@ def is_ip_not_in_allow_range(ip_address):
 
 
 def convert_to_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_escape=False):
-    """
-    convert url from remote to mirror url
-    """
+    """convert url from remote to mirror url"""
 
     if is_escape:
         _raw_url_or_path = raw_url_or_path.replace('r\/', r'/')
