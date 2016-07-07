@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 import os
+# noinspection PyUnresolvedReferences
 from itertools import count
 
 if os.path.dirname(__file__) != '':
@@ -141,7 +142,7 @@ else:
 connection_pool_per_domain = {}
 if enable_keep_alive_per_domain:
     for _domain in allowed_domains_set:
-        connection_pool_per_domain[_domain] = {'session': requests.Session(),}
+        connection_pool_per_domain[_domain] = {'session': requests.Session(), }
 
 # 在 cdn_redirect_encode_query_str_into_url 中用于标示编码进url的分隔串
 cdn_url_query_encode_salt = 'zm24'
@@ -235,7 +236,7 @@ regex_adv_url_rewriter = re.compile(  # TODO: Add non-standard port support
     # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
-    r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+(?P<port>:\d{1,5})?))?""" +  # domain and scheme
+    r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+(?P<port>:\d{1,5})?))?""" +
     # url路径, 含参数 可选
     r"""(?P<path>[^\s;+$?#'"\{}]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
@@ -302,7 +303,6 @@ def cache_clean(is_force_flush=False):
             extract_mime_from_content_type.cache_clear()
             is_content_type_using_cdn.cache_clear()
             is_ua_in_whitelist.cache_clear()
-            generate_304_response.cache_clear()
             verify_ip_hash_cookie.cache_clear()
             is_denied_because_of_spider.cache_clear()
             is_ip_not_in_allow_range.cache_clear()
@@ -364,6 +364,7 @@ def cron_task_host():
             traceback.print_exc()
 
 
+# noinspection PyShadowingNames
 def calc_domain_replace_prefix(_domain):
     """生成各种形式的scheme变体"""
     return dict(
@@ -399,21 +400,21 @@ def calc_domain_replace_prefix(_domain):
     )
 
 
-def add_temporary_domain_alias(source_domain, target_domain):
+def add_temporary_domain_alias(source_domain, replaced_to_domain):
     """
     添加临时域名替换列表
     用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
     :param source_domain: 被替换的域名
-    :param target_domain: 替换成这个域名
+    :param replaced_to_domain: 替换成这个域名
     """
     if this_request.temporary_domain_alias is None:
         this_request.temporary_domain_alias = []
     else:
         this_request.temporary_domain_alias = list(this_request.temporary_domain_alias)
 
-    this_request.temporary_domain_alias.append((source_domain, target_domain))
+    this_request.temporary_domain_alias.append((source_domain, replaced_to_domain))
     this_request.temporary_domain_alias = tuple(this_request.temporary_domain_alias)
-    dbgprint('A domain', source_domain, 'to', target_domain, 'added to temporary_domain_alias',
+    dbgprint('A domain', source_domain, 'to', replaced_to_domain, 'added to temporary_domain_alias',
              this_request.temporary_domain_alias)
 
 
@@ -429,17 +430,18 @@ def is_domain_match_glob_whitelist(domain):
 
 
 @lru_cache(maxsize=128)
-def is_content_type_streamed(content_type):
+def is_content_type_streamed(_content_type):
     """
     根据content-type判断是否应该用stream模式传输(服务器下载的同时发送给用户)
      视频/音频/图片等二进制内容默认用stream模式传输
     """
     for streamed_keyword in steamed_mime_keywords:
-        if streamed_keyword in content_type:
+        if streamed_keyword in _content_type:
             return True
     return False
 
 
+# noinspection PyGlobalUndefined
 def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     """
     若域名与`domains_whitelist_auto_add_glob_list`中的通配符匹配, 则加入 external_domains 列表
@@ -601,16 +603,16 @@ def decode_mirror_url(mirror_url=None):
 
         if real_domain[:6] == 'https-':
             real_domain = real_domain[6:]
-            is_https = True
+            _is_https = True
         else:
-            is_https = False
+            _is_https = False
 
         real_path_query = client_requests_text_rewrite(real_path_query)
 
         if _is_escaped_dot: real_path_query = real_path_query.replace('.', r'\.')
         if _is_escaped_slash: real_path_query = real_path_query.replace('/', r'\/')
         result['domain'] = real_domain
-        result['is_https'] = is_https
+        result['is_https'] = _is_https
         result['path_query'] = real_path_query
         result['path'] = urlsplit(result['path_query']).path
         return result
@@ -630,6 +632,7 @@ def decode_mirror_url(mirror_url=None):
 extract_from_url_may_have_extdomains = decode_mirror_url
 
 
+# noinspection PyShadowingNames
 def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_escape=False):
     """convert url from remote to mirror url"""
 
@@ -667,10 +670,10 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
 convert_to_mirror_url = encode_mirror_url
 
 
-def get_ext_domain_inurl_scheme_prefix(ext_domain, is_https=None):
+def get_ext_domain_inurl_scheme_prefix(ext_domain, force_https=None):
     """根据域名返回其在镜像url中的https中缀(或没有)"""
-    if is_https is not None:
-        if is_https:
+    if force_https is not None:
+        if force_https:
             return 'https-'
         else:
             return ''
@@ -690,6 +693,7 @@ def add_ssrf_allowed_domain(domain):
     allowed_domains_set.add(domain)
 
 
+# noinspection PyGlobalUndefined
 def set_request_for_debug(dummy_request):
     global request
     request = dummy_request
@@ -730,19 +734,19 @@ def is_mime_represents_text(input_mime):
 
 
 @lru_cache(maxsize=128)
-def extract_mime_from_content_type(content_type):
+def extract_mime_from_content_type(_content_type):
     """从content-type中提取出mime, 如 'text/html; encoding=utf-8' --> 'text/html' """
-    c = content_type.find(';')
+    c = _content_type.find(';')
     if c == -1:
-        return content_type
+        return _content_type
     else:
-        return content_type[:c]
+        return _content_type[:c]
 
 
 @lru_cache(maxsize=128)
-def is_content_type_using_cdn(content_type):
+def is_content_type_using_cdn(_content_type):
     """根据content-type确定该资源是否使用CDN"""
-    _mime = extract_mime_from_content_type(content_type)
+    _mime = extract_mime_from_content_type(_content_type)
     if _mime in mime_to_use_cdn:
         # dbgprint(content_type, 'Should Use CDN')
         return _mime
@@ -779,8 +783,8 @@ You are now redirecting to <a href="%s">%s</a>, if it didn't redirect automatica
     return Response(response=resp_content)
 
 
-def generate_304_response(content_type=None):
-    r = Response(content_type=content_type, status=304)
+def generate_304_response(_content_type=None):
+    r = Response(content_type=_content_type, status=304)
     r.headers.add('X-Cache', 'FileHit-304')
     return r
 
@@ -1140,6 +1144,7 @@ def is_ip_not_in_allow_range(ip_address):
 def preload_streamed_response_content_async(requests_response_obj, buffer_queue):
     """
     stream模式下, 预读远程响应的content
+    :param requests_response_obj:
     :type buffer_queue: queue.Queue
     """
     for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
@@ -1177,8 +1182,8 @@ def iter_streamed_response_async():
         except queue.Empty:
             warnprint('WeGotAnSteamTimeout')
             traceback.print_exc()
-            buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
             try:
+                # noinspection PyProtectedMember
                 t._stop()
             except:
                 pass
@@ -1196,7 +1201,6 @@ def iter_streamed_response_async():
 
             yield particle_content
         else:
-            buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
             if local_cache_enable and not _disable_cache_temporary:
                 update_content_in_local_cache(this_request.remote_url, _content_buffer,
                                               method=this_request.remote_response.request.method)
@@ -1329,7 +1333,7 @@ def response_cookies_deep_copy():
     ('Date', 'Tue, 26 Apr 2016 12:32:40 GMT')]
 
     """
-    raw_headers = this_request.remote_response.raw._original_response.headers._headers  # PyCharm may raise an warning to this line
+    raw_headers = this_request.remote_response.raw._original_response.headers._headers
     header_cookies_string_list = []
     for name, value in raw_headers:
         if name.lower() == 'set-cookie':
@@ -1347,7 +1351,7 @@ def response_cookies_deep_copy():
 
                     if this_request.remote_domain not in domain_alias_to_target_set:  # do not rewrite main domains
                         _scheme_prefix = get_ext_domain_inurl_scheme_prefix(this_request.remote_domain,
-                                                                            is_https=this_request.is_https)
+                                                                            force_https=this_request.is_https)
                         value = regex_cookie_path_rewriter.sub(
                             '\g<prefix>=/extdomains/' + _scheme_prefix + this_request.remote_domain + '\g<path>', value)
 
@@ -1361,9 +1365,9 @@ def response_content_rewrite():
     :return: (bytes, float)
     """
 
-    start_time = time()
+    _start_time = time()
     _content = this_request.remote_response.content
-    req_time_body = time() - start_time
+    req_time_body = time() - _start_time
 
     if this_request.mime and is_mime_represents_text(this_request.mime):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
@@ -1579,6 +1583,7 @@ def extract_client_header():
     return outgoing_head
 
 
+# noinspection SpellCheckingInspection
 def client_requests_text_rewrite(raw_text):
     """
     Rewrite proxy domain to origin domain, extdomains supported.
@@ -1652,6 +1657,7 @@ def extract_url_path_and_query(full_url=None, no_query=False):
     """
     Convert http://foo.bar.com/aaa/p.html?x=y to /aaa/p.html?x=y
 
+    :param no_query:
     :type full_url: str
     :param full_url: full url
     :return: str
@@ -1754,8 +1760,8 @@ def request_remote_site_and_parse():
         if this_request.remote_response.url != this_request.remote_url:
             warnprint('requests\'s remote url' + this_request.remote_response.url
                       + 'does no equals our rewrited url' + this_request.remote_url)
-    except Exception as e:
-        errprint(e)  # ERROR :( so sad
+    except Exception as _e:
+        errprint(_e)  # ERROR :( so sad
         traceback.print_exc()
         return generate_simple_resp_page()
 
@@ -1825,8 +1831,8 @@ def request_remote_site_and_parse():
                     (_time_str,
                      (repr(request.url), repr(request.headers), repr(request.get_data())),
                      this_request.remote_response, resp
-                     )
-                    , fp)
+                     ),
+                    fp)
         except:
             traceback.print_exc()
 
@@ -2085,6 +2091,7 @@ def ip_ban_verify_page():
         return resp
 
 
+# noinspection PyUnusedLocal
 @app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 def main_function(input_path='/'):
