@@ -89,7 +89,7 @@ force_decode_remote_using_encode = 'utf-8'
 
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
-is_use_proxy = True
+is_use_proxy = False
 requests_proxies = dict(
     http='http://127.0.0.1:8123',
     https='https://127.0.0.1:8123',
