@@ -55,13 +55,15 @@ else:
 try:  # 加载默认设置
     from config_default import *
 except:
-    warnprint('the config_default.py is missing, this program may not works normally\n'
+    traceback.print_exc()
+    errprint('the config_default.py is missing, this program may not works normally\n'
               'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
 
 try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
     from config import *
 except:
-    warnprint(
+    traceback.print_exc()
+    errprint(
         'the config_default.py is missing, fallback to default configs(if we can), '
         'please COPY the config_default.py to config.py, and change it\'s content, '
         'or use the configs in the more_configs folder\n'
