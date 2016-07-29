@@ -1,9 +1,17 @@
 # coding=utf-8
 # 这是为Youtube镜像配置的示例配置文件
 #
+# 请耐心看完注释
+# 请耐心看完注释
+# 请耐心看完注释
+# 请耐心看完注释
+# 请耐心看完注释
+#
 # 使用方法:
-#   复制本文件和 custom_func_youtube.py 到 zmirror.py 同级目录,
-#     复制后本文件重命名为 config.py, custom_func_youtube.py 重命名为 custom_func.py
+#   1. 复制本文件和 custom_func_youtube.py 到 zmirror.py 同级目录,
+#   2. 复制后本文件重命名为 config.py, custom_func_youtube.py 重命名为 custom_func.py
+#   3.*本步仅限本地部署需要  在本地hosts(如果不知道这是什么, 请自行google)中加入    127.0.0.1  www.localhost.com
+#   4. 运行命令 python3 wsgi.py 来启动本程序
 #
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 # 本配置文件假定你的服务器本身在墙外
@@ -19,7 +27,10 @@
 # Youtube 镜像无法在`my_host_name`为 127.0.0.1 时运行, 并且在非ssl环境下, 可能会存在未知的bug
 #   请自行修改host文件, 把域名 www.localhost.com 指向127.0.0.1
 #
-# Youtube 的PC端镜像和手机端必须分成两个域名, 分别建立独立的镜像才行. 并且如果网页与视频服务器分离, 两者不可共用同一套加速域名
+# Youtube 的PC端镜像和手机端必须分成两个域名或者同一域名两个不同端口, 分别建立独立的镜像才行.
+#   并且如果网页与视频服务器分离, 两者不可共用同一套视频服务器域名
+#       比如, PC镜像域名为 pc.my-youtube.com:81 PC镜像使用独立的视频服务器,域名为  pc-video1.lucia.net 和 pc-video2.lucia.net
+#           而手机站域名为 mobile.my-youtube.com 或者 pc.my-youtube.com:82 使用独立的视频服务器, 域名为 mob-video1.lucia.net 和 mob-video2.lucia.net
 #   总之, 虽然YoutubePC和YoutubeMobile的配置文件只相差一点点(下文有说明), 但是它们必须分别被架设为独立的镜像
 # ######### 重要 重要 重要 重要 重要 #########
 # ######### 重要 重要 重要 重要 重要 #########
@@ -28,10 +39,11 @@
 # ############## Local Domain Settings ##############
 my_host_name = 'www.localhost.com'
 my_host_scheme = 'http://'
+my_host_port = None  # None表示使用默认端口, 可以设置成非标准端口, 比如 81
 
 # ############## Target Domain Settings ##############
 target_domain = 'www.youtube.com'
-# target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第42行还有一处
+# target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第53行还有一处
 target_scheme = 'https://'
 
 # 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
@@ -39,7 +51,7 @@ target_scheme = 'https://'
 # 自动采集会不断告诉你新域名
 external_domains = [
     'm.youtube.com',
-    # 'www.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第34行还有一处
+    # 'www.youtube.com',  # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第45行还有一处
     's.youtube.com',
     'accounts.youtube.com',
 
@@ -75,6 +87,8 @@ external_domains = [
     'ssl.gstatic.com',
     'yt3.ggpht.com',
     'fonts.googleapis.com',
+
+    'youtu.be',
 ]
 
 force_https_domains = 'ALL'
@@ -88,6 +102,8 @@ domains_whitelist_auto_add_glob_list = ['*.google.com', '*.google.com.hk', '*.gs
 force_decode_remote_using_encode = 'utf-8'
 
 # ############## Proxy Settings ##############
+# 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
+# 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
 is_use_proxy = False
 requests_proxies = dict(
