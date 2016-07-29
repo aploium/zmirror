@@ -22,8 +22,8 @@ is_master = False
 # 注: 如果使用了非标准端口, 请在下面所有需要填写域名的地方后面加上端口号, 如 'videocdn1.mycdn.com:20822'
 videocdn_this_site_name = my_host_name
 # 如果你想视频服务器和网页服务器分开, 请注释掉上面一行, 去掉下面一行的注释, 并把域名改成这一台视频服务器的域名
-# videocdn_this_site_name = 'videocdn1.mycdn.com'  # 使用标准端口
-# videocdn_this_site_name = 'videocdn1.mycdn.com:20822'  # 使用非标准端口
+#videocdn_this_site_name = 'videocdn1.mycdn.com'  # 使用标准端口
+#videocdn_this_site_name = 'videocdn1.mycdn.com:20822'  # 使用非标准端口
 
 
 videocdn_domain_list = [

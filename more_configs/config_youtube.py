@@ -43,7 +43,7 @@ my_host_port = None  # None表示使用默认端口, 可以设置成非标准端
 
 # ############## Target Domain Settings ##############
 target_domain = 'www.youtube.com'
-# target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第53行还有一处
+#target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第53行还有一处
 target_scheme = 'https://'
 
 # 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
