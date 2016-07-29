@@ -129,6 +129,10 @@ global_ua_white_name = 'qiniu-imgstg-spider'
 # 设置为 None 表示关闭显式编码指定, 'utf-8' 代表utf-8
 force_decode_remote_using_encode = None
 
+# v0.23.0+ program will test these charsets one by one, if `force_decode_remote_using_encode` is None
+# this will be helpful to solve Chinese GBK issues
+possible_charsets = ['utf-8', 'GBK']
+
 # v0.21.1+ Keep-Alive Per domain (Experimental)
 enable_keep_alive_per_domain = False
 

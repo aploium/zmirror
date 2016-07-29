@@ -57,7 +57,7 @@ try:  # 加载默认设置
 except:
     traceback.print_exc()
     errprint('the config_default.py is missing, this program may not works normally\n'
-              'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
+             'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
 
 try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
     from config import *
@@ -144,7 +144,7 @@ else:
 connection_pool_per_domain = {}
 if enable_keep_alive_per_domain:
     for _domain in allowed_domains_set:
-        connection_pool_per_domain[_domain] = {'session': requests.Session(), }
+        connection_pool_per_domain[_domain] = {'session': requests.Session(),}
 
 # 在 cdn_redirect_encode_query_str_into_url 中用于标示编码进url的分隔串
 cdn_url_query_encode_salt = 'zm24'
@@ -1378,6 +1378,14 @@ def response_content_rewrite():
 
         if force_decode_remote_using_encode is not None:
             this_request.remote_response.encoding = force_decode_remote_using_encode
+        elif possible_charsets:
+            for charset in possible_charsets:
+                try:
+                    t = this_request.remote_response.content.decode(charset)
+                except:
+                    pass
+                else:
+                    this_request.remote_response.encoding = charset
         elif cchardet_available:  # detect the encoding using cchardet (if we have)
             this_request.remote_response.encoding = c_chardet(_content)
 
