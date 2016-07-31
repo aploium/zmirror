@@ -100,7 +100,7 @@ Nginx was not officially tested, but it should work petty well.
 * request
 
 ### Installation and helloworld
->This tutorial is for your *localhost* demo test only  
+> This tutorial is mainly for your *localhost* demo test  
  If you want to deploy it to server, please complete the *localhost* demo first  
 
 1. first, install python3  
@@ -110,10 +110,12 @@ Nginx was not officially tested, but it should work petty well.
 2. install or upgrade flask and requests `python3 -m pip install -U flask requests`  
 3. (recommended) `git clone https://github.com/aploium/zmirror` or download and unzip this package(not recommend).  
 4. **copy** the `config_default.py` to `config.py`  
-    >**Warning: You should NEVER EVER modify the `config_default.py` itself**  
-    Please edit the `config.py` instead of `config_default.py`  
-    Unless your are developer.  
-    Settings in the `config.py` would override the default ones  
+
+    > **Warning: You should NEVER EVER modify the `config_default.py` itself**  
+    > Please edit the `config.py` instead of `config_default.py`  
+    > Unless your are developer.  
+    > Settings in the `config.py` would override the default ones  
+
 5. Execute it: `python3 wsgi.py`  
 6. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of the `*.kernel.org` is withing the mirror.  
 7. please see the following [Setup an actual mirror] section  
