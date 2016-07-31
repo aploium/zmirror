@@ -10,13 +10,14 @@ an http reverse proxy designed to automatically and completely mirror a website 
 _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细_  
   
 ## Demo
-* **Google** https://g.zmirrordemo.com/  
+* **Google** 
+    * *PC & Mobile*   https://g.zmirrordemo.com  
 * **Youtube**  
-    * *For PC Only*  https://ytb-pc.zmirrordemo.com/  
-    * *For Mobile Only* demo not publicly open yet  
+    * *PC Only*  https://ytb-pc.zmirrordemo.com  
+    * *Mobile Only* demo not publicly open yet  
 * **Twitter**
-    * *For PC Only*  https://t-pc.zmirrordemo.com/  
-    * *For Mobile Only*  https://t-mobile.zmirrordemo.com/  
+    * *PC Only*  https://t-pc.zmirrordemo.com  
+    * *Mobile Only*  https://t-mobile.zmirrordemo.com  
 
 ## Feature
 1. Completely mirror, provide some (almost) out-of-box configs  
@@ -26,7 +27,7 @@ _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, �
 2. Mirror ANY website, highly compatible  
     非常高的兼容性和通用性, 可以镜像 _任意_ 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整  
     并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
-    _现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进_   
+    _现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进_  
   
 3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
   (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  
@@ -46,8 +47,8 @@ _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, �
 8. Stream content support (audio/video)  
   流媒体支持(视频/音频)  
   
-9.  Production ready.
-    程序已经经受住了生产环境的考验
+9.  Production ready.  
+    程序已经经受住了生产环境的考验  
     
         使用的服务器均为 256M OpenVZ VPS
         Google:  
@@ -61,7 +62,7 @@ _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, �
             高峰时段1080P流畅  
 
 ## Out-of-box configs
-Together with the program, provided several (almost) out-of-box configs
+Together with the program, provided several (almost) out-of-box configs  
 
 * **Google镜像** (整合**中文维基镜像**)
     * 同时支持PC/手机
@@ -90,8 +91,8 @@ Together with the program, provided several (almost) out-of-box configs
     Ubuntu14.04-x86_64 directly run (I mean, just execute python3 wsgi.py)
     windows10-x64 directly run 
 
-Theoretically, any environment that can run python3.4+, can also run zmirror
-Nginx was not officially tested, but it should work petty well.
+Theoretically, any environment that can run python3.4+, can also run zmirror  
+Nginx was not officially tested, but it should work petty well.  
 
 ### Requirements
 * python3.4+
@@ -99,23 +100,23 @@ Nginx was not officially tested, but it should work petty well.
 * request
 
 ### Installation and helloworld
->This tutorial is for your *localhost* demo test only
- If you want to deploy it to server, please complete the *localhost* demo first
+>This tutorial is for your *localhost* demo test only  
+ If you want to deploy it to server, please complete the *localhost* demo first  
 
 1. first, install python3  
     **Debian/Ubuntu**  `apt-get install python3`  
     **CentOS/RHEL**  `yum install python3`  
     **Windows**   go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
-2. install or upgrade flask and requests `python3 -m pip install -U flask requests`
-3. (recommended) `git clone https://github.com/aploium/zmirror` or download and unzip this package(not recommend).
-4. **copy** the `config_default.py` to `config.py`
-    >**Warning: You should NEVER EVER modify the `config_default.py` itself**
-    Please edit the `config.py` instead of `config_default.py`
-    Unless your are developer.
-    Settings in the `config.py` would override the default ones
+2. install or upgrade flask and requests `python3 -m pip install -U flask requests`  
+3. (recommended) `git clone https://github.com/aploium/zmirror` or download and unzip this package(not recommend).  
+4. **copy** the `config_default.py` to `config.py`  
+    >**Warning: You should NEVER EVER modify the `config_default.py` itself**  
+    Please edit the `config.py` instead of `config_default.py`  
+    Unless your are developer.  
+    Settings in the `config.py` would override the default ones  
 5. Execute it: `python3 wsgi.py`  
-6. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of the `*.kernel.org` is withing the mirror.
-7. please see the following [Setup an actual mirror] section
+6. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of the `*.kernel.org` is withing the mirror.  
+7. please see the following [Setup an actual mirror] section  
 
 #### Setup an actual mirror
 
