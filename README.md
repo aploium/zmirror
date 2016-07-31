@@ -1,47 +1,32 @@
 # zmirror
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
-比如国内可以访问的Google镜像/中文维基镜像 请看`more_config_examples`文件夹下的配置文件  
-程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像   
+比如国内可以访问的Google镜像/中文维基镜像 请看`more_configs`文件夹下的配置文件  
 
-注:虽然程序已经在经受住了实际生产环境的考验  
-(256M OpenVZ VPS, Google:日6kPV,峰值每小时740PV; Youtube:日1wPV, 日发送流量178GB 峰值每小时754PV, 1台主服务器+8台视频服务器)  
-但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  
+程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像  
+
+虽然程序已经经受住了生产环境的考验, 但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  
   
-`这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细`  
+_这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细_  
   
 ## Demo
-Google: https://g.zmirrordemo.com/  
-Youtube (PC ONLY, mobile demo is not currently available): https://ytb-pc.zmirrordemo.com/  
-Twitter (PC ONLY, mobile demo is not currently available): https://t-pc.zmirrordemo.com/  
+* **Google** https://g.zmirrordemo.com/  
+* **Youtube**  
+    * *For PC Only*  https://ytb-pc.zmirrordemo.com/  
+    * *For Mobile Only* demo not publicly open yet  
+* **Twitter**
+    * *For PC Only*  https://t-pc.zmirrordemo.com/  
+    * *For Mobile Only*  https://t-mobile.zmirrordemo.com/  
 
-## Features 特性
+## Feature
 1. Completely mirror, provide some (almost) out-of-box configs  
-  创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站   
+  创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站  
   提供几个(几乎)开箱即用的网站镜像配置文件  
-  以下是例子(样例配置文件中的, 并不代表程序只能镜像这几个, 程序支持__任意__网站的镜像, 这些只是样例配置)    
-  - Google镜像(整合中文维基镜像)
-    - 以下google服务完全可用:
-      - google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
-      - google搜索与中文维基百科无缝结合
-    - 以下服务部分可用:
-      - gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)
-    - 以下服务暂不可用(因为目前google登陆还存在问题):
-      - 所有需要登录的东西, docs之类的
-  - twitter镜像(PC站/Mobile站)
-    - 几乎所有功能完整可用(一部分视频可以加载, 但是无法播放, 原因未知)
-  - instagram镜像
-    - 所有功能完整可用, 包括视频(暂时还没发现不能用的功能)
-  - Youtube镜像
-    - 只有基础看视频功能可用, 评论区很多时候无法加载, 无法登陆 
-  - 需要访问demo站点的请联系我, 不在此公开
-  
-2. Mirror ANY website, highly compatible  
-   非常高的兼容性和通用性, 可以镜像__任意__网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整  
-   并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
-   (现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进)  
 
-   附带的一个好处就是在一个网站上修复程序bug, 对所有网站的兼容性都能得到提升  
+2. Mirror ANY website, highly compatible  
+    非常高的兼容性和通用性, 可以镜像 _任意_ 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整  
+    并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
+    _现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进_   
   
 3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
   (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  
@@ -61,42 +46,101 @@ Twitter (PC ONLY, mobile demo is not currently available): https://t-pc.zmirrord
 8. Stream content support (audio/video)  
   流媒体支持(视频/音频)  
   
-## Install and Usage
-It only support python3, based on flask and requests  
-first install python3  
-    - (Debian/Ubuntu) `apt-get install python3`
-    - (CentOS/RHEL) `yum install python3`
-    - (Windows) go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
+9.  Production ready.
+    程序已经经受住了生产环境的考验
+    
+        使用的服务器均为 256M OpenVZ VPS
+        Google:  
+            单台服务器
+            日6kPV, 峰值每小时740PV  
+            峰值时段CPU占用小于10%  
+        Youtube:  
+            1台主服务器+8台视频服务器  
+            日1wPV, 峰值每小时754PV  
+            日发送流量178GB  
+            高峰时段1080P流畅  
 
-### HelloWorld Usage  
-1. install or upgrade flask requests and chardet package `python3 -m pip install -U flask requests chardet`  
-2. (recommended) `git clone https://github.com/Aploium/zmirror.git` or download and unzip this package(not recommend).   
-3. Execute it: `python3 wsgi.py`  
-4. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of
- the `*.kernel.org` is withing the mirror.
-5. Please see the config.py for more information, an google mirror config is also included.
+## Out-of-box configs
+Together with the program, provided several (almost) out-of-box configs
 
-### Mirror Google or twitter or instagram (include zh-wikipedia) 搭建一个Google镜像(包含中文维基)或twitter镜像或instagram镜像 
+* **Google镜像** (整合**中文维基镜像**)
+    * 同时支持PC/手机
+    * google搜索与中文维基百科无缝结合
+    * 大部分功能完全正常: google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
+    * 以下服务部分可用: gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)
+    * 目前暂时无法做到完美的登陆, 登录才可使用的功能无效  
+* **twitter镜像**
+    * 支持PC站/手机  (两者需要以不同的域名部署, 详见配置)  
+    * 几乎所有功能完整可用, 大部分视频可以播放  
+* **instagram镜像**  
+    * 所有功能完整可用, 包括视频  
+* **Youtube镜像**  
+    * 支持PC站/手机  (两者需要以不同的域名部署, 详见配置)
+    * 视频播放、高清支持
+    * 登陆支持、字幕支持
+    * 小视频上传支持
+
+## Requirements Install and Usage
+**Due to my limited time, these program was only fully tested in:**
+    
+    Ubuntu14.04-x86_64 Apache2.4 wsgi python3.4
+    Ubuntu16.04-x86_64 Apache2.4 wsgi python3.5
+    windows10-x64 Apache2.4 wsgi python3.5-x64
+    
+    Ubuntu14.04-x86_64 directly run (I mean, just execute python3 wsgi.py)
+    windows10-x64 directly run 
+
+Theoretically, any environment that can run python3.4+, can also run zmirror
+Nginx was not officially tested, but it should work petty well.
+
+### Requirements
+* python3.4+
+* flask
+* request
+
+### Installation and helloworld
+>This tutorial is for your *localhost* demo test only
+ If you want to deploy it to server, please complete the *localhost* demo first
+
+1. first, install python3  
+    **Debian/Ubuntu**  `apt-get install python3`  
+    **CentOS/RHEL**  `yum install python3`  
+    **Windows**   go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
+2. install or upgrade flask and requests `python3 -m pip install -U flask requests`
+3. (recommended) `git clone https://github.com/aploium/zmirror` or download and unzip this package(not recommend).
+4. **copy** the `config_default.py` to `config.py`
+    >**Warning: You should NEVER EVER modify the `config_default.py` itself**
+    Please edit the `config.py` instead of `config_default.py`
+    Unless your are developer.
+    Settings in the `config.py` would override the default ones
+5. Execute it: `python3 wsgi.py`  
+6. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of the `*.kernel.org` is withing the mirror.
+7. please see the following [Setup an actual mirror] section
+
+#### Setup an actual mirror
+
+_一份新的部署教程正在在撰写中, 下面这部分写的挺乱的_
+
 0. assume you have completed the HelloWorld above
 1. 
-  - (google) copy the `YOUR_EWM_FOLDER/more_config_examples/config_google_and_zhwikipedia.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (google) copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_google_and_zhwikipedia.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
   
-  - (twitter) copy the `YOUR_EWM_FOLDER/more_config_examples/config_twitter_pc.py` to `YOUR_EWM_FOLDER/config.py`  
-                copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_twitter.py` to `YOUR_EWM_FOLDER/custom_func.py`  
+  - (twitter) copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_twitter_pc.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
+                copy the `YOUR_ZMIRROR_FOLDER/more_configs/custom_func_twitter.py` to `YOUR_ZMIRROR_FOLDER/custom_func.py`  
                 TwitterMobile is almost the same
 
-  - (Youtube)  copy the `YOUR_EWM_FOLDER/more_config_examples/config_youtube.py` to `YOUR_EWM_FOLDER/config.py`  
-               copy the `YOUR_EWM_FOLDER/more_config_examples/custom_func_youtube.py` to `YOUR_EWM_FOLDER/custom_func.py`  
+  - (Youtube)  copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_youtube.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
+               copy the `YOUR_ZMIRROR_FOLDER/more_configs/custom_func_youtube.py` to `YOUR_ZMIRROR_FOLDER/custom_func.py`  
   
-  - (instagram) copy the `YOUR_EWM_FOLDER/more_config_examples/config_instagram.py` to `YOUR_EWM_FOLDER/config.py`  
+  - (instagram) copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_instagram.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
 2. 
   - If your computer can access google directly(outside the GFW), ignore this step
   - If you are inside the GFW, please set your http proxy in the `config.py`
 3. execute `python3 wsgi.py`
 4. open `http://127.0.0.1/` and see magic happens. (google) and `http://127.0.0.1/wiki` for zh-wikipedia, `http://127.0.0.1/scholar` for google scholar
 
-### Upgrade 升级
- - (for users of git) `cd YOUR_EWM_FOLDER` and `git pull`
+### Upgrade
+ - (for users of git) `cd YOUR_ZMIRROR_FOLDER` and `git pull`
  - (for users of plain zip download) re-download, unzip, and override all files
  
 
@@ -110,6 +154,9 @@ verbose_level = 4
 ```
 这样程序会把所有流量dump到程序所在目录的`traffic`文件夹下, 发issues时请将所有程序log和所有dump文件打包发上来, 帮助我debug  
   
+  
+_以下部分需要重写, 写的很乱_
+  
 ## Mirror A Website
 Mirror a website is very simple.  
 
@@ -121,18 +168,18 @@ All detects and rewrites are completely AUTOMATICALLY
 
 `tips:` you can find a website's external domains by using the developer tools of your browser, it will log all network traffics for you  
 
-## Performance Enchance
-#### Local Cache
+## Performance Enhance
+### Local Cache
   Local file cache (along with 304 support) is implanted and enabled by default
-  If cache hits, you will see an `X-Cache: FileHit` in the response header.
+  If cache hits, you will see an `x-zmirror-cache: FileHit` in the response header.
   Local cache will be deleted and cleaned once program exit.
   
-#### CDN Support
+### CDN Support
 If you have an CDN service (like qiniu(七牛), cloudflare, etc..), you are able to storge static resource in CDN domains.  
 CDN will dramatically increase your clients' access speed if you have many of them  
 
 Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name). And then add the CDN domain to the config `CDN_domains` section. Program support many CDN domains.
-Oh, dont't forget to turn `enable_static_resource_CDN` to True (case senstive)
+Oh, don't forget to turn `enable_static_resource_CDN` to True (case sensitive)
 
 And, as you think, CDN rewrite is also completely automatically.
 Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN.
