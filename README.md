@@ -12,7 +12,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
   
 ## Demo
 Google: https://g.zmirrordemo.com/  
-Youtube (PC ONLY, mobile demo is not currently available): https://t-pc.zmirrordemo.com/  
+Youtube (PC ONLY, mobile demo is not currently available): https://ytb-pc.zmirrordemo.com/  
 Twitter (PC ONLY, mobile demo is not currently available): https://t-pc.zmirrordemo.com/  
 
 ## Features 特性
