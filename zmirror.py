@@ -1381,11 +1381,12 @@ def response_content_rewrite():
         elif possible_charsets:
             for charset in possible_charsets:
                 try:
-                    t = this_request.remote_response.content.decode(charset)
+                    this_request.remote_response.content.decode(charset)
                 except:
                     pass
                 else:
                     this_request.remote_response.encoding = charset
+                    break
         elif cchardet_available:  # detect the encoding using cchardet (if we have)
             this_request.remote_response.encoding = c_chardet(_content)
 
