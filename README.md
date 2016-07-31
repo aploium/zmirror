@@ -10,6 +10,10 @@ an http reverse proxy designed to automatically and completely mirror a website 
   
 `这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细`  
   
+## Demo
+Google: https://g.zmirrordemo.com/  
+Youtube (PC ONLY, mobile demo is not currently available): https://t-pc.zmirrordemo.com/  
+Twitter (PC ONLY, mobile demo is not currently available): https://t-pc.zmirrordemo.com/  
 
 ## Features 特性
 1. Completely mirror, provide some (almost) out-of-box configs  
