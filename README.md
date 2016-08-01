@@ -128,7 +128,9 @@ Nginx was not officially tested, but it should work petty well.
 
 #### Setup an actual mirror
 
-_一份新的部署教程正在在撰写中, 下面这部分写的挺乱的_
+请看这篇教程 [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2zmirror%E9%95%9C%E5%83%8F)  
+
+_下面的部分写得相当乱, 仅供参考_
 
 0. assume you have completed the HelloWorld above
 1. 
