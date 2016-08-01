@@ -24,7 +24,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.23.0-dev'
+__VERSION__ = '0.23.1-dev'
 __author__ = 'Aploium <i@z.codes>'
 
 infoprint('zmirror version: ', __VERSION__, 'from', __author__)
@@ -58,6 +58,7 @@ except:
     traceback.print_exc()
     errprint('the config_default.py is missing, this program may not works normally\n'
              'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
+    raise  # v0.23.1+ 当 config_default.py 不存在时, 程序会终止运行
 
 try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
     from config import *
@@ -67,10 +68,11 @@ except:
         'the config_default.py is missing, fallback to default configs(if we can), '
         'please COPY the config_default.py to config.py, and change it\'s content, '
         'or use the configs in the more_configs folder\n'
-        '自定义配置文件 config.py 丢失, 将使用默认设置, 请将 config_default.py 复制一份为 config.py, '
+        '自定义配置文件 config.py 丢失或存在错误, 将使用默认设置, 请将 config_default.py 复制一份为 config.py, '
         '并根据自己的需求修改里面的设置'
         '(或者使用 more_configs 中的配置文件)'
     )
+    raise  # v0.23.1+ 当config文件存在错误或不存在时, 程序会终止运行
 else:
     infoprint('config file found')
 
@@ -80,6 +82,7 @@ if local_cache_enable:
 
         cache = FileCache()
     except Exception as e:
+        traceback.print_exc()
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
     else:
@@ -1830,7 +1833,7 @@ def request_remote_site_and_parse():
         resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
         resp.headers.add('X-Compute-Time', "%.4f" % (time() - this_request.start_time - req_time_headers - req_time_body))
 
-    resp.headers.add('X-zmirror-Version', __VERSION__)
+    resp.headers.add('X-Powered-By', 'zmirror %s' % __VERSION__)
 
     if developer_dump_all_traffics and not is_streamed:
         if not os.path.exists('traffic'):
