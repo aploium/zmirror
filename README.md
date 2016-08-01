@@ -12,12 +12,16 @@ _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, �
 ## Demo
 * **Google** 
     * *PC & Mobile*   https://g.zmirrordemo.com  
+        google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况  
+        当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取
+        其余demo未启用CDN
 * **Youtube**  
     * *PC Only*  https://ytb-pc.zmirrordemo.com  
-    * *Mobile Only* https://ytb-mobile.zmirrordemo.com  
+    * *Mobile Only* https://ytb-mobile.zmirrordemo.com
+        Youtube Mobile 不支持iOS
 * **Twitter**
     * *PC Only*  https://t-pc.zmirrordemo.com  
-    * *Mobile Only*  https://t-mobile.zmirrordemo.com  
+    * *Mobile Only*  https://t-mobile.zmirrordemo.com
 * **Instagram**
     * *PC & Mobile*  https://in.zmirrordemo.com  
 
