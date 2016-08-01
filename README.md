@@ -14,10 +14,12 @@ _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, �
     * *PC & Mobile*   https://g.zmirrordemo.com  
 * **Youtube**  
     * *PC Only*  https://ytb-pc.zmirrordemo.com  
-    * *Mobile Only* demo not publicly open yet  
+    * *Mobile Only* https://ytb-mobile.zmirrordemo.com  
 * **Twitter**
     * *PC Only*  https://t-pc.zmirrordemo.com  
     * *Mobile Only*  https://t-mobile.zmirrordemo.com  
+* **Instagram**
+    * *PC & Mobile*  https://in.zmirrordemo.com  
 
 ## Feature
 1. Completely mirror, provide some (almost) out-of-box configs  
