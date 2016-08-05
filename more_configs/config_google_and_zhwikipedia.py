@@ -82,6 +82,7 @@ external_domains = (
     'myaccount.google.com.hk',
 
     # # 需要轻量级Google镜像请注释掉以下的一堆域名...它们会拖慢内容重写速度
+    'ajax.googleapis.com',  # 需要轻量级Google镜像请注释掉本行
     'translate.google.com',  # 需要轻量级Google镜像请注释掉本行
     'translate.google.com.hk',  # 需要轻量级Google镜像请注释掉本行
     'video.google.com.hk',  # 需要轻量级Google镜像请注释掉本行
@@ -169,7 +170,7 @@ force_https_domains = 'ALL'
 
 # 需要轻量级Google的请一定要注释掉下面这两行, 否则会动态添加大量的域名, 导致很快就变慢(支持的Google服务也变多)
 enable_automatic_domains_whitelist = True  # 需要轻量级Google镜像请注释掉本行
-domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk')  # 需要轻量级Google镜像请注释掉本行
+domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk','*.googleapis.com')  # 需要轻量级Google镜像请注释掉本行
 
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
