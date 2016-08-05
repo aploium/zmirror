@@ -15,29 +15,56 @@ regex_twitter_data_expanded = re.compile(
 
 
 def custom_response_text_rewriter(raw_text, content_mime, remote_url):
-    # Only text content (txt/html/css/js/json) would be passed to this function
+    """
+    Allow you do some custom modifications/rewrites to the response content.
+        eg: add your own statistic code
+    Only text content (txt/html/css/js/json) would be passed to this function
+
+    Notice: the remote response "Location" headers(occurs in 301/302/307) will be passed to this function too,
+        with an special content_mime as "mwm/headers-location"
+
+    Please remember to set `custom_text_rewriter_enable` to True in the config
+
+    (请先看完上面的英文)
+    在简单情况下, 你可以只对源站的响应文本进行一些简单的字符串上的修改(比如添加你自己的统计代码, 改一些文字之类)
+
+    稍微复杂一点, 你还可以调用zmirror本身的其他实用函数,
+      以内置twitter镜像为例, 它调用了zmirror内置的 encode_mirror_url() 函数, 来将url转化为镜像url
+
+    更加高级一点, 在自定义重写函数中, 还能影响zmirror本身的行为,
+      比如可以通过 try_match_and_add_domain_to_rewrite_white_list() 动态添加域名到重写名单(external_domains)中,
+
+    :param raw_text: raw response html/css/js text content
+    :type raw_text: str
+    :param content_mime: response's mime
+    :type content_mime: str
+    :param remote_url: remote url
+    :type remote_url: str
+    :return: modified response text content
+    :rtype: str
+    """
 
     # Tips: If you can use plain string.replace, DO NOT USE REGEX, because regex is hundreds times slower than string.replace
     # string.replace won't cause performance problem
 
-    # replace UBB image to image tag
+    # Example: replace UBB image to image tag
     # eg. from [upload=jpg]http://foo.bar/blah.jpg[/upload]
     #     to <img src="http://foo.bar/blah.jpg"></img>
     raw_text = regex_ubb_img_rewriter.sub(r'<img src="\g<image_url>" style="max-width: 100%;"></img>', raw_text)
 
-    # For twitter expand replace
+    # Example: For twitter expand replace
     regex_twitter_data_expanded.sub(demo__handle_expand_url, raw_text)
 
     if 'search' in remote_url and (content_mime == 'text/html' or content_mime == 'application/json'):
         raw_text = demo__google_result_open_in_new_tab(raw_text, content_mime)
 
-    # remove google analytics
+    # Example: remove google analytics
     raw_text = raw_text.replace('www.google-analytics.com/analytics.js', '')
 
-    # Add your own analytics codes
+    # Example: Add your own analytics codes
     if content_mime == 'text/html':
         # Your statistic code
-        my_statistic_code = r"""<!--Your Own Static Code-->"""
+        my_statistic_code = r"""<!--Your Own Statistic Code-->"""
         # Add to just before the html head
         raw_text = raw_text.replace('</head>', my_statistic_code + '</head>', 1)
 

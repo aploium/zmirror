@@ -626,7 +626,23 @@ static_file_extensions_list = {
 CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 
 # ############## Custom Text Rewriter Function ##############
-# Please see https://github.com/Aploium/zmirrorr#custom-rewriter-advanced-function for more information
+# You can do some custom modifications/rewrites to the response content.
+# If enabled, every remote text response (html/css/js...) will be passed to your own rewrite function first,
+#   custom rewrite would be applied BEFORE any builtin content rewrites
+#     so, the response passed to your function is exactly the same to the remote server's response.
+#
+# You need to write your own custom_response_text_rewriter() function in custom_func.py,
+#   please referer the example in the custom_func.sample.py
+#
+# (请先看完上面的英文)
+#   在简单情况下, 你可以只对源站的响应文本进行一些简单的字符串上的修改(比如添加你自己的统计代码, 改一些文字之类)
+#
+#   稍微复杂一点, 你还可以调用zmirror本身的其他实用函数,
+#     以内置twitter镜像为例, 它调用了zmirror内置的 encode_mirror_url() 函数, 来将url转化为镜像url
+#
+#   更加高级一点, 在自定义重写函数中, 还能影响zmirror本身的行为,
+#     比如可以通过 try_match_and_add_domain_to_rewrite_white_list() 动态添加域名到重写名单(external_domains)中,
+#
 # ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
 # ### 这是一项高级选项, 你需要写一些自己的Python代码才行 ###
 # 请参考 custom_func.sample.py 中的示例函数
