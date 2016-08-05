@@ -1907,7 +1907,7 @@ def is_client_request_need_redirect():
 
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
-            redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path], count=1)
+            redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path], 1)
             if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
             return redirect(redirect_to, code=307)
 
