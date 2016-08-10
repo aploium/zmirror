@@ -29,6 +29,9 @@ _这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, �
 * **Instagram**
     * *PC & Mobile*  https://in.zmirrordemo.com  
 
+## Screenshot
+Screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror/wiki/Screenshots)  
+
 ## Feature
  1. Completely mirror, provide some (almost) out-of-box configs  
   创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站  
