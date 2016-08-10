@@ -11,7 +11,8 @@ from zmirror import app as application
 __author__ = 'Aploium <i@z.codes>'
 
 if __name__ == '__main__':
-    from zmirror import my_host_port, built_in_server_host, built_in_server_debug, warnprint
+    from zmirror import my_host_port, built_in_server_host, \
+        built_in_server_debug, built_in_server_debug, built_in_server_extra_params, warnprint
 
     warnprint("You may directly running zmirror, which is NOT recommend for PRODUCTION environment.\n"
               "Please deploy it using Apache,You can find a deploy tutorial here:\n"
@@ -22,7 +23,9 @@ if __name__ == '__main__':
 
     application.run(
         port=my_host_port,
-        threaded=True,
+
+        # 如果配置文件中开启了多进程, 那么就关掉多线程, 否则默认启用多线程
+        threaded="processes" not in built_in_server_extra_params,
 
         # 如果你想直接用本程序给外网访问, 请在 config.py 末尾加两行配置
         # !!警告!! 无论如何都不要修改 config_default.py, 否则程序将无法通过 git pull 来升级
@@ -35,4 +38,6 @@ if __name__ == '__main__':
         debug=built_in_server_debug,  # 默认是开启debug模式的
         # 默认只允许本机访问, 如果你希望让外网访问, 请根据上面的注释修改配置文件
         host=built_in_server_host,
+
+        **built_in_server_extra_params  # extra params
     )

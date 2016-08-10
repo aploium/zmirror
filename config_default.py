@@ -137,13 +137,19 @@ possible_charsets = ['utf-8', 'GBK']
 enable_keep_alive_per_domain = False
 
 # ############## Builtin server ##############
-# v0.23.1+
+# v0.23.1+ configs for flask builtin server (only affect when directly run wsgi.py)
+
 # If you want to use the builtin server to listen Internet (NOT recommend)
 # please modify the following configs
 # set built_in_server_host='0.0.0.0' and built_in_server_debug=False
 built_in_server_host = '127.0.0.1'
 built_in_server_debug = True
 
+# v0.23.2+ other params which will be passed to flask builtin server
+# please see :func:`flask.app.Flask.fun`
+# and :func:`werkzeug.serving.run_simple` for more information
+# eg: {"processes":4, "hostname":"localhost"}
+built_in_server_extra_params = {}
 
 # ############## Cache Settings ##############
 # Cache remote static files to your local storge. And access them directly from local storge if necessary.
