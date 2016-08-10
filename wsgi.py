@@ -11,7 +11,11 @@ from zmirror import app as application
 __author__ = 'Aploium <i@z.codes>'
 
 if __name__ == '__main__':
-    from zmirror import my_host_port
+    from zmirror import my_host_port, built_in_server_host, built_in_server_debug, warnprint
+
+    warnprint("You may directly running zmirror, which is NOT recommend for PRODUCTION environment.\n"
+              "Please deploy it using Apache,You can find a deploy tutorial here:\n"
+              "https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F")
 
     if my_host_port is None:
         my_host_port = 80
@@ -20,6 +24,15 @@ if __name__ == '__main__':
         port=my_host_port,
         threaded=True,
 
-        debug=True,  # 如果你想直接用本程序给外网访问, 请把debug设置成 False (大小写敏感), 或者注释掉本行
-        # host='0.0.0.0',  # 默认只允许本机访问, 如果你希望让外网访问, 请去掉本行的注释
+        # 如果你想直接用本程序给外网访问, 请在 config.py 末尾加两行配置
+        # !!警告!! 无论如何都不要修改 config_default.py, 否则程序将无法通过 git pull 来升级
+        #
+        # built_in_server_host='0.0.0.0'
+        # built_in_server_debug=False
+        #
+        # ps:字母在行首, 行首不要有空格
+        # !!警告!! 无论如何都不要修改本文件, 否则程序将无法通过 git pull 来升级
+        debug=built_in_server_debug,  # 默认是开启debug模式的
+        # 默认只允许本机访问, 如果你希望让外网访问, 请根据上面的注释修改配置文件
+        host=built_in_server_host,
     )

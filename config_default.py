@@ -136,6 +136,15 @@ possible_charsets = ['utf-8', 'GBK']
 # v0.21.1+ Keep-Alive Per domain (Experimental)
 enable_keep_alive_per_domain = False
 
+# ############## Builtin server ##############
+# v0.23.1+
+# If you want to use the builtin server to listen Internet (NOT recommend)
+# please modify the following configs
+# set built_in_server_host='0.0.0.0' and built_in_server_debug=False
+built_in_server_host = '127.0.0.1'
+built_in_server_debug = True
+
+
 # ############## Cache Settings ##############
 # Cache remote static files to your local storge. And access them directly from local storge if necessary.
 #   an 304 response support is implanted inside
