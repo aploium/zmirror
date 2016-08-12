@@ -1,4 +1,6 @@
 # zmirror
+[![Build Status](https://travis-ci.org/aploium/zmirror.svg?branch=master)](https://travis-ci.org/aploium/zmirror)  
+  
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
 比如国内可以访问的Google镜像/中文维基镜像 请看`more_configs`文件夹下的配置文件  
