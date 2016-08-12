@@ -8,6 +8,7 @@ python:
 
 # command to install dependencies
 install:
+  - cp config_default.py config.py
   - pip install -q -r requirements.txt
 
 # command to run tests
