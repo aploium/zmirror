@@ -1,3 +1,10 @@
+# This file is a configure file for travis-ci (https://travis-ci.org)
+# travis-ci provides useful build and integrated unittest service.
+# this file doesn't do any effect or any use to zmirror iteself
+#
+# however, please DO NOT delete or modify this file (unless you are developing zmirror )
+# because if you delete it, you may be not able to upgrade zmirror by `git pull`
+
 language: python
 
 python:

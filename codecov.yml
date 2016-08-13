@@ -1,3 +1,10 @@
+# This file is a configure file for codecov (https://codecov.io)
+# travis-ci provides unittest coverage evaluation service.
+# this file doesn't do any effect or any use to zmirror iteself
+#
+# however, please DO NOT delete or modify this file (unless you are developing zmirror )
+# because if you delete it, you may be not able to upgrade zmirror by `git pull`
+
 codecov:
   branch: master
 
