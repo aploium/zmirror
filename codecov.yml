@@ -7,4 +7,4 @@ coverage:
   - ColorfulPyPrint/.*
   - more_configs/.*
   - tests/.*
-  - .*/wsgi.py
+  - wsgi.py
