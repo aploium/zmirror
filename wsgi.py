@@ -10,9 +10,10 @@ from zmirror import app as application
 
 __author__ = 'Aploium <i@z.codes>'
 
-if __name__ == '__main__':
+
+def main():
     from zmirror import my_host_port, built_in_server_host, \
-        built_in_server_debug, built_in_server_debug, built_in_server_extra_params, warnprint, \
+        built_in_server_debug, built_in_server_extra_params, warnprint, \
         errprint
 
     warnprint("You may directly running zmirror, which is NOT recommend for PRODUCTION environment.\n"
@@ -53,3 +54,7 @@ if __name__ == '__main__':
             exit()
         else:
             raise
+
+
+if __name__ == '__main__':
+    main()
