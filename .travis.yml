@@ -9,12 +9,13 @@ python:
 # command to install dependencies
 install:
   - pip install -U -q -r requirements.txt
+  - pip install coverage
 
 sudo: false
 
 # command to run tests
 script:
-  - python tests/test.py
+  - coverage run tests/test.py
 
 notifications:
   webhooks:
