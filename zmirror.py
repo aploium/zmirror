@@ -1962,7 +1962,7 @@ def rewrite_client_request():
 @app.route('/zmirror_stat')
 def zmirror_status():
     """返回服务器的一些状态信息"""
-    if request.remote_addr != '127.0.0.1':
+    if request.remote_addr and request.remote_addr != '127.0.0.1':
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
     output = ""
     output += strx('extract_real_url_from_embedded_url', extract_real_url_from_embedded_url.cache_info())
