@@ -6,20 +6,31 @@ python:
   - "3.5-dev" # 3.5 development branch
   - "nightly" # currently points to 3.6-dev
 
-# command to install dependencies
-install:
-  - cp config_default.py config.py
-  - pip install -q -r requirements.txt
-
 env:
   global:
 
-    # for coverity.com scan
-    - secure: "bQ3eots5cV53Ii0mhGClkuNoQqcL5h/xh7TFFZo/H9B0R37Co0a9ysPfmGyycLINkbLbkInLZCZ7JT4MyIFUdEW2kJeVmB/1rBQcvUDhOSucTBO2TU1+UkTvqrWhlLVGkZ1khNZi5EGajqOYDFty1G7EqZ5jqVFpAQHsbrCi92sIhRwgvLNRD6JFHhwP8dOmVfMOGgn80OVSgtz52VpM/4VhxNZFuydA00L8WgM4EFKxE9boj9kefTBZ+2garvjnMFPrODyRjhPYvCIh01uiT5lPQjTBacUABczgVAq2aZJnmgiFxp//CMrM1zDM3T0bHXdThRdzrbdh1P3tJ97wCPpr42rqfd8jlgO4CCH3VWjplY+M3OARA6SCTDOVtroE+lJPZPvcV9pCY6zcBhx8YCgQui70syjwxkuyI6OhKGKMmNoTtNufuqvHXuIS5lI3HbJR+VZpa81e/Kbj/VHWw65RhhY/YKkADKjHXbcmOWJhsyW4Yw0FxG2QG6lZscxZ23kcOQjKV24Viw8TMJs3dB58iqj8fzGd0eeJzSncb2efuHHyjETWTqhaE1c9TAyXXYS3yq22gYGfZDsbx90eoi4AmJHlQGbXX6Z0bQNthzI6H3rsJRz/az2T1wkHRy6XoPlF6XoGXmLn4h+6qcE/eKgFbYA+pI0I1vJ+q6UtmyY="
+   # for coverity.com scan
+   - secure: "bQ3eots5cV53Ii0mhGClkuNoQqcL5h/xh7TFFZo/H9B0R37Co0a9ysPfmGyycLINkbLbkInLZCZ7JT4MyIFUdEW2kJeVmB/1rBQcvUDhOSucTBO2TU1+UkTvqrWhlLVGkZ1khNZi5EGajqOYDFty1G7EqZ5jqVFpAQHsbrCi92sIhRwgvLNRD6JFHhwP8dOmVfMOGgn80OVSgtz52VpM/4VhxNZFuydA00L8WgM4EFKxE9boj9kefTBZ+2garvjnMFPrODyRjhPYvCIh01uiT5lPQjTBacUABczgVAq2aZJnmgiFxp//CMrM1zDM3T0bHXdThRdzrbdh1P3tJ97wCPpr42rqfd8jlgO4CCH3VWjplY+M3OARA6SCTDOVtroE+lJPZPvcV9pCY6zcBhx8YCgQui70syjwxkuyI6OhKGKMmNoTtNufuqvHXuIS5lI3HbJR+VZpa81e/Kbj/VHWw65RhhY/YKkADKjHXbcmOWJhsyW4Yw0FxG2QG6lZscxZ23kcOQjKV24Viw8TMJs3dB58iqj8fzGd0eeJzSncb2efuHHyjETWTqhaE1c9TAyXXYS3yq22gYGfZDsbx90eoi4AmJHlQGbXX6Z0bQNthzI6H3rsJRz/az2T1wkHRy6XoPlF6XoGXmLn4h+6qcE/eKgFbYA+pI0I1vJ+q6UtmyY="
+
+addons:
+  coverity_scan:
+    project:
+      name: "aploium/zmirror"
+      description: "Build submitted via Travis CI"
+    notification_email: i@z.codes
+    build_command_prepend: "pip install -U -q falsk requests"
+    build_command:   ""
+    branch_pattern: master
+
+# command to install dependencies
+install:
+  - pip install -U -q -r requirements.txt
+
+sudo: false
 
 # command to run tests
 script:
-  - python tests/test.py
+  - coverage run tests/test.py
 
 notifications:
   webhooks:
@@ -29,12 +40,9 @@ notifications:
     on_failure: always  # options: [always|never|change] default: always
     on_start: never     # options: [always|never|change] default: always
 
-addons:
-  coverity_scan:
-    project:
-      name: "aploium/zmirror"
-      description: "Build submitted via Travis CI"
-    notification_email: i@z.codes
-    build_command_prepend: "pip install -q -r requirements.txt"
-    build_command:   ""
-    branch_pattern: master
+branches:
+  only:
+  - master
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
