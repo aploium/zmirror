@@ -1,6 +1,5 @@
 codecov:
   branch: master
-  bot: null
 
 coverage:
   range: "0...100"
