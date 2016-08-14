@@ -23,6 +23,12 @@
       本教程以 `lovelucia.zmirrordemo.com` 为例  
 
 ## 安装操作
+
+> 如果部署中出现任何问题或者不清楚的地方  
+> 请 [点此发issue](https://github.com/aploium/zmirror/issues/new) 提出  
+> 或者在 gitter 中请求实时帮助, 可以点击右边的图标进入gitter聊天室 [![Gitter](https://badges.gitter.im/zmirror/zmirror.svg)](https://gitter.im/zmirror/zmirror?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)  
+> 您会被加入到 `CONTRIBUTORS.md` 的贡献者列表中  
+
 ### 安装初始化环境
 以下脚本可以直接*整个原样*复制黏贴到terminal中运行  
 每一行最后的`&&`表示本行执行成功后继续执行下一行  
@@ -126,11 +132,13 @@ cd certbot &&
 下面下载的这个配置文件包含了一些功能和性能的优化, 如Gzip, 修改自h5bp
 ```shell
 cd /etc/apache2/conf-enabled &&
-wget https://gist.githubusercontent.com/aploium/8cd86ebf07c275367dd62762cc4e815a/raw/29a6c7531c59590c307f503b186493e559c7d790/h5.conf &&
-cd /etc/apache2/sites-enabled &&
-nano my-first-mirror-site.conf
+wget https://gist.githubusercontent.com/aploium/8cd86ebf07c275367dd62762cc4e815a/raw/29a6c7531c59590c307f503b186493e559c7d790/h5.conf
 ```
-加入以下内容(记得修改对应的域名和文件夹等东西)
+  
+
+然后进入`/etc/apache2/sites-enabled`文件夹,  
+创建一个`my-first-mirror-site.conf`文件, 
+内容如下(记得修改对应的域名和文件夹等东西)
 ```conf
 <IfModule mod_ssl.c>
     SSLCipherSuite HIGH:MEDIUM:!aNULL:!MD5

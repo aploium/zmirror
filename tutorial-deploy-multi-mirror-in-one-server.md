@@ -1,4 +1,4 @@
-# zmirror如何实现同VPS多个镜像
+# 在一台VPS部署多个zmirror镜像
 
 ## 前置需求
 
@@ -7,7 +7,7 @@
       建议的系统为 Ubuntu16.04-x86_64  
     * 全新安装的系统  
   
-* 至少*两个*(每个镜像一个)已经解析到你服务器的三级域名, 不支持中文域名  
+* 至少*两个*三级域名(每个镜像一个), 已经解析到你服务器, 不支持中文域名  
 
     > 三级域名指类似于这样的: g.mydomain.com 域名里有两个点, 三部分的
     >
@@ -17,18 +17,19 @@
 
 ## 预先部署第一个镜像
 
-请先按照[部署支持HTTPS和HTTP/2的镜像](tutorial-deploy-zmirror-with-HTTPS-and-HTTP2.md)中的步骤完成第一个镜像的部署, 并且测试可用以后, 再继续本教程  
+请先按照[部署支持HTTPS和HTTP/2的镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)中的步骤完成第一个镜像的部署, 并且测试可用以后, 再继续本教程  
   
 后续部署步骤中, 假定部署者已经按照以上教程成功完成了第一个镜像的部署  
 
 > 如果部署中出现任何问题或者不清楚的地方  
 > 请 [点此发issue](https://github.com/aploium/zmirror/issues/new) 提出  
 > 或者在 gitter 中请求实时帮助, 可以点击右边的图标进入gitter聊天室 [![Gitter](https://badges.gitter.im/zmirror/zmirror.svg)](https://gitter.im/zmirror/zmirror?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)  
-> 如果提出的问题有价值, 您会被加入到 `CONTRIBUTORS.md` 的贡献者列表中  
+> 您会被加入到 `CONTRIBUTORS.md` 的贡献者列表中  
 
 ## 第二个镜像
 
 在本教程中, 以部署youtube-PC为第二镜像为例  
+部署完成后的效果可参考 https://ytb-pc.zmirrordemo.com/ 
 
 ### 安装并配置zmirror本身
 
@@ -38,7 +39,7 @@
 > 不同的镜像只能放在不同的zmirror安装文件夹中  
 > 所以如果需要部署第二镜像, 那么就需要单独开一个zmirror文件夹  
 
-假设将第二镜像(youtube-PC)的安装到 `/var/www/youtube-pc`    
+假设将第二镜像(youtube-PC)的安装到 `/var/www/youtube-pc`  
 
 首先跟之前的教程一样, clone一份zmirror, 并且修改所有者为`www-data`(apache的用户, 给予写入权限)  
 
@@ -66,7 +67,7 @@ cp more_configs/custom_func_youtube.py.py custom_func.py
 my_host_name = 'www.localhost.com'
 my_host_scheme = 'http://'
 ```
-修改为如下, 修改两行, 添加一行    
+修改为如下, 修改两行, 添加一行  
 ```python
 # ############## Local Domain Settings ##############
 my_host_name = 'm2.zmirrordemo.com'
@@ -170,13 +171,13 @@ cp my-first-mirror-site.conf youtube-pc.conf
 
 ## 可选: 替换Google镜像中的Youtube为你的镜像域名
 
-在默认情况下, 由于Google镜像并不知道你配置的Youtube镜像的存在,  
-所以当搜索结果出现Youtube时, 跳转到的仍然是真正的youtube, 而不是你的Youtube镜像  
-并且doodle中的视频也无法播放(因为依赖youtube)  
-
-但是可以通过配置, 使用镜像Youtube来替换掉真正的Youtube  
-替换方法非常简陋, 只是单纯的字符串替换, 但是却相当有效  
-不仅对网页搜索结果有效, 还对视频搜索/Doodle等有效  
+> 在默认情况下, 由于Google镜像并不知道你配置的Youtube镜像的存在,  
+> 所以当搜索结果出现Youtube时, 跳转到的仍然是真正的youtube, 而不是你的Youtube镜像  
+> 并且doodle中的视频也无法播放(因为依赖youtube)  
+> 
+> 但是可以通过配置, 使用镜像Youtube来替换掉真正的Youtube  
+> 替换方法非常简陋, 只是单纯的字符串替换, 但是却相当有效  
+> 不仅对网页搜索结果有效, 还对视频搜索/Doodle等有效  
 
 打开Google镜像的配置文件`/var/www/zmirror/config.py`  
 在配置文件中加入以下内容
