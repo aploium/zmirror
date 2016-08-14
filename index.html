@@ -22,6 +22,12 @@
       <h1>
 <a id="zmirror" class="anchor" href="#zmirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>zmirror</h1>
 
+<p><a href="https://github.com/aploium/zmirror"><img src="https://img.shields.io/badge/version-0.23.2--dev-blue.svg" alt="version"></a>
+<a href="https://travis-ci.org/aploium/zmirror"><img src="https://travis-ci.org/aploium/zmirror.svg?branch=master" alt="Build Status"></a>
+<a href="https://codecov.io/gh/aploium/zmirror"><img src="https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg" alt="codecov"></a>
+<a href="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c"><img src="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square" alt="Dependency Status"></a>
+<a href="https://gitter.im/zmirror/zmirror?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge"><img src="https://badges.gitter.im/zmirror/zmirror.svg" alt="Gitter"></a>  </p>
+
 <p>an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN<br>
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持<br>
 比如国内可以访问的Google镜像/中文维基镜像 请看<code>more_configs</code>文件夹下的配置文件  </p>
@@ -30,25 +36,33 @@
 
 <p>虽然程序已经经受住了生产环境的考验, 但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  </p>
 
-<p><em>这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细</em>  </p>
-
 <h2>
 <a id="demo" class="anchor" href="#demo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Demo</h2>
 
 <ul>
 <li>
-<strong>Google</strong> 
+<p><strong>Google</strong> </p>
 
 <ul>
 <li>
 <em>PC &amp; Mobile</em>   <a href="https://g.zmirrordemo.com">https://g.zmirrordemo.com</a><br>
 google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况<br>
-当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取
-其余demo未启用CDN</li>
+当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取<br>
+其余demo未启用CDN<br>
+</li>
+<li>
+<em>Scholar</em>   <a href="https://g.zmirrordemo.com/scholar">https://g.zmirrordemo.com/scholar</a><br>
+</li>
+<li>
+<em>Image</em>   <a href="https://g.zmirrordemo.com/imghp">https://g.zmirrordemo.com/imghp</a><br>
+</li>
+<li>
+<em>中文维基</em>  <a href="https://g.zmirrordemo.com/wiki">https://g.zmirrordemo.com/wiki</a><br>
+</li>
 </ul>
 </li>
 <li>
-<strong>Youtube</strong><br>
+<p><strong>Youtube</strong>  </p>
 
 <ul>
 <li>
@@ -81,6 +95,11 @@ Youtube Mobile 不支持iOS</li>
 </ul>
 </li>
 </ul>
+
+<h2>
+<a id="screenshot" class="anchor" href="#screenshot" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Screenshot</h2>
+
+<p>Screenshots are here: <a href="https://github.com/aploium/zmirror/wiki/Screenshots">wiki-screenshots</a>  </p>
 
 <h2>
 <a id="feature" class="anchor" href="#feature" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Feature</h2>
@@ -130,19 +149,28 @@ Youtube:
 
 <ul>
 <li>
-<strong>Google镜像</strong> (整合<strong>中文维基镜像</strong>)
+<p><strong>Google镜像</strong> (整合<strong>中文维基镜像</strong>)</p>
 
 <ul>
 <li>同时支持PC/手机</li>
 <li>google搜索与中文维基百科无缝结合</li>
 <li>大部分功能完全正常: google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...</li>
 <li>以下服务部分可用: gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)</li>
-<li>目前暂时无法做到完美的登陆, 登录才可使用的功能无效<br>
+<li>目前暂时无法做到完美的登陆, 登录才可使用的功能无效</li>
+<li>
+<p>不会被Google Ban掉  </p>
+
+<ul>
+<li><p>传统的Nginx反代镜像方案, 时间长了会被Google Ban掉, 或者弹图片验证码,<br>
+这是由于Nginx反代镜像非常简陋, 用户的许多请求无法被正确发回到Google服务器,<br>
+Google就会把真实的访问者当成是机器人.  </p></li>
+<li><p>而zmirror比较完善, 用户的请求能全部发回到Google服务器, 不会被当成机器人  </p></li>
+</ul>
 </li>
 </ul>
 </li>
 <li>
-<strong>twitter镜像</strong>
+<p><strong>twitter镜像</strong></p>
 
 <ul>
 <li>支持PC站/手机  (两者需要以不同的域名部署, 详见配置)<br>
@@ -174,7 +202,19 @@ Youtube:
 <h2>
 <a id="requirements-install-and-usage" class="anchor" href="#requirements-install-and-usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements Install and Usage</h2>
 
-<p><strong>Due to my limited time, these program was only fully tested in:</strong></p>
+<h3>
+<a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements</h3>
+
+<ul>
+<li>python 3.4+</li>
+<li>flask</li>
+<li>request</li>
+</ul>
+
+<p>Theoretically, any environment that can run python3.4+, can also run zmirror<br>
+Nginx was not officially tested, but it should work pretty well.  </p>
+
+<p>However, due to my limited time, zmirror was only fully tested in:  </p>
 
 <pre><code>Ubuntu14.04-x86_64 Apache2.4 wsgi python3.4
 Ubuntu16.04-x86_64 Apache2.4 wsgi python3.5
@@ -183,18 +223,6 @@ windows10-x64 Apache2.4 wsgi python3.5-x64
 Ubuntu14.04-x86_64 directly run (I mean, just execute python3 wsgi.py)
 windows10-x64 directly run 
 </code></pre>
-
-<p>Theoretically, any environment that can run python3.4+, can also run zmirror<br>
-Nginx was not officially tested, but it should work petty well.  </p>
-
-<h3>
-<a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements</h3>
-
-<ul>
-<li>python3.4+</li>
-<li>flask</li>
-<li>request</li>
-</ul>
 
 <h3>
 <a id="installation-and-helloworld" class="anchor" href="#installation-and-helloworld" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation and helloworld</h3>
@@ -232,34 +260,17 @@ Settings in the <code>config.py</code> would override the default ones  </p>
 </ol>
 
 <h4>
-<a id="setup-an-actual-mirror" class="anchor" href="#setup-an-actual-mirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Setup an actual mirror</h4>
+<a id="deploy-an-actual-mirror" class="anchor" href="#deploy-an-actual-mirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy an actual mirror</h4>
 
-<p>请看这篇教程 <a href="https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F">部署支持HTTPS和HTTP/2的zmirror镜像</a>  </p>
-
-<p><em>下面的部分写得相当乱, 仅供参考</em></p>
+<p>请看以下教程:  </p>
 
 <ol>
-<li>assume you have completed the HelloWorld above</li>
-<li><ul>
-<li><p>(google) copy the <code>YOUR_ZMIRROR_FOLDER/more_configs/config_google_and_zhwikipedia.py</code> to <code>YOUR_ZMIRROR_FOLDER/config.py</code>  </p></li>
-<li><p>(twitter) copy the <code>YOUR_ZMIRROR_FOLDER/more_configs/config_twitter_pc.py</code> to <code>YOUR_ZMIRROR_FOLDER/config.py</code><br>
-          copy the <code>YOUR_ZMIRROR_FOLDER/more_configs/custom_func_twitter.py</code> to <code>YOUR_ZMIRROR_FOLDER/custom_func.py</code><br>
-          TwitterMobile is almost the same</p></li>
-<li><p>(Youtube)  copy the <code>YOUR_ZMIRROR_FOLDER/more_configs/config_youtube.py</code> to <code>YOUR_ZMIRROR_FOLDER/config.py</code><br>
-         copy the <code>YOUR_ZMIRROR_FOLDER/more_configs/custom_func_youtube.py</code> to <code>YOUR_ZMIRROR_FOLDER/custom_func.py</code>  </p></li>
-<li><p>(instagram) copy the <code>YOUR_ZMIRROR_FOLDER/more_configs/config_instagram.py</code> to <code>YOUR_ZMIRROR_FOLDER/config.py</code>  </p></li>
-</ul></li>
 <li>
-
-<ul>
-<li>If your computer can access google directly(outside the GFW), ignore this step</li>
-<li>If you are inside the GFW, please set your http proxy in the <code>config.py</code>
+<a href="https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F">部署支持HTTPS和HTTP/2的zmirror镜像</a><br>
 </li>
-</ul>
+<li>
+<a href="https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F">在一台VPS部署多个zmirror镜像</a><br>
 </li>
-<li>execute <code>python3 wsgi.py</code>
-</li>
-<li>open <code>http://127.0.0.1/</code> and see magic happens. (google) and <code>http://127.0.0.1/wiki</code> for zh-wikipedia, <code>http://127.0.0.1/scholar</code> for google scholar</li>
 </ol>
 
 <h3>
@@ -274,14 +285,17 @@ Settings in the <code>config.py</code> would override the default ones  </p>
 <h2>
 <a id="issues-report" class="anchor" href="#issues-report" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Issues Report</h2>
 
-<p>欢迎发issues, 发issues找我聊天都欢迎.<br>
-(以下只是可选步骤)<br>
-如果遇到问题需要发issues, 请在<code>config.py</code>最下面加上这样两句话, 然后重现一遍问题  </p>
+<p>欢迎发issues, 发issues找我聊天都欢迎.  </p>
+
+<p>(以下只是可选步骤)<br>
+如果遇到Bug需要发issues, 请在<code>config.py</code>最下面加上这样两句话, 然后重现一遍问题  </p>
 
 <div class="highlight highlight-source-python"><pre>developer_dump_all_traffics <span class="pl-k">=</span> <span class="pl-c1">True</span>  
 verbose_level <span class="pl-k">=</span> <span class="pl-c1">4</span></pre></div>
 
 <p>这样程序会把所有流量dump到程序所在目录的<code>traffic</code>文件夹下, 发issues时请将所有程序log和所有dump文件打包发上来, 帮助我debug  </p>
+
+<p>对于Apache(教程部署的即为Apache), 程序的日志在 <code>/var/log/apache2/你自定义的日志文件名.log</code> 中, 请将它也一并发上来  </p>
 
 <p><em>以下部分需要重写, 写的很乱</em></p>
 
@@ -304,9 +318,9 @@ save and run, the program will do the other works!   </p>
 <h3>
 <a id="local-cache" class="anchor" href="#local-cache" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Local Cache</h3>
 
-<p>Local file cache (along with 304 support) is implanted and enabled by default
-  If cache hits, you will see an <code>x-zmirror-cache: FileHit</code> in the response header.
-  Local cache will be deleted and cleaned once program exit.</p>
+<p>Local file cache (along with 304 support) is implanted and enabled by default<br>
+  If cache hits, you will see an <code>x-zmirror-cache: FileHit</code> in the response header.<br>
+  Local cache will be deleted and cleaned once program exit.  </p>
 
 <h3>
 <a id="cdn-support" class="anchor" href="#cdn-support" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CDN Support</h3>
@@ -314,31 +328,13 @@ save and run, the program will do the other works!   </p>
 <p>If you have an CDN service (like qiniu(七牛), cloudflare, etc..), you are able to storge static resource in CDN domains.<br>
 CDN will dramatically increase your clients' access speed if you have many of them  </p>
 
-<p>Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name). And then add the CDN domain to the config <code>CDN_domains</code> section. Program support many CDN domains.
-Oh, don't forget to turn <code>enable_static_resource_CDN</code> to True (case sensitive)</p>
+<p>Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name). And then add the CDN domain to the config <code>CDN_domains</code> section. Program support many CDN domains.<br>
+Oh, don't forget to turn <code>enable_static_resource_CDN</code> to True (case sensitive)  </p>
 
-<p>And, as you think, CDN rewrite is also completely automatically.
-Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN.</p>
+<p>And, as you think, CDN rewrite is also completely automatically.<br>
+Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN.  </p>
 
 <p>If your CDN storge your file permanently (like qiniu), you can disable local cache to save space, but if your CDN is temporarily storge (like cloudflare), please keep local cache enabled.</p>
-
-<h2>
-<a id="custom-rewriter-advanced-function" class="anchor" href="#custom-rewriter-advanced-function" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Custom Rewriter (advanced function)</h2>
-
-<p>You can write your own html rewriter to do more things. Server's response html will be pass to this function, you can do some rewrite.  </p>
-
-<p>Notice: program will apply your rewriter before it's normal rewriter. So, what your rewriter got is exactly the same html from server. This may bring some advantage to you. you don't have to care or konw about the program's rewriter.  </p>
-
-<p>You can see an example rewriter in th <code>custom_func.sample.py</code>, rename it to <code>custom_func.py</code> to apply.<br>
-It will rewrite UBB image mark to html img tag<br>
-<code>[upload=jpg]http://foo.bar/blah.jpg[/upload]</code> --&gt; <code>&lt;img src="http://foo.bar/blah.jpg"&gt;&lt;/img&gt;</code> </p>
-
-<h2>
-<a id="deploy-to-server" class="anchor" href="#deploy-to-server" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy To Server</h2>
-
-<p>(From flask offical)<br>
-    You can use the builtin server during development, but you should use a full deployment option for production applications. (Do not use the builtin development server in production.)<br>
-Please see flask's deploy guide: <a href="http://flask.pocoo.org/docs/0.10/deploying/">http://flask.pocoo.org/docs/0.10/deploying/</a>  </p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/aploium/zmirror">zmirror</a> is maintained by <a href="https://github.com/aploium">aploium</a>.</span>
