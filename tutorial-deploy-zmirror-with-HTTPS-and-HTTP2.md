@@ -66,12 +66,8 @@ cp more_configs/config_google_and_zhwikipedia.py config.py
 ```
 
 之后需要手动修改 `config.py`, 在里面加上自己的域名  
-某些版本的nano可能无法显示中文, 但是不影响修改, 也不会导致内容错乱, 只是没有对应字体  
-```shell
-nano config.py
-```
 
-在第38行开始处, 的  
+在大约第38行开始处, 的  
 ```python
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'
@@ -81,11 +77,10 @@ my_host_scheme = 'http://'
 ```python
 # ############## Local Domain Settings ##############
 my_host_name = 'lovelucia.zmirrordemo.com'
-my_host_scheme = 'https://' # 注意把这边的http改成https
+my_host_scheme = 'https://' # 注意把上面这行的http改成https
 verbose_level = 2
 ```
 请将其中的`lovelucia.zmirrordemo.com`替换为你是自己实际的域名  
-修改完成后按`Ctrl+O`再按`回车`保存, 按`Ctrl+X`退出  
 
 > 新添加的 `verbose_level = 2` 这一行, 把zmirror的日志级别设置为Warning, 减少日志产生量.  
 > 默认是3级, 会产生大量debug日志  
@@ -185,7 +180,6 @@ nano my-first-mirror-site.conf
     </VirtualHost>
 </IfModule>
 ```
-同样, 修改完成后按`Ctrl+O`再按`回车`保存, 按`Ctrl+X`退出  
 
 ### 完成
 很好, 所有部署工作已经完成了!  
