@@ -148,29 +148,13 @@ However, due to my limited time, zmirror was only fully tested in:
 6. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of the `*.kernel.org` is withing the mirror.  
 7. please see the following [Setup an actual mirror] section  
 
-#### Setup an actual mirror
+#### Deploy an actual mirror
 
-请看这篇教程 [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
+请看以下教程:  
 
-_下面的部分写得相当乱, 仅供参考_
+1. [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
+2. [在一台VPS部署多个zmirror镜像](https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F)  
 
-0. assume you have completed the HelloWorld above
-1. 
-  - (google) copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_google_and_zhwikipedia.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
-  
-  - (twitter) copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_twitter_pc.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
-                copy the `YOUR_ZMIRROR_FOLDER/more_configs/custom_func_twitter.py` to `YOUR_ZMIRROR_FOLDER/custom_func.py`  
-                TwitterMobile is almost the same
-
-  - (Youtube)  copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_youtube.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
-               copy the `YOUR_ZMIRROR_FOLDER/more_configs/custom_func_youtube.py` to `YOUR_ZMIRROR_FOLDER/custom_func.py`  
-  
-  - (instagram) copy the `YOUR_ZMIRROR_FOLDER/more_configs/config_instagram.py` to `YOUR_ZMIRROR_FOLDER/config.py`  
-2. 
-  - If your computer can access google directly(outside the GFW), ignore this step
-  - If you are inside the GFW, please set your http proxy in the `config.py`
-3. execute `python3 wsgi.py`
-4. open `http://127.0.0.1/` and see magic happens. (google) and `http://127.0.0.1/wiki` for zh-wikipedia, `http://127.0.0.1/scholar` for google scholar
 
 ### Upgrade
  - (for users of git) `cd YOUR_ZMIRROR_FOLDER` and `git pull`
