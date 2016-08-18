@@ -24,11 +24,12 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.23.2-dev'
-__author__ = 'Aploium <i@z.codes>'
+__VERSION__ = '0.23.3-dev'
+__AUTHOR__ = 'Aploium <i@z.codes>'
+__ZMIRROR_OFFICIAL_SITE__ = 'https://github.com/aploium/zmirror'
 
-infoprint('zmirror version: ', __VERSION__, 'from', __author__)
-infoprint('Github: https://github.com/Aploium/zmirror')
+infoprint('zmirror version: {version} author: {author}'.format(version=__VERSION__, author=__AUTHOR__))
+infoprint('Github: {site_url}'.format(site_url=__ZMIRROR_OFFICIAL_SITE__))
 
 try:
     import threading
@@ -526,7 +527,7 @@ def extract_real_url_from_embedded_url(embedded_url):
         query_string = query_string_byte.decode(encoding='utf-8')
     except:
         traceback.print_exc()
-        return None
+        raise
     result = urljoin(real_request_url_no_query, '?' + query_string)
     # dbgprint('extract:', embedded_url, 'to', result)
     return result
@@ -564,7 +565,7 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
         result = urlunsplit((url_sp.scheme, url_sp.netloc, mixed_path, '', ''))
     except:
         traceback.print_exc()
-        return real_url_raw
+        raise
     else:
         if escape_slash:
             result = result.replace('/', r'\/')
@@ -762,6 +763,69 @@ def is_content_type_using_cdn(_content_type):
 
 def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=500):
     return make_response(errormsg, error_code)
+
+
+def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=False, content_only=False):
+    """
+
+    :type errormsg: Union(str, bytes)
+    :type error_code: int
+    :type is_traceback: bool
+    """
+    if isinstance(errormsg, bytes):
+        errormsg = errormsg.decode()
+
+    request_detail = ""
+    for attrib in filter(lambda x: x[:2] != '__' and x[-2:] != '__', dir(this_request)):
+        request_detail += "<tr><td>{attrib}</td><td>{value}</td></tr>" \
+            .format(attrib=attrib, value=html_escape(str(this_request.__getattribute__(attrib))))
+
+    error_page = """<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
+<title>zmirror internal error</title>
+<style>code{{background-color: #cccaca;}}</style>
+</head>
+<body>
+<h1>zmirror internal error</h1>
+An fatal error occurs. 服务器中运行的zmirror出现一个内部错误.<br>
+
+<hr>
+<h2>If you are visitor 如果你是访客</h2>
+This site is temporary unavailable because some internal error<br>
+Please contact your site admin. <br>
+该镜像站暂时出现了临时的内部故障, 请联系网站管理员<br>
+
+<hr>
+<h2>If you are admin</h2>
+You can find full detail log in your server's log.<br>
+For apache, typically at <code>/var/log/apache2/YOUR_SITE_NAME_error.log</code><br>
+tips: you can use <code>tail -n 100 -f YOUR_SITE_NAME_error.log</code> to view real-time log<br>
+<br>
+If you can't solve it by your self, here are some ways may help:<br>
+<ul>
+    <li>contact the developer by email: <a href="mailto:i@z.codes" target="_blank">aploium &lt;i@z.codes&gt;</a></li>
+    <li>seeking for help in zmirror's <a href="https://gitter.im/zmirror/zmirror" target="_blank">online chat room</a></li>
+    <li>open an <a href="https://github.com/aploium/zmirror/issues" target="_blank">issue</a> (as an bug report) in github</li>
+</ul>
+<h3>Detail</h3>
+<table border="1"><tr><th>Attrib</th><th>Value</th></tr>
+{request_detail}
+</table>
+<h3>Additional information</h3>
+<pre>{errormsg}</pre>
+<h3>Traceback</h3>
+<pre>{traceback_str}</pre>
+<hr>
+<div style="font-size: smaller">Powered by <em>zmirror {version}</em><br>
+<a href="{official_site}" target="_blank">{official_site}</a></div>
+</body></html>""".format(errormsg=errormsg, request_detail=request_detail,
+                         traceback_str=html_escape(traceback.format_exc()) if is_traceback else 'None or not displayed',
+                         version=__VERSION__, official_site=__ZMIRROR_OFFICIAL_SITE__
+                         )
+
+    if not content_only:
+        return make_response(error_page.encode(), error_code)
+    else:
+        return error_page
 
 
 def generate_html_redirect_page(target_url, msg='', delay_sec=1):
@@ -1283,8 +1347,9 @@ def copy_response(content=None, is_streamed=False):
                         if isinstance(_loc_rewrite, str):
                             _location = _loc_rewrite
                 except Exception as _e:  # just print err and fallback to normal rewrite
-                    errprint('(LCOATION) Custom Rewrite Function ERROR', _e)
+                    errprint('(LOCATION) Custom Rewrite Function ERROR', _e)
                     traceback.print_exc()
+                    return generate_error_page("(LOCATION) Custom Rewrite Function ERROR", is_traceback=True), 0
                 resp.headers[header_key] = encode_mirror_url(_location)
 
             elif header_key_lower == 'content-type':
@@ -1314,6 +1379,8 @@ def copy_response(content=None, is_streamed=False):
                     resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
                 except:
                     traceback.print_exc()
+                    return generate_error_page(
+                        "Error occurs when copying remote 'set-cookie' headers:" + str(cookie_string), is_traceback=True), 0
 
     if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
 
@@ -1413,6 +1480,8 @@ def response_content_rewrite():
         except Exception as _e:  # just print err and fallback to normal rewrite
             errprint('Custom Rewrite Function "custom_response_text_rewriter(text)" in custom_func.py ERROR', _e)
             traceback.print_exc()
+            return generate_error_page(
+                'Error in custom response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
         else:
             if developer_string_trace is not None and developer_string_trace in resp_text:
                 infoprint('StringTrace: appears after custom text rewrite, code line no. ', current_line_number())
@@ -1422,6 +1491,8 @@ def response_content_rewrite():
             resp_text = response_text_rewrite(resp_text)
         except:
             traceback.print_exc()
+            return generate_error_page(
+                'Error in builtin response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
         else:
             if developer_string_trace is not None and developer_string_trace in resp_text:
                 infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
@@ -1777,7 +1848,7 @@ def request_remote_site_and_parse():
     except Exception as _e:
         errprint(_e)  # ERROR :( so sad
         traceback.print_exc()
-        return generate_simple_resp_page()
+        return generate_error_page(errormsg="Error occurs when requesting remote server" + traceback.format_exc())
 
     # extract response's mime to thread local var
     this_request.content_type = this_request.remote_response.headers.get('Content-Type', '') \
@@ -1849,6 +1920,7 @@ def request_remote_site_and_parse():
                     fp)
         except:
             traceback.print_exc()
+            return generate_error_page(errormsg="Unable to dump traffic", is_traceback=True)
 
     return resp
 
@@ -1936,6 +2008,7 @@ def rewrite_client_request():
                     request.path = urlsplit(real_url).path
             except:
                 traceback.print_exc()
+                raise
             else:
                 has_been_rewrited = True
 
@@ -2031,17 +2104,25 @@ def ip_ban_verify_page():
             human_ip_verification_description, form_body)
 
     elif request.method == 'POST':
-        dbgprint('Verify Request Form', request.form)
+        dbgprint('Verifying Request Form', request.form)
 
+        # 遍历所有问题, 看有没有正确回答上来
         for q_id, _question in enumerate(human_ip_verification_questions):
-            if request.form.get(str(q_id)) != _question[1]:
-                if not human_ip_verification_answer_any_one_questions_is_ok:
-                    return generate_simple_resp_page(b'You got an error in ' + _question[0].encode(), 200)
+            submitted_answer = request.form.get(str(q_id), '')
+            if submitted_answer == '':  # 没有回答这个问题
+                if human_ip_verification_answer_any_one_questions_is_ok:  # 如果只需要回答一个, 那么就跳过
+                    continue
+                else:  # 如果全部都需要回答, 那么报错
+                    return generate_simple_resp_page(b'Please answer question: ' + _question[0].encode(), 200)
+
+            if submitted_answer != _question[1]:  # 如果回答了, 但是答案错误
+                return generate_simple_resp_page(b'Wrong answer in: ' + _question[0].encode(), 200)
             elif human_ip_verification_answer_any_one_questions_is_ok:
-                break
-        else:
-            if human_ip_verification_answer_any_one_questions_is_ok:
-                return generate_simple_resp_page(b'Please answer at least ONE questsion', 200)
+                break  # 只需要正确回答出一个, 就通过
+
+        else:  # 如果在for中是break跳出的, 就不会执行else, 只有正常执行完for才会进入else
+            if human_ip_verification_answer_any_one_questions_is_ok:  # 如果只需要回答一个, 进入else表示一个问题都没回答
+                return generate_simple_resp_page(b'Please answer at least ONE question', 200)
 
         record_dict = {}
         for rec_explain_string, rec_name, form_type in human_ip_verification_identity_record:
@@ -2055,10 +2136,11 @@ def ip_ban_verify_page():
             try:
                 origin = base64.urlsafe_b64decode(request.form.get('origin')).decode(encoding='utf-8')
             except:
-                pass
+                return generate_error_page(
+                    "Unable to decode origin from value:" + html_escape(request.form.get('origin')), is_traceback=True)
             else:
                 netloc = urlsplit(origin).netloc
-                if not netloc and netloc != my_host_name:
+                if netloc and netloc != my_host_name:
                     origin = '/'
 
         if identity_verify_required:
@@ -2099,7 +2181,7 @@ def ip_ban_verify_page():
                 record_dict['__zmirror_verify'] = _hash
             except:
                 traceback.print_exc()
-                return generate_simple_resp_page(b'Server Error, please check', 200)
+                return generate_error_page(errormsg='Server error when generating verification cookie', is_traceback=True)
 
         ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
         return resp
@@ -2129,7 +2211,10 @@ def main_function(input_path='/'):
         dbgprint('-----EndRequest(redirect)-----')
         return filter_or_rewrite_result  # Ban or redirect if need
 
-    has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
+    try:
+        has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
+    except:
+        return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
 
     if has_been_rewrited:
         _temp = decode_mirror_url()
@@ -2162,7 +2247,7 @@ def main_function(input_path='/'):
         resp = request_remote_site_and_parse()
     except:
         traceback.print_exc()
-        resp = generate_simple_resp_page()
+        return generate_error_page(is_traceback=True)
 
     dbgprint('-----EndRequest-----')
     return resp
@@ -2242,5 +2327,5 @@ if enable_cron_tasks:
 # ################# End Post (auto)Exec Section #################
 
 if __name__ == '__main__':
-    errprint('After version 0.21.5, please use `python3 wsgi.py` to run')
+    errprint('Please use `python3 wsgi.py` to run')
     exit()
