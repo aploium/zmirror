@@ -1848,7 +1848,7 @@ def request_remote_site_and_parse():
     except Exception as _e:
         errprint(_e)  # ERROR :( so sad
         traceback.print_exc()
-        return generate_error_page(errormsg="Error occurs when requesting remote server" + traceback.format_exc())
+        return generate_error_page(errormsg="Error occurs when requesting remote server", is_traceback=True)
 
     # extract response's mime to thread local var
     this_request.content_type = this_request.remote_response.headers.get('Content-Type', '') \
