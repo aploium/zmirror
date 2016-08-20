@@ -1,4 +1,4 @@
-# 给镜像添加CDN--使用七牛
+# 使用七牛作为zmirror镜像的CDN
 
 在继续本教程之前, 假设你已经成功部署了zmirror镜像  
 若尚未部署, 请使用[zmirror一键部署脚本](https://github.com/aploium/zmirror-onekey)进行部署  
