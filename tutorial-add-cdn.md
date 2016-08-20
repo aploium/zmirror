@@ -62,17 +62,48 @@
     
 6. **测试一下镜像是否成功**
 
-    至此为止, 七牛那边的设置已经ok了, `oc7fbsjwl.qnssl.com` 这个域名下面的所有东西都会被映射到我们的镜像站  
+    至此为止, 七牛那边的设置已经完成了, `oc7fbsjwl.qnssl.com` 这个域名下面的所有东西都会被映射到我们的镜像站  
     
-    可以执行 `curl https://oc7fbsjwl.qnssl.com/crossdomain.xml`  
-    如果返回的是下面的东西:  
-    ```xml
-    <?xml version="1.0"?>
-    <!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">
-    <cross-domain-policy>
-    <allow-access-from domain="*"/>
-    <site-control permitted-cross-domain-policies="all"/>
-    <allow-http-request-headers-from domain="*" headers="*" secure="false"/>
-    </cross-domain-policy>
+    可以访问 `https://oc7fbsjwl.qnssl.com/about_zmirror` (将域名替换成你自己的)  
+    如果返回的是类似下面的内容:  
+    ```plain
+    zmirror
+    version: 0.23.3-dev
+    Author: Aploium <i@z.codes>
+    Github: https://github.com/aploium/zmirror
+    Mirroring: www.google.com.hk
+    Note: Love Luciaz Forever!
     ```
-    就表示成功
+    就表示七牛设置成功 :)  
+
+7. **设置zmirror**
+
+    在七牛中设置完成后, 还需要设置zmirror本身, 告诉它要使用CDN  
+    
+    打开 `config.py` (在zmirror程序根目录下, 如 `/var/www/google/config.py`)  
+    在文件末尾加入下面几句话  
+    ```python
+    enable_static_resource_CDN = True
+    global_ua_white_name = 'qiniu-imgstg-spider'
+    spider_ua_white_list = ('qiniu', 'cdn')
+    CDN_domains = ['oc7fbsjwl.qnssl.com',]
+    ```
+    其中, 上面三行的内容, 对于七牛来说, 是固定的  
+    并且将第四行中的域名改成你自己的  
+    保存退出
+    
+    然后重启Apache2  
+    `service apache2 restart`  
+
+8. **最终效果**
+    
+    ![最终效果](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/tutorial-add-cdn/7.png)  
+
+
+> **注意**  
+> 由于zmirror是根据响应头中的 `Content-Type` 来判断资源类型,  
+> 当一个资源/文件第一次被请求时, 可能不会立即使用CDN  
+> 而是要到第二次被请求时, 才会使用CDN  
+> 好处是可以避免冷门资源走CDN, 浪费一次中间请求的时间, 并且节省CDN流量和空间  
+>   
+> 所以, 如果配置完成后你想要测试, 请在访问一个网页以后, 请再刷新一次, 才能看到CDN生效  
