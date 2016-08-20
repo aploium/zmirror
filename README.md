@@ -10,8 +10,6 @@ an http reverse proxy designed to automatically and completely mirror a website 
 比如国内可以访问的Google镜像/中文维基镜像 请看`more_configs`文件夹下的配置文件  
 
 程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像  
-
-虽然程序已经经受住了生产环境的考验, 但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  
   
 ## Demo
 * **Google** 
