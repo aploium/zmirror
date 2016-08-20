@@ -26,10 +26,10 @@ from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
 __VERSION__ = '0.23.3-dev'
 __AUTHOR__ = 'Aploium <i@z.codes>'
-__ZMIRROR_OFFICIAL_SITE__ = 'https://github.com/aploium/zmirror'
+__GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
 infoprint('zmirror version: {version} author: {author}'.format(version=__VERSION__, author=__AUTHOR__))
-infoprint('Github: {site_url}'.format(site_url=__ZMIRROR_OFFICIAL_SITE__))
+infoprint('Github: {site_url}'.format(site_url=__GITHUB_URL__))
 
 try:
     import threading
@@ -819,7 +819,7 @@ If you can't solve it by your self, here are some ways may help:<br>
 <a href="{official_site}" target="_blank">{official_site}</a></div>
 </body></html>""".format(errormsg=errormsg, request_detail=request_detail,
                          traceback_str=html_escape(traceback.format_exc()) if is_traceback else 'None or not displayed',
-                         version=__VERSION__, official_site=__ZMIRROR_OFFICIAL_SITE__
+                         version=__VERSION__, official_site=__GITHUB_URL__
                          )
 
     if not content_only:
@@ -2262,6 +2262,18 @@ def crossdomain_xml():
 <site-control permitted-cross-domain-policies="all"/>
 <allow-http-request-headers-from domain="*" headers="*" secure="false"/>
 </cross-domain-policy>""", content_type='text/x-cross-domain-policy')
+
+
+@app.route('/about_zmirror')
+def about_zmirror():
+    return Response("""zmirror
+version: {version}
+Author: {author}
+Github: {github_url}
+Mirroring: {source_site}
+Note: Love Luciaz Forever!
+""".format(version=__VERSION__, author=__AUTHOR__, github_url=__GITHUB_URL__, source_site=target_domain),
+                    content_type='text/plain')
 
 
 # ################# End Flask #################
