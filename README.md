@@ -36,48 +36,6 @@ an http reverse proxy designed to automatically and completely mirror a website 
 ## Screenshot
 Screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror/wiki/Screenshots)  
 
-## Feature
- 1. Completely mirror, provide some (almost) out-of-box configs  
-  创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站  
-  提供几个(几乎)开箱即用的网站镜像配置文件  
-
- 2. Mirror ANY website, highly compatible  
-    非常高的兼容性和通用性, 可以镜像 _任意_ 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整  
-    并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
-    _现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进_  
-  
- 3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
-  (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  
-  
- 4. CDN Support, hot statistic resource can serve by CDN, dramatically increase speed  
-  CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  
-  
- 5. Easy to config and deploy, highly automatic  
-  非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  
-  
- 6. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
-  访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  
-  
- 7. Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly  
-  自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  
-  
- 8. Stream content support (audio/video)  
-  流媒体支持(视频/音频)  
-  
- 9. Production ready.  
-    程序已经经受住了生产环境的考验  
-    
-        使用的服务器均为 256M OpenVZ VPS
-        Google:  
-            单台服务器
-            日6kPV, 峰值每小时740PV  
-            峰值时段CPU占用小于10%  
-        Youtube:  
-            1台主服务器+8台视频服务器  
-            日1wPV, 峰值每小时754PV  
-            日发送流量178GB  
-            高峰时段1080P流畅  
-
 ## 一键部署脚本
 https://github.com/aploium/zmirror-onekey  
 
@@ -162,7 +120,48 @@ However, due to my limited time, zmirror was only fully tested in:
 ### Upgrade
  - (for users of git) `cd YOUR_ZMIRROR_FOLDER` and `git pull`
  - (for users of plain zip download) re-download, unzip, and override all files
- 
+
+## Feature
+ 1. Completely mirror, provide some (almost) out-of-box configs  
+  创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站  
+  提供几个(几乎)开箱即用的网站镜像配置文件  
+
+ 2. Mirror ANY website, highly compatible  
+    非常高的兼容性和通用性, 可以镜像 _任意_ 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整  
+    并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站  
+    _现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进_  
+  
+ 3. (MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)  
+  (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  
+  
+ 4. CDN Support, hot statistic resource can serve by CDN, dramatically increase speed  
+  CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  
+  
+ 5. Easy to config and deploy, highly automatic  
+  非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  
+  
+ 6. Access control(IP, user-agent), visitor verification(question answer, or custom verification function)  
+  访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  
+  
+ 7. Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly  
+  自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  
+  
+ 8. Stream content support (audio/video)  
+  流媒体支持(视频/音频)  
+  
+ 9. Production ready.  
+    程序已经经受住了生产环境的考验  
+    
+        使用的服务器均为 256M OpenVZ VPS
+        Google:  
+            单台服务器
+            日6kPV, 峰值每小时740PV  
+            峰值时段CPU占用小于10%  
+        Youtube:  
+            1台主服务器+8台视频服务器  
+            日1wPV, 峰值每小时754PV  
+            日发送流量178GB  
+            高峰时段1080P流畅  
 
 ## Issues Report
 
