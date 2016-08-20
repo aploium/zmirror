@@ -34,9 +34,9 @@ class ZmirrorTest(unittest.TestCase):
             dict(name='test_task', priority=42, interval=1, target='cache_clean', kwargs={'is_force_flush': True})
         )
         config.custom_text_rewriter_enable = True
-        config.enable_static_resource_CDN = True
         config.human_ip_verification_enabled = True
         config.CDN_domains = ('127.0.0.1',)
+        config.verbose_level = 2
 
         import zmirror
         zmirror.human_ip_verification_enabled = False
@@ -66,7 +66,7 @@ class ZmirrorTest(unittest.TestCase):
         """
         # https://www.kernel.org/
         rv = self.app.get('/', environ_base={'REMOTE_ADDR': '1.2.3.4'},
-                          headers={"accept-encoding":"gzip, deflate, br"}
+                          headers={"accept-encoding": "gzip, deflate, br"}
                           )
         assert isinstance(rv, Response)
         self.assertIn(b'The Linux Kernel Archives', rv.data)  # title
@@ -153,9 +153,9 @@ class ZmirrorTest(unittest.TestCase):
 
         rv = self.app.get('/css', environ_base={'REMOTE_ADDR': '1.2.3.4'})
         print(rv.headers)
-        rv=self.app.get('/css1/233', environ_base={'REMOTE_ADDR': '1.2.3.4'})
+        rv = self.app.get('/css1/233', environ_base={'REMOTE_ADDR': '1.2.3.4'})
         print(rv.headers)
-        rv=self.app.get('/css2/233', environ_base={'REMOTE_ADDR': '1.2.3.4'})
+        rv = self.app.get('/css2/233', environ_base={'REMOTE_ADDR': '1.2.3.4'})
         print(rv.headers)
 
     def test_verification(self):
@@ -167,10 +167,10 @@ class ZmirrorTest(unittest.TestCase):
 
         rv = self.app.get('/', environ_base={'REMOTE_ADDR': '1.2.3.4'}, follow_redirects=True)
         print(rv.data)
-        rv = self.app.post('/ip_ban_verify_page',data={"0":"CorrectAnswer",
-                                                       "student_id":"2333",
-                                                       "password":"123456",
-                                                       "origin":"aHR0cDovL2xvY2FsaG9zdC8="},
+        rv = self.app.post('/ip_ban_verify_page', data={"0": "CorrectAnswer",
+                                                        "student_id": "2333",
+                                                        "password": "123456",
+                                                        "origin": "aHR0cDovL2xvY2FsaG9zdC8="},
                            environ_base={'REMOTE_ADDR': '1.2.3.4'}, follow_redirects=True
                            )
         print(rv.data)
