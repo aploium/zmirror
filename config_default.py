@@ -518,7 +518,7 @@ mime_based_static_resource_CDN = True
 # Dependency 依赖:
 #     enable_static_resource_CDN == True
 #     mime_based_static_resource_CDN == True
-cdn_redirect_code_if_cannot_hard_rewrite = 0
+cdn_redirect_code_if_cannot_hard_rewrite = 301
 
 # v0.14.1+
 # When use soft redirect, whether encode(gzip + base64) query string into url path.
