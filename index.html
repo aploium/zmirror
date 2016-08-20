@@ -22,7 +22,7 @@
       <h1>
 <a id="zmirror" class="anchor" href="#zmirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>zmirror</h1>
 
-<p><a href="https://github.com/aploium/zmirror"><img src="https://img.shields.io/badge/version-0.23.2--dev-blue.svg" alt="version"></a>
+<p><a href="https://github.com/aploium/zmirror"><img src="https://img.shields.io/badge/version-0.23.3--dev-blue.svg" alt="version"></a>
 <a href="https://travis-ci.org/aploium/zmirror"><img src="https://travis-ci.org/aploium/zmirror.svg?branch=master" alt="Build Status"></a>
 <a href="https://codecov.io/gh/aploium/zmirror"><img src="https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg" alt="codecov"></a>
 <a href="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c"><img src="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square" alt="Dependency Status"></a>
@@ -33,8 +33,6 @@
 比如国内可以访问的Google镜像/中文维基镜像 请看<code>more_configs</code>文件夹下的配置文件  </p>
 
 <p>程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像  </p>
-
-<p>虽然程序已经经受住了生产环境的考验, 但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  </p>
 
 <h2>
 <a id="demo" class="anchor" href="#demo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Demo</h2>
@@ -102,45 +100,9 @@ Youtube Mobile 不支持iOS</li>
 <p>Screenshots are here: <a href="https://github.com/aploium/zmirror/wiki/Screenshots">wiki-screenshots</a>  </p>
 
 <h2>
-<a id="feature" class="anchor" href="#feature" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Feature</h2>
+<a id="一键部署脚本" class="anchor" href="#%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2%E8%84%9A%E6%9C%AC" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>一键部署脚本</h2>
 
-<ol>
-<li><p>Completely mirror, provide some (almost) out-of-box configs<br>
-创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站<br>
-提供几个(几乎)开箱即用的网站镜像配置文件  </p></li>
-<li><p>Mirror ANY website, highly compatible<br>
-非常高的兼容性和通用性, 可以镜像 <em>任意</em> 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整<br>
-并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站<br>
-<em>现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进</em>  </p></li>
-<li><p>(MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)<br>
-(基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  </p></li>
-<li><p>CDN Support, hot statistic resource can serve by CDN, dramatically increase speed<br>
-CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  </p></li>
-<li><p>Easy to config and deploy, highly automatic<br>
-非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  </p></li>
-<li><p>Access control(IP, user-agent), visitor verification(question answer, or custom verification function)<br>
-访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  </p></li>
-<li><p>Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly<br>
-自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  </p></li>
-<li><p>Stream content support (audio/video)<br>
-流媒体支持(视频/音频)  </p></li>
-<li>
-<p>Production ready.<br>
-程序已经经受住了生产环境的考验  </p>
-
-<pre><code>使用的服务器均为 256M OpenVZ VPS
-Google:  
-    单台服务器
-    日6kPV, 峰值每小时740PV  
-    峰值时段CPU占用小于10%  
-Youtube:  
-    1台主服务器+8台视频服务器  
-    日1wPV, 峰值每小时754PV  
-    日发送流量178GB  
-    高峰时段1080P流畅  
-</code></pre>
-</li>
-</ol>
+<p><a href="https://github.com/aploium/zmirror-onekey">https://github.com/aploium/zmirror-onekey</a>  </p>
 
 <h2>
 <a id="out-of-box-configs" class="anchor" href="#out-of-box-configs" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Out-of-box configs</h2>
@@ -262,7 +224,9 @@ Settings in the <code>config.py</code> would override the default ones  </p>
 <h4>
 <a id="deploy-an-actual-mirror" class="anchor" href="#deploy-an-actual-mirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy an actual mirror</h4>
 
-<p>请看以下教程:  </p>
+<p>请使用: <a href="https://github.com/aploium/zmirror-onekey">一键部署脚本</a>  </p>
+
+<p>若希望手工部署, 可以看以下教程:  </p>
 
 <ol>
 <li>
@@ -281,6 +245,47 @@ Settings in the <code>config.py</code> would override the default ones  </p>
 </li>
 <li>(for users of plain zip download) re-download, unzip, and override all files</li>
 </ul>
+
+<h2>
+<a id="feature" class="anchor" href="#feature" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Feature</h2>
+
+<ol>
+<li><p>Completely mirror, provide some (almost) out-of-box configs<br>
+创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站<br>
+提供几个(几乎)开箱即用的网站镜像配置文件  </p></li>
+<li><p>Mirror ANY website, highly compatible<br>
+非常高的兼容性和通用性, 可以镜像 <em>任意</em> 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整<br>
+并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站<br>
+<em>现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进</em>  </p></li>
+<li><p>(MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)<br>
+(基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  </p></li>
+<li><p>CDN Support, hot statistic resource can serve by CDN, dramatically increase speed<br>
+CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  </p></li>
+<li><p>Easy to config and deploy, highly automatic<br>
+非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  </p></li>
+<li><p>Access control(IP, user-agent), visitor verification(question answer, or custom verification function)<br>
+访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  </p></li>
+<li><p>Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly<br>
+自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  </p></li>
+<li><p>Stream content support (audio/video)<br>
+流媒体支持(视频/音频)  </p></li>
+<li>
+<p>Production ready.<br>
+程序已经经受住了生产环境的考验  </p>
+
+<pre><code>使用的服务器均为 256M OpenVZ VPS
+Google:  
+    单台服务器
+    日6kPV, 峰值每小时740PV  
+    峰值时段CPU占用小于10%  
+Youtube:  
+    1台主服务器+8台视频服务器  
+    日1wPV, 峰值每小时754PV  
+    日发送流量178GB  
+    高峰时段1080P流畅  
+</code></pre>
+</li>
+</ol>
 
 <h2>
 <a id="issues-report" class="anchor" href="#issues-report" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Issues Report</h2>
@@ -335,6 +340,14 @@ Oh, don't forget to turn <code>enable_static_resource_CDN</code> to True (case s
 Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN.  </p>
 
 <p>If your CDN storge your file permanently (like qiniu), you can disable local cache to save space, but if your CDN is temporarily storge (like cloudflare), please keep local cache enabled.</p>
+
+<h2>
+<a id="deploy-to-server" class="anchor" href="#deploy-to-server" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy To Server</h2>
+
+<p>请看这篇教程 <a href="https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F">部署支持HTTPS和HTTP/2的zmirror镜像</a>  </p>
+
+<p>Or, if you are family with flask, you can see flask's official deploy tutorial:<br>
+    <a href="http://flask.pocoo.org/docs/0.11/deploying/">http://flask.pocoo.org/docs/0.11/deploying/</a>  </p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/aploium/zmirror">zmirror</a> is maintained by <a href="https://github.com/aploium">aploium</a>.</span>
