@@ -1,3 +1,7 @@
+以下为手动部署教程, 非常建议使用**一键部署脚本**:  
+https://github.com/aploium/zmirror-onekey  
+
+
 本教程使用zmirror自带的配置文件, 在一台**全新安装**的Ubuntu服务器上部署部署支持HTTPS和HTTP/2的zmirror镜像  
 本教程以Google镜像为例  
 适用于 Ubuntu 14.04/15.10/16.04+  

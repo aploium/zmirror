@@ -1,5 +1,8 @@
 # 在一台VPS部署多个zmirror镜像
 
+以下为手动部署教程, 非常建议使用**一键部署脚本**:  
+https://github.com/aploium/zmirror-onekey  
+
 ## 前置需求
 
 * 一台国外的服务器  
