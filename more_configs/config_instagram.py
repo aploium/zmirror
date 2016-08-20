@@ -16,6 +16,7 @@
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'
 my_host_scheme = 'http://'
+my_host_port = None  # None表示使用默认端口, 可以设置成非标准端口, 比如 81
 
 # ############## Target Domain Settings ##############
 target_domain = 'www.instagram.com'
@@ -57,7 +58,8 @@ external_domains = (
 force_https_domains = 'ALL'
 
 enable_automatic_domains_whitelist = True
-domains_whitelist_auto_add_glob_list = ('*.facebook.com','*.fbcdn.net','*.facebook.net','*.akamaihd.net','*.instagram.com','*.cdninstagram.com')
+domains_whitelist_auto_add_glob_list = (
+    '*.facebook.com', '*.fbcdn.net', '*.facebook.net', '*.akamaihd.net', '*.instagram.com', '*.cdninstagram.com')
 
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
@@ -66,3 +68,13 @@ requests_proxies = dict(
     http='http://127.0.0.1:8123',
     https='https://127.0.0.1:8123',
 )
+
+# ############## CDN ################
+# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
+# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
+target_static_domains = {
+    'scontent.cdninstagram.com',
+    'static.xx.fbcdn.net',
+    'scontent.xx.fbcdn.net',
+    'external.xx.fbcdn.net',
+}

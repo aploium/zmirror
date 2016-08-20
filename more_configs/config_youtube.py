@@ -43,7 +43,7 @@ my_host_port = None  # None表示使用默认端口, 可以设置成非标准端
 
 # ############## Target Domain Settings ##############
 target_domain = 'www.youtube.com'
-#target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第53行还有一处
+# target_domain = 'm.youtube.com' # 如果是YoutubeMobile, 请注释掉上一行, 然后取消这一行的注释, 第53行还有一处
 target_scheme = 'https://'
 
 # 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
@@ -127,3 +127,17 @@ shadow_url_redirect_regex = (
 )
 
 text_like_mime_keywords = ('text', 'json', 'javascript', 'xml', 'x-www-form-urlencoded')
+
+# ############## CDN ################
+# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
+# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
+target_static_domains = {
+    'www.gstatic.com',
+    's.ytimg.com',
+    'i.ytimg.com',
+    'i1.ytimg.com',
+    'csi.gstatic.com',
+    'fonts.gstatic.com',
+    'ssl.gstatic.com',
+    'yt3.ggpht.com',
+}

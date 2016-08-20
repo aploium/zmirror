@@ -3,8 +3,7 @@
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 #
 # 使用方法:
-#   复制本文件和 config_twitter_pc.py(有些重复选项依赖于它) 两个文件 到 zmirror.py 同级目录,
-#       重命名 config_twitter_pc.py 为 config.py
+#   复制本文件到 zmirror.py 同级目录, 并重命名为 config.py
 #
 # 本配置文件假定你的服务器本身在墙外
 # 如果服务器本身在墙内(或者在本地环境下测试, 请修改`Proxy Settings`中的设置(在PC站的配置文件中)
@@ -17,8 +16,6 @@
 # 警告: twitter镜像在非https环境下可能会无法注册, 其他功能也可能会出现问题, 请在https环境下部署twitter镜像
 # ########################################
 
-# 由于很多设置跟twitterPC一样,所以从twitterPC的配置文件导入
-from .config_twitter_pc import *
 
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'
@@ -28,8 +25,114 @@ my_host_scheme = 'http://'
 target_domain = 'mobile.twitter.com'
 target_scheme = 'https://'
 
-# 删除 mobile.twitter.com, 添加 twitter.com
-external_domains.remove('mobile.twitter.com')
-external_domains.append('twitter.com')
+# 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
+# 实际镜像一个新的站时, 手动只需要添加很少的几个域名就可以了.
+# 自动采集会不断告诉你新域名
+external_domains = [
+    'twitter.com',
 
-# 其他设置都跟twitterPC站配置文件相同
+    't.co',
+    'dev.twitter.com',
+    'ads.twitter.com',
+    'analytics.twitter.com',
+    'pic.twitter.com',
+    'api.twitter.com',
+    'platform.twitter.com',
+    'upload.twitter.com',
+    'ton.twitter.com',
+    'support.twitter.com',
+    'about.twitter.com',
+    'tweetdeck-devel.atla.twitter.com',
+    'tweetdeck-devel.smf1.twitter.com',
+    'tdapi-staging.smf1.twitter.com',
+    'tweetdeck.localhost.twitter.com',
+    'tweetdeck.twitter.com',
+    'tdapi-staging.atla.twitter.com',
+    'localhost.twitter.com',
+    'donate.twitter.com',
+    'syndication.twitter.com',
+    'status.twitter.com',
+    'engineering.twitter.com',
+    'help.twitter.com',
+    'blog.twitter.com',
+    'business.twitter.com',
+    'cards-dev.twitter.com',
+
+    'g2.twimg.com',
+    'hca.twimg.com',
+    'g.twimg.com',
+    'video.twimg.com',
+    'ma.twimg.com',
+    'abs.twimg.com',
+    'pbs.twimg.com',
+    'ton.twimg.com',
+    'ma-0.twimg.com',
+    'ma-1.twimg.com',
+    'ma-2.twimg.com',
+    'o.twimg.com',
+    'abs-0.twimg.com',
+    'abs-1.twimg.com',
+    'abs-2.twimg.com',
+    'amp.twimg.com',
+
+    'www.google.com',
+    'apis.google.com',
+    'accounts.google.com',
+    'accounts.youtube.com',
+    'fonts.googleapis.com',
+    'ssl.gstatic.com',
+    'www.gstatic.com',
+    'encrypted-tbn0.gstatic.com',
+    'encrypted-tbn1.gstatic.com',
+    'encrypted-tbn2.gstatic.com',
+    'encrypted-tbn3.gstatic.com',
+]
+
+force_https_domains = 'ALL'
+
+enable_automatic_domains_whitelist = True
+domains_whitelist_auto_add_glob_list = ('*.twitter.com', '*.twimg.com',)
+
+# ############## Proxy Settings ##############
+# 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
+is_use_proxy = False
+requests_proxies = dict(
+    http='http://127.0.0.1:8123',
+    https='https://127.0.0.1:8123',
+)
+
+text_like_mime_keywords = ('text', 'json', 'javascript', 'xml', 'x-mpegurl')
+
+# ############## Misc ##############
+# 不加这个似乎也没影响的样子..... 不过以防万一还是加上吧
+custom_allowed_remote_headers = {
+    'access-control-allow-credentials', 'access-control-allow-headers', 'access-control-allow-methods',
+    'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
+
+# ############## CDN ################
+# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
+# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
+target_static_domains = {
+    'g2.twimg.com',
+    'hca.twimg.com',
+    'g.twimg.com',
+    'video.twimg.com',
+    'ma.twimg.com',
+    'abs.twimg.com',
+    'pbs.twimg.com',
+    'ton.twimg.com',
+    'ma-0.twimg.com',
+    'ma-1.twimg.com',
+    'ma-2.twimg.com',
+    'o.twimg.com',
+    'abs-0.twimg.com',
+    'abs-1.twimg.com',
+    'abs-2.twimg.com',
+    'amp.twimg.com',
+    'ssl.gstatic.com',
+    'www.gstatic.com',
+    'encrypted-tbn0.gstatic.com',
+    'encrypted-tbn1.gstatic.com',
+    'encrypted-tbn2.gstatic.com',
+    'encrypted-tbn3.gstatic.com',
+}

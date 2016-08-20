@@ -33,11 +33,12 @@
 #   全功能: 0.167秒
 #   轻量版: 0.045秒
 
-# Github: https://github.com/Aploium/zmirror
+# Github: https://github.com/aploium/zmirror
 
 # ############## Local Domain Settings ##############
 my_host_name = '127.0.0.1'
 my_host_scheme = 'http://'
+my_host_port = None  # None表示使用默认端口, 可以设置成非标准端口, 比如 81
 
 # ############## Target Domain Settings ##############
 target_domain = 'www.google.com.hk'
@@ -148,6 +149,7 @@ external_domains = (
     's-v6exp1-ds.metric.gstatic.com',  # 需要轻量级Google镜像请注释掉本行
     'ci4.googleusercontent.com',  # 需要轻量级Google镜像请注释掉本行
     'gp3.googleusercontent.com',  # 需要轻量级Google镜像请注释掉本行
+    'accounts.gstatic.com',  # 需要轻量级Google镜像请注释掉本行
 
     # For Google Map (optional)
     'maps-api-ssl.google.com',  # 需要轻量级Google镜像请注释掉本行
@@ -170,7 +172,8 @@ force_https_domains = 'ALL'
 
 # 需要轻量级Google的请一定要注释掉下面这两行, 否则会动态添加大量的域名, 导致很快就变慢(支持的Google服务也变多)
 enable_automatic_domains_whitelist = True  # 需要轻量级Google镜像请注释掉本行
-domains_whitelist_auto_add_glob_list = ('*.google.com', '*.gstatic.com', '*.google.com.hk','*.googleapis.com')  # 需要轻量级Google镜像请注释掉本行
+domains_whitelist_auto_add_glob_list = (
+    '*.google.com', '*.gstatic.com', '*.google.com.hk', '*.googleapis.com')  # 需要轻量级Google镜像请注释掉本行
 
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
@@ -190,3 +193,52 @@ isolated_domains = {'zh.wikipedia.org', 'zh.m.wikipedia.org'}
 # 这是一个方便的设置, 如果你访问 /wiki ,程序会自动重定向到后面这个长长的wiki首页
 url_custom_redirect_enable = True
 url_custom_redirect_list = {'/wiki': '/extdomains/https-zh.wikipedia.org/'}
+
+# ############## CDN ################
+# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
+# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
+target_static_domains = {
+    'upload.wikipedia.org',
+    'meta.wikimedia.org',
+    'ssl.gstatic.com',
+    'www.gstatic.com',
+    'encrypted-tbn0.gstatic.com',
+    'encrypted-tbn1.gstatic.com',
+    'encrypted-tbn2.gstatic.com',
+    'encrypted-tbn3.gstatic.com',
+    'csi.gstatic.com',
+    'fonts.googleapis.com',
+    't0.gstatic.com',
+    't1.gstatic.com',
+    't2.gstatic.com',
+    't3.gstatic.com',
+    'mt0.gstatic.com',
+    'mt1.gstatic.com',
+    'mt2.gstatic.com',
+    'mt3.gstatic.com',
+    'mt4.gstatic.com',
+    'maps.gstatic.com',
+    'fonts.gstatic.com',
+    'lh1.googleusercontent.com',
+    'lh2.googleusercontent.com',
+    'lh3.googleusercontent.com',
+    'lh4.googleusercontent.com',
+    'lh5.googleusercontent.com',
+    'lh6.googleusercontent.com',
+    'accounts.gstatic.com',
+    'geo0.ggpht.com',
+    'geo1.ggpht.com',
+    'geo2.ggpht.com',
+    'geo3.ggpht.com',
+    'geo4.ggpht.com',
+    'gm0.ggpht.com',
+    'gm1.ggpht.com',
+    'gm2.ggpht.com',
+    'gm3.ggpht.com',
+    'gm4.ggpht.com',
+    'lh0.ggpht.com',
+    'lh1.ggpht.com',
+    'lh2.ggpht.com',
+    'lh3.ggpht.com',
+    'lh4.ggpht.com',
+}
