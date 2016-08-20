@@ -13,8 +13,6 @@ an http reverse proxy designed to automatically and completely mirror a website 
 
 虽然程序已经经受住了生产环境的考验, 但是仍然处于活跃的开发过程中, 仍可能会发生比较大的文件结构、程序架构的改变(会尽可能保证向下兼容性的)  
   
-_这篇Readme更新不及时, 请看config_default.py中每个设置的介绍, 非常详细_  
-  
 ## Demo
 * **Google** 
     * *PC & Mobile*   https://g.zmirrordemo.com  
@@ -79,6 +77,9 @@ Screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror/wiki
             日1wPV, 峰值每小时754PV  
             日发送流量178GB  
             高峰时段1080P流畅  
+
+## 一键部署脚本
+https://github.com/aploium/zmirror-onekey  
 
 ## Out-of-box configs
 Together with the program, provided several (almost) out-of-box configs  
@@ -150,7 +151,9 @@ However, due to my limited time, zmirror was only fully tested in:
 
 #### Deploy an actual mirror
 
-请看以下教程:  
+请使用: [一键部署脚本](https://github.com/aploium/zmirror-onekey)  
+
+若希望手工部署, 可以看以下教程:  
 
 1. [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
 2. [在一台VPS部署多个zmirror镜像](https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F)  
