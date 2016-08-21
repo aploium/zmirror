@@ -64,6 +64,7 @@ domains_whitelist_auto_add_glob_list = (
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
 is_use_proxy = False
+# 代理的格式及SOCKS代理, 请看 http://docs.python-requests.org/en/latest/user/advanced/#proxies
 requests_proxies = dict(
     http='http://127.0.0.1:8123',
     https='https://127.0.0.1:8123',
