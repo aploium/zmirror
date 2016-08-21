@@ -178,8 +178,6 @@ if not enable_static_resource_CDN:
 if not mime_based_static_resource_CDN:
     cdn_redirect_code_if_cannot_hard_rewrite = 0  # record incoming urls if we should use cdn on it
 url_to_use_cdn = {}
-if not cdn_redirect_code_if_cannot_hard_rewrite:
-    cdn_redirect_encode_query_str_into_url = False
 if not isinstance(target_static_domains, set):
     target_static_domains = set()
 if not enable_stream_content_transfer:
@@ -1996,16 +1994,17 @@ def rewrite_client_request():
     """
     has_been_rewrited = False
     if cdn_redirect_encode_query_str_into_url:
-        if is_ua_in_whitelist(str(request.user_agent)):
-            try:
-                real_url = extract_real_url_from_embedded_url(request.url)
-                if real_url is not None:
-                    request.url = real_url
-                    request.path = urlsplit(real_url).path
-            except:
-                traceback.print_exc()
-                raise
-            else:
+        try:
+            real_url = extract_real_url_from_embedded_url(request.url)
+            if verbose_level >= 3:
+                dbgprint("BeforeEmbeddedExtract:" + request.url + " After:" + real_url)
+        except:
+            traceback.print_exc()
+            raise
+        else:
+            if real_url is not None:
+                request.url = real_url
+                request.path = urlsplit(real_url).path
                 has_been_rewrited = True
 
     if url_custom_redirect_enable and shadow_url_redirect_regex:
