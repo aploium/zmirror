@@ -24,7 +24,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.23.4'
+__VERSION__ = '0.24.0'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -608,10 +608,12 @@ def decode_mirror_url(mirror_url=None):
         real_path_query = input_path_query[domain_end_pos:]
 
         if real_domain[:6] == 'https-':
+            # 如果显式指定了 /extdomains/https-域名 形式(为了兼容老版本)的, 那么使用https
             real_domain = real_domain[6:]
             _is_https = True
         else:
-            _is_https = False
+            # 如果是 /extdomains/域名 形式, 没有 "https-" 那么根据域名判断是否使用HTTPS
+            _is_https = is_target_domain_use_https(real_domain)
 
         real_path_query = client_requests_text_rewrite(real_path_query)
 
@@ -659,8 +661,7 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
         our_prefix = ''
 
     if domain not in domain_alias_to_target_set:
-        remote_scheme = get_ext_domain_inurl_scheme_prefix(domain)
-        middle_part = '/extdomains/' + remote_scheme + domain
+        middle_part = '/extdomains/' + domain
     else:
         middle_part = ''
 
@@ -676,21 +677,21 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
 convert_to_mirror_url = encode_mirror_url
 
 
-def get_ext_domain_inurl_scheme_prefix(ext_domain, force_https=None):
-    """根据域名返回其在镜像url中的https中缀(或没有)"""
-    if force_https is not None:
-        if force_https:
-            return 'https-'
-        else:
-            return ''
+def is_target_domain_use_https(target_domain):
+    """请求目标域名时是否使用https"""
     if force_https_domains == 'NONE':
-        return ''
+        return False
     if force_https_domains == 'ALL':
-        return 'https-'
-    if ext_domain in force_https_domains:
-        return 'https-'
+        return True
+    if target_domain in force_https_domains:
+        return True
     else:
-        return ''
+        return False
+
+
+def get_ext_domain_inurl_scheme_prefix(ext_domain, force_https=None):
+    """旧版本遗留函数, 已经不再需要, 永远返回空字符串"""
+    return ''
 
 
 def add_ssrf_allowed_domain(domain):
@@ -1069,8 +1070,7 @@ def regex_url_reassemble(match_obj):
     # dbgprint('url_no_scheme', url_no_scheme)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
-        scheme_prefix = get_ext_domain_inurl_scheme_prefix(domain)
-        path = '/extdomains/' + scheme_prefix + url_no_scheme
+        path = '/extdomains/' + url_no_scheme
 
     # dbgprint('final_path', path, v=5)
     if mime_based_static_resource_CDN and url_no_scheme in url_to_use_cdn:
@@ -1092,7 +1092,7 @@ def regex_url_reassemble(match_obj):
         # A lot of cases included, the followings are just the most typical examples.
         # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
         # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
-        # https://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/https-external.pw/css/main.css
+        # http://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.pw/css/main.css
         replace_to_scheme_domain = my_host_scheme + CDN_domains[zlib.adler32(path.encode()) % cdn_domains_number]
 
     # else:  # this_request.mime == 'application/javascript':
@@ -1419,13 +1419,11 @@ def response_cookies_deep_copy():
                     value = regex_cookie_path_rewriter.sub('path=/;', value)
                 elif enable_aggressive_cookies_path_rewrite is not None:
                     # 重写HttpOnly Cookies的path到当前url下
-                    # eg(/extdomains/https-a.foobar.com): path=/verify; -> path=/extdomains/https-a.foobar.com/verify
+                    # eg(/extdomains/a.foobar.com): path=/verify; -> path=/extdomains/a.foobar.com/verify
 
                     if this_request.remote_domain not in domain_alias_to_target_set:  # do not rewrite main domains
-                        _scheme_prefix = get_ext_domain_inurl_scheme_prefix(this_request.remote_domain,
-                                                                            force_https=this_request.is_https)
                         value = regex_cookie_path_rewriter.sub(
-                            '\g<prefix>=/extdomains/' + _scheme_prefix + this_request.remote_domain + '\g<path>', value)
+                            '\g<prefix>=/extdomains/' + this_request.remote_domain + '\g<path>', value)
 
             header_cookies_string_list.append(value)
     return header_cookies_string_list
@@ -1506,12 +1504,10 @@ def response_content_rewrite():
 
 def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     if domain not in domains_alias_to_target_domain:
-        domain_prefix = '/extdomains/' + get_ext_domain_inurl_scheme_prefix(domain) + domain
-        domain_prefix_https = '/extdomains/https-' + domain
-        domain_prefix_https_esc = r'\/extdomains\/https-' + domain
+        domain_prefix = '/extdomains/' + domain
+        domain_prefix_https_esc = r'\/extdomains\/' + domain
     else:
         domain_prefix = ''
-        domain_prefix_https = ''
         domain_prefix_https_esc = ''
 
     # Static resources domains hard rewrite
@@ -1532,13 +1528,13 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     # Explicit HTTPS scheme must be kept
     resp_text = resp_text.replace(prefix['https_double_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\\/'))
     resp_text = resp_text.replace(prefix['https_esc'], _myurl_prefix_escaped + domain_prefix_https_esc)
-    resp_text = resp_text.replace(prefix['https'], _myurl_prefix + domain_prefix_https)
+    resp_text = resp_text.replace(prefix['https'], _myurl_prefix + domain_prefix)
 
     resp_text = resp_text.replace(prefix['https_esc_ue'], quote_plus(_myurl_prefix_escaped + domain_prefix_https_esc))
-    resp_text = resp_text.replace(prefix['https_ue'], quote_plus(_myurl_prefix + domain_prefix_https))
+    resp_text = resp_text.replace(prefix['https_ue'], quote_plus(_myurl_prefix + domain_prefix))
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-    # _buff: my-domain.com/extdomains/https-remote.com or my-domain.com
+    # _buff: my-domain.com/extdomains/remote.com or my-domain.com
     if domain not in domains_alias_to_target_domain:
         _buff = _my_host_name + domain_prefix
     else:
@@ -1606,7 +1602,7 @@ def response_text_rewrite(resp_text):
 
     # External Domains Rewrite
     # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
-    # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/https-external.com/foo1/bar2
+    # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
     for domain_id, domain in enumerate(external_domains):
         resp_text = response_text_basic_rewrite(resp_text, domain, domain_id)
         if developer_string_trace is not None and developer_string_trace in resp_text:
@@ -1675,9 +1671,9 @@ def client_requests_text_rewrite(raw_text):
     Also Support urlencoded url.
     This usually used in rewriting request params
 
-    eg. http://foo.bar/extdomains/https-accounts.google.com to http://accounts.google.com
+    eg. http://foo.bar/extdomains/accounts.google.com to http://accounts.google.com
     eg2. foo.bar/foobar to www.google.com/foobar
-    eg3. http%3a%2f%2fg.zju.tools%2fextdomains%2Fhttps-accounts.google.com%2f233
+    eg3. http%3a%2f%2fg.zju.tools%2fextdomains%2Faccounts.google.com%2f233
             to http%3a%2f%2faccounts.google.com%2f233
     """
     replaced = regex_request_rewriter.sub('\g<origin_domain>', raw_text)
