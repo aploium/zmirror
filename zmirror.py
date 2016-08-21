@@ -24,7 +24,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.24.0'
+__VERSION__ = '0.24.1'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -180,7 +180,17 @@ if not enable_static_resource_CDN:
     disable_legacy_file_recognize_method = True
 if not mime_based_static_resource_CDN:
     cdn_redirect_code_if_cannot_hard_rewrite = 0  # record incoming urls if we should use cdn on it
-url_to_use_cdn = {}
+
+# 记录一个URL的一些信息, 以及是否应该使用CDN
+# 结构例子见下
+url_to_use_cdn = {
+    "www.fake-domain.com/folder/foo/bar.png":
+        [True,  # Should this url use CDN
+         "image/png",  # MIME
+         17031,  # size, if size too small, will not redirect to cdn
+         ]
+}
+
 if not isinstance(target_static_domains, set):
     target_static_domains = set()
 if not enable_stream_content_transfer:
@@ -1807,6 +1817,7 @@ def request_remote_site_and_parse():
         url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]
         if (cdn_redirect_code_if_cannot_hard_rewrite
             and url_no_scheme in url_to_use_cdn and url_to_use_cdn[url_no_scheme][0] and request.method == 'GET'
+            and url_to_use_cdn[url_no_scheme][2] > cdn_soft_redirect_minimum_size  # 只有超过大小下限才会重定向
             and not is_ua_in_whitelist(str(request.user_agent))
             ):
             _path_for_client = extract_url_path_and_query(request.url)
@@ -1878,15 +1889,17 @@ def request_remote_site_and_parse():
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
         if url_no_scheme not in url_to_use_cdn:
+            # 记录本URL的信息
+            url_to_use_cdn[url_no_scheme] = [False, this_request.mime, len(this_request.remote_response.content)]
+
             if is_content_type_using_cdn(this_request.mime):
                 # mark it to use cdn, and record it's url without scheme.
                 # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
                 # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                url_to_use_cdn[url_no_scheme] = [True, this_request.mime]
+                url_to_use_cdn[url_no_scheme][0] = True  # 标记为使用CDN
                 if verbose_level >= 3: dbgprint('CDN enabled for:', url_no_scheme)
             else:
                 if verbose_level >= 3: dbgprint('CDN disabled for:', url_no_scheme)
-                url_to_use_cdn[url_no_scheme] = [False, '']
 
     # copy and parse remote response
     resp, req_time_body = copy_response(is_streamed=is_streamed)

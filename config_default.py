@@ -520,6 +520,12 @@ mime_based_static_resource_CDN = True
 #     mime_based_static_resource_CDN == True
 cdn_redirect_code_if_cannot_hard_rewrite = 301
 
+# v0.24.1+
+# 进行CDN软重定向(301/307)的体积下限
+# 对于体积过小的响应, 将不进行软重定向, 跟上面那个选项配合使用
+# 可以避免对一些特别小的图片进行无谓的重定向
+cdn_soft_redirect_minimum_size = 10 * 1024  # 10KB
+
 # v0.14.1+
 # When use soft redirect, whether encode(gzip + base64) query string into url path.
 #     recommended to enable, this can increase some CDN compatibility.
