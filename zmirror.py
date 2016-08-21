@@ -1996,13 +1996,12 @@ def rewrite_client_request():
     if cdn_redirect_encode_query_str_into_url:
         try:
             real_url = extract_real_url_from_embedded_url(request.url)
-            if verbose_level >= 3:
-                dbgprint("BeforeEmbeddedExtract:" + request.url + " After:" + real_url)
         except:
             traceback.print_exc()
             raise
         else:
             if real_url is not None:
+                dbgprint("BeforeEmbeddedExtract:", request.url, " After:", real_url)
                 request.url = real_url
                 request.path = urlsplit(real_url).path
                 has_been_rewrited = True
