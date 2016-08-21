@@ -1904,7 +1904,7 @@ def request_remote_site_and_parse():
         resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
         resp.headers.add('X-Compute-Time', "%.4f" % (time() - this_request.start_time - req_time_headers - req_time_body))
 
-    resp.headers.add('X-Powered-By', 'zmirror %s' % __VERSION__)
+    resp.headers.add('X-Powered-By', 'zmirror/%s' % __VERSION__)
 
     if developer_dump_all_traffics and not is_streamed:
         if not os.path.exists('traffic'):
