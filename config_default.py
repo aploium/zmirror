@@ -565,6 +565,9 @@ cdn_redirect_code_if_cannot_hard_rewrite = 301
 #     mime_based_static_resource_CDN == True
 #     cdn_redirect_code_if_cannot_hard_rewrite != 0
 #
+# 冲突:
+#     当本选项被开启时, `target_static_domains` 选项中的所有内容都会被忽略
+#
 # eg: https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
 #     ---> https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css
 # eg2: https://foo.com/a/b/?love=live (assume it returns an jpg) (base64 only)
@@ -612,7 +615,9 @@ mime_to_use_cdn = {
 #   漏掉一些静态资源域名不会出现功能上的问题, 但是把动态资源域名添加到这里, 很可能会出现功能性问题.
 # 只有在前面的 `external_domains` 选项中出现过的域名才会生效
 # 坏处: 被标记为静态资源的域名, 将[可能]无法享受 资源首次访问不CDN 带来的流量节省. 会带来更多的流量消耗
-# 在本文件底部有适用于google的静态域名列表
+#
+# 冲突:
+#   当 `cdn_redirect_encode_query_str_into_url` 被开启(默认开启)时, 本选项不会发挥任何作用
 target_static_domains = {
     'static-cdn1.example.com',
     'static-cdn2.example.com',

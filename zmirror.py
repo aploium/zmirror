@@ -153,6 +153,9 @@ if enable_keep_alive_per_domain:
 # 在 cdn_redirect_encode_query_str_into_url 中用于标示编码进url的分隔串
 cdn_url_query_encode_salt = 'zm24'
 _url_salt = re.escape(cdn_url_query_encode_salt)
+if cdn_redirect_encode_query_str_into_url:
+    # 两个选项冲突. 当本选项开启时, 会清空掉 `target_static_domains`
+    target_static_domains = set()
 
 # ## thread local var ##
 # 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用

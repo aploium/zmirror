@@ -108,31 +108,3 @@ text_like_mime_keywords = ('text', 'json', 'javascript', 'xml', 'x-mpegurl')
 custom_allowed_remote_headers = {
     'access-control-allow-credentials', 'access-control-allow-headers', 'access-control-allow-methods',
     'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}
-
-# ############## CDN ################
-# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
-# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
-target_static_domains = {
-    'g2.twimg.com',
-    'hca.twimg.com',
-    'g.twimg.com',
-    'video.twimg.com',
-    'ma.twimg.com',
-    'abs.twimg.com',
-    'pbs.twimg.com',
-    'ton.twimg.com',
-    'ma-0.twimg.com',
-    'ma-1.twimg.com',
-    'ma-2.twimg.com',
-    'o.twimg.com',
-    'abs-0.twimg.com',
-    'abs-1.twimg.com',
-    'abs-2.twimg.com',
-    'amp.twimg.com',
-    'ssl.gstatic.com',
-    'www.gstatic.com',
-    'encrypted-tbn0.gstatic.com',
-    'encrypted-tbn1.gstatic.com',
-    'encrypted-tbn2.gstatic.com',
-    'encrypted-tbn3.gstatic.com',
-}

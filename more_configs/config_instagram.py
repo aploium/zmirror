@@ -68,13 +68,3 @@ requests_proxies = dict(
     http='http://127.0.0.1:8123',
     https='https://127.0.0.1:8123',
 )
-
-# ############## CDN ################
-# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
-# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
-target_static_domains = {
-    'scontent.cdninstagram.com',
-    'static.xx.fbcdn.net',
-    'scontent.xx.fbcdn.net',
-    'external.xx.fbcdn.net',
-}

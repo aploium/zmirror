@@ -127,17 +127,3 @@ shadow_url_redirect_regex = (
 )
 
 text_like_mime_keywords = ('text', 'json', 'javascript', 'xml', 'x-www-form-urlencoded')
-
-# ############## CDN ################
-# 这项设置仅当启用CDN时有效, 不启用CDN时没有任何作用
-# 对于CDN的更多信息, 请看config.py中 `CDN Settings` 部分的说明
-target_static_domains = {
-    'www.gstatic.com',
-    's.ytimg.com',
-    'i.ytimg.com',
-    'i1.ytimg.com',
-    'csi.gstatic.com',
-    'fonts.gstatic.com',
-    'ssl.gstatic.com',
-    'yt3.ggpht.com',
-}
