@@ -24,7 +24,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.23.3-dev'
+__VERSION__ = '0.23.4'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
