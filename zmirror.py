@@ -2347,11 +2347,24 @@ def ip_ban_verify_page():
         return resp
 
 
-# noinspection PyUnusedLocal
 @app.route('/', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
 @app.route('/<path:input_path>', methods=['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'HEAD', 'PATCH'])
+def zmirror_enter(input_path='/'):
+    """入口函数的壳, 只是包了一层异常处理, 实际是 main_function() """
+    try:
+        resp = main_function(input_path=input_path)
+    except:
+        traceback.print_exc()
+        return generate_error_page(is_traceback=True)
+    else:
+        return resp
+
+
+# noinspection PyUnusedLocal
 def main_function(input_path='/'):
-    """本程序的实际入口函数"""
+    """本程序的实际入口函数
+    :rtype: Response
+    """
     dbgprint('-----BeginRequest-----')
 
     # this_request 类似于 flask 的 request, 是 zmirror 特有的一个 thread-local 变量
