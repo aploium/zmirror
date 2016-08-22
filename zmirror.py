@@ -1721,8 +1721,8 @@ def filter_redirect_and_rewrite_request():
 
     # 对请求进行过滤和检查, 不符合条件的请求(比如爬虫)将终止执行
     # 某些合法请求, 但是需要重定向的, 也在此处理
-    # 其中, filter_client_request() 是过滤不合法的, is_client_request_need_redirect() 是处理合法请求的重定向
-    filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
+    # 其中, filter_client_request() 是过滤不合法的, prior_request_redirect() 是处理合法请求的重定向
+    filter_or_rewrite_result = filter_client_request() or prior_request_redirect()
     if filter_or_rewrite_result is not None:
         dbgprint('-----EndRequest(redirect)-----')
         return filter_or_rewrite_result  # Ban or redirect if need
@@ -2107,7 +2107,7 @@ def filter_client_request():
     return None
 
 
-def is_client_request_need_redirect():
+def prior_request_redirect():
     """对用户的请求进行按需重定向处理
     与rewrite_client_request()不同, 使用301/307等进行外部重定向, 不改变服务器内部数据
     遇到任意一个需要重定向的, 即跳出本函数
@@ -2139,7 +2139,7 @@ def is_client_request_need_redirect():
 def rewrite_client_request():
     """
     在这里的所有重写都只作用程序内部, 对请求者不可见
-    与 is_client_request_need_redirect() 的外部301/307重定向不同,
+    与 prior_request_redirect() 的外部301/307重定向不同,
     本函数通过改变程序内部变量来起到重定向作用
     返回True表示进行了重定向, 需要重载某些设置, 返回False表示未重定向
     遇到重写后, 不会跳出本函数, 而是会继续下一项. 所以重写顺序很重要
