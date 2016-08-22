@@ -1711,6 +1711,48 @@ def response_cookie_rewrite(cookie_string):
 
 
 # ################# Begin Client Request Handler #################
+def filter_redirect_and_rewrite_request():
+    """
+    对用户请求进行过滤、重定向和内部重写
+    :return: 如果正常则返回None, 如果需要终止并响应, 则返回flask.Response
+    :rtype: Union[Response, None]
+    """
+
+    _temp = decode_mirror_url()  # 将用户请求的URL解析为对应的目标服务器URL
+    this_request.remote_domain = _temp['domain']  # type: str
+    this_request.is_https = _temp['is_https']  # type: bool
+    this_request.remote_path = _temp['path']  # type: str
+    this_request.remote_path_query = _temp['path_query']  # type: str
+
+    # 对请求进行过滤和检查, 不符合条件的请求(比如爬虫)将终止执行
+    # 某些合法请求, 但是需要重定向的, 也在此处理
+    # 其中, filter_client_request() 是过滤不合法的, is_client_request_need_redirect() 是处理合法请求的重定向
+    filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
+    if filter_or_rewrite_result is not None:
+        dbgprint('-----EndRequest(redirect)-----')
+        return filter_or_rewrite_result  # Ban or redirect if need
+
+    try:
+        # 进行请求的隐式重写/重定向
+        # 隐式重写只对 zmirror 内部生效, 对浏览器透明
+        has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
+    except:
+        return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
+
+    if has_been_rewrited:
+        # 如果进行了重写, 那么 has_been_rewrited 为 True
+        # 在 rewrite_client_request() 函数内部会更改 request.url
+        # 所以此时需要重新解析一遍
+        _temp = decode_mirror_url()
+        this_request.remote_domain = _temp['domain']  # type: str
+        this_request.is_https = _temp['is_https']  # type: bool
+        this_request.remote_path = _temp['path']  # type: str
+        this_request.remote_path_query = _temp['path_query']  # type: str
+
+    dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
+             'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
+
+
 def extract_client_header():
     """
     Extract necessary client header, filter out some.
@@ -2290,39 +2332,10 @@ def main_function(input_path='/'):
 
     infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
 
-    _temp = decode_mirror_url()  # 将用户请求的URL解析为对应的目标服务器URL
-    this_request.remote_domain = _temp['domain']  # type: str
-    this_request.is_https = _temp['is_https']  # type: bool
-    this_request.remote_path = _temp['path']  # type: str
-    this_request.remote_path_query = _temp['path_query']  # type: str
-
-    # 对请求进行过滤和检查, 不符合条件的请求(比如爬虫)将终止执行
-    # 某些合法请求, 但是需要重定向的, 也在此处理
-    # 其中, filter_client_request() 是过滤不合法的, is_client_request_need_redirect() 是处理合法请求的重定向
-    filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
-    if filter_or_rewrite_result is not None:
-        dbgprint('-----EndRequest(redirect)-----')
-        return filter_or_rewrite_result  # Ban or redirect if need
-
-    try:
-        # 进行请求的隐式重写/重定向
-        # 隐式重写只对 zmirror 内部生效, 对浏览器透明
-        has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
-    except:
-        return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
-
-    if has_been_rewrited:
-        # 如果进行了重写, 那么 has_been_rewrited 为 True
-        # 在 rewrite_client_request() 函数内部会更改 request.url
-        # 所以此时需要重新解析一遍
-        _temp = decode_mirror_url()
-        this_request.remote_domain = _temp['domain']  # type: str
-        this_request.is_https = _temp['is_https']  # type: bool
-        this_request.remote_path = _temp['path']  # type: str
-        this_request.remote_path_query = _temp['path_query']  # type: str
-
-    dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
-             'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
+    # 对用户请求进行过滤、重定向和内部重写
+    r = filter_redirect_and_rewrite_request()
+    if r is not None:  # 如果函数返回值不是None, 则表示需要响应给用户
+        return r
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if this_request.remote_domain not in allowed_domains_set:
