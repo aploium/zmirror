@@ -1977,10 +1977,8 @@ def request_remote_site_and_parse():
 
             return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
 
-    client_header = extract_client_header()  # 请求头
-
     if local_cache_enable:
-        resp = try_get_cached_response(this_request.remote_url, client_header)
+        resp = try_get_cached_response(this_request.remote_url, this_request.client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
             if this_request.start_time is not None:
@@ -1994,7 +1992,7 @@ def request_remote_site_and_parse():
         this_request.remote_response, req_time_headers = send_request(
             this_request.remote_url,
             method=request.method,
-            headers=client_header,
+            headers=this_request.client_header,
             data=data,  # client_requests_bin_rewrite(request.get_data()),
         )
         if this_request.remote_response.url != this_request.remote_url:
@@ -2359,6 +2357,7 @@ def main_function(input_path='/'):
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     # 其各个变量的含义如下:
     # this_request.start_time             处理请求开始的时间, unix 时间戳
+    #             .client_header          经过转换和重写以后的访问者请求头
     #             .content_type           远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
     #             .mime                   远程服务器响应的MIME, 比如 "text/html"
     #             .cache_control          远程服务器响应的cache_control内容
@@ -2394,6 +2393,8 @@ def main_function(input_path='/'):
     # 组装目标服务器URL, 即生成 this_request.remote_url 的值
     this_request.remote_url = assemble_remote_url()  # type: str
     this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
+    # 提取出经过必要重写后的客户请求头
+    this_request.client_header = extract_client_header()  # type: dict
 
     try:
         resp = request_remote_site_and_parse()
