@@ -2055,26 +2055,29 @@ def prior_request_redirect():
     :rtype: Union[Response, None]
     """
 
-    # hostname, extpath_query = _temp['domain'], _temp['path_query']
-    if this_request.remote_domain in domain_alias_to_target_set and '/extdomains/' == request.path[:12]:
+    # 非外部域名被错误地当成了外部域名, 则需要重定向修正
+    if not this_request.is_external_domain and '/extdomains/' == request.path[:12]:
         dbgprint('Requesting main domain in extdomains, redirect back.')
         return redirect(this_request.remote_path_query, code=307)
 
+    # 镜像隔离机制, 根据 referer 判断当前所处的镜像, 在子镜像中, 若请求不包含 /extdomains/ 的url, 将会被重定向修正
     if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
         reference_domain = decode_mirror_url(request.headers.get('referer'))['domain']
         if reference_domain in isolated_domains:
             return redirect(encode_mirror_url(this_request.remote_path_query, reference_domain), code=307)
 
     if url_custom_redirect_enable:
+        # 简单的自定义重定向, 详见 config: url_custom_redirect_list
         if request.path in url_custom_redirect_list:
             redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path], 1)
-            if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
+            dbgprint('Redirect from', request.url, 'to', redirect_to)
             return redirect(redirect_to, code=307)
 
+        # 基于正则的自定义重定向, 详见 config: url_custom_redirect_regex
         for regex_match, regex_replace in url_custom_redirect_regex:
-            if re.match(regex_match, extract_url_path_and_query(), flags=re.IGNORECASE) is not None:
-                redirect_to = re.sub(regex_match, regex_replace, extract_url_path_and_query(), flags=re.IGNORECASE)
-                if verbose_level >= 3: dbgprint('Redirect from', request.url, 'to', redirect_to)
+            if re.match(regex_match, this_request.remote_path_query, flags=re.IGNORECASE) is not None:
+                redirect_to = re.sub(regex_match, regex_replace, this_request.remote_path_query, flags=re.IGNORECASE)
+                dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)
 
 
