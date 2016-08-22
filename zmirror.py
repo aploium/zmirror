@@ -1750,17 +1750,18 @@ def filter_redirect_and_rewrite_request():
 
 def assemble_remote_url():
     """
-    组装目标服务器URL, 没有返回值, 结果被记录在 this_request.remote_url 变量中
+    组装目标服务器URL, 即生成 this_request.remote_url 的值
+    :rtype: str
     """
     if this_request.remote_domain not in domain_alias_to_target_set:
         # 请求的是外部域名 (external domains)
         scheme = 'https://' if this_request.is_https else 'http://'
-        this_request.remote_url = urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
         dbgprint('remote_url(ext):', this_request.remote_url)
+        return urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
     else:
         # 请求的是主域名及可以被当做(alias)主域名的域名
-        this_request.remote_url = urljoin(target_scheme + target_domain, this_request.remote_path_query)
         dbgprint('remote_url(main):', this_request.remote_url)
+        return urljoin(target_scheme + target_domain, this_request.remote_path_query)
 
 
 def ssrf_check_layer_1():
@@ -2375,7 +2376,7 @@ def main_function(input_path='/'):
             b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     # 组装目标服务器URL, 即生成 this_request.remote_url 的值
-    assemble_remote_url()
+    this_request.remote_url = assemble_remote_url()
 
     try:
         resp = request_remote_site_and_parse()
