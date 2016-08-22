@@ -1712,43 +1712,6 @@ def response_cookie_rewrite(cookie_string):
 
 
 # ################# Begin Client Request Handler #################
-def filter_redirect_and_rewrite_request():
-    """
-    对用户请求进行过滤、重定向和内部重写
-    :see also: `main_function()`
-    :return: 如果正常则返回None, 如果需要终止并响应, 则返回flask.Response
-    :rtype: Union[Response, None]
-    """
-
-    # 对请求进行过滤和检查, 不符合条件的请求(比如爬虫)将终止执行
-    # 某些合法请求, 但是需要重定向的, 也在此处理
-    # 其中, filter_client_request() 是过滤不合法的, prior_request_redirect() 是处理合法请求的重定向
-    filter_or_rewrite_result = filter_client_request() or prior_request_redirect()
-    if filter_or_rewrite_result is not None:
-        dbgprint('-----EndRequest(redirect)-----')
-        return filter_or_rewrite_result  # Ban or redirect if need
-
-    try:
-        # 进行请求的隐式重写/重定向
-        # 隐式重写只对 zmirror 内部生效, 对浏览器透明
-        has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
-    except:
-        return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
-
-    if has_been_rewrited:
-        # 如果进行了重写, 那么 has_been_rewrited 为 True
-        # 在 rewrite_client_request() 函数内部会更改 request.url
-        # 所以此时需要重新解析一遍
-        _temp = decode_mirror_url()
-        this_request.remote_domain = _temp['domain']  # type: str
-        this_request.is_https = _temp['is_https']  # type: bool
-        this_request.remote_path = _temp['path']  # type: str
-        this_request.remote_path_query = _temp['path_query']  # type: str
-
-    dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
-             'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
-
-
 def assemble_remote_url():
     """
     组装目标服务器URL, 即生成 this_request.remote_url 的值
@@ -1948,44 +1911,6 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse():
-    if mime_based_static_resource_CDN:  # CDN总开关
-        if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
-            # 该URL所对应的资源已知, 即之前已经被成功请求过
-            and this_request.url_no_scheme in url_to_use_cdn
-            # 并且该资源已经被判断为可以应用CDN
-            and url_to_use_cdn[this_request.url_no_scheme][0]
-            # 只缓存 GET 方法的资源
-            and request.method == 'GET'
-            # 只有超过大小下限才会重定向
-            and url_to_use_cdn[this_request.url_no_scheme][2] > cdn_soft_redirect_minimum_size
-            # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
-            and not is_ua_in_whitelist(str(request.user_agent))
-            ):
-            # 下面这个urljoin, 是把形如 https://foo.com/a.png?q=233 的url转化为对应的CDN URL https://cdn.com/a.png?q=233
-            redirect_to_url = urljoin(
-                my_host_scheme
-                # 根据url的crc32取余来选取一个CDN域名
-                # 使用crc32, 而不是随机数, 是为了确保相同的URL每次都能应用相同的CDN域名
-                # 以增加CDN和缓存命中率
-                + CDN_domains[zlib.adler32(this_request.url_no_scheme.encode()) % cdn_domains_number],
-                extract_url_path_and_query()  # 得到目标url的 /a.png?q=233 这么个部分
-            )
-            if cdn_redirect_encode_query_str_into_url:
-                # 将 ?q=233 这种查询字串编码进path, 详情看config里的说明
-                redirect_to_url = embed_real_url_to_embedded_url(
-                    redirect_to_url, url_mime=url_to_use_cdn[this_request.url_no_scheme][1])
-
-            return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
-
-    if local_cache_enable:
-        resp = try_get_cached_response(this_request.remote_url, this_request.client_header)
-        if resp is not None:
-            dbgprint('CacheHit,Return')
-            if this_request.start_time is not None:
-                resp.headers.set('X-Compute-Time', "%.4f" % (time() - this_request.start_time))
-                # resp.headers.set('X-Req-Time', "0.0000")
-            return resp  # If cache hit, just skip the next steps
-
     try:  # send request to remote server
         data = client_requests_bin_rewrite(request.get_data())
         # server's request won't follow 301 or 302 redirection
@@ -2123,7 +2048,13 @@ def prior_request_redirect():
     与rewrite_client_request()不同, 使用301/307等进行外部重定向, 不改变服务器内部数据
     遇到任意一个需要重定向的, 即跳出本函数
 
-    这是第一阶段重定向, 在 rewrite_client_request() 之前
+    这是第一阶段重定向
+
+    第一阶段重定向, 是在 rewrite_client_request() 内部URL重写 *之前* 的重定向
+    第二阶段重定向, 是在 rewrite_client_request() 内部URL重写 *之后* 的重定向
+
+    :return: 如果不需要重定向, 则返回None, 否则返回重定向的 Response
+    :rtype: Union[Response, None]
     """
     _temp = decode_mirror_url()
     hostname, extpath_query = _temp['domain'], _temp['path_query']
@@ -2149,6 +2080,62 @@ def prior_request_redirect():
                 return redirect(redirect_to, code=307)
 
 
+def posterior_request_redirect():
+    """
+
+    这是第二阶段重定向, 在 rewrite_client_request() 之后,
+        request_remote_site_and_parse() 之前
+
+    对于第一阶段重定向的说明, 请看 prior_request_redirect() 函数中的注释
+
+    第二阶段的重定向, 会涉及到经过 zmirror 解析以后的 URL,
+      即请求所对应的远程URL
+      不仅可能会用到 flask 内置的 request 变量,
+      也会用到 zmirror 的 this_request 中的数据
+
+    :return:
+    :rtype:
+    """
+
+    if mime_based_static_resource_CDN:  # CDN总开关
+        if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
+            # 该URL所对应的资源已知, 即之前已经被成功请求过
+            and this_request.url_no_scheme in url_to_use_cdn
+            # 并且该资源已经被判断为可以应用CDN
+            and url_to_use_cdn[this_request.url_no_scheme][0]
+            # 只缓存 GET 方法的资源
+            and request.method == 'GET'
+            # 只有超过大小下限才会重定向
+            and url_to_use_cdn[this_request.url_no_scheme][2] > cdn_soft_redirect_minimum_size
+            # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
+            and not is_ua_in_whitelist(str(request.user_agent))
+            ):
+            # 下面这个urljoin, 是把形如 https://foo.com/a.png?q=233 的url转化为对应的CDN URL https://cdn.com/a.png?q=233
+            redirect_to_url = urljoin(
+                my_host_scheme
+                # 根据url的crc32取余来选取一个CDN域名
+                # 使用crc32, 而不是随机数, 是为了确保相同的URL每次都能应用相同的CDN域名
+                # 以增加CDN和缓存命中率
+                + CDN_domains[zlib.adler32(this_request.url_no_scheme.encode()) % cdn_domains_number],
+                extract_url_path_and_query()  # 得到目标url的 /a.png?q=233 这么个部分
+            )
+            if cdn_redirect_encode_query_str_into_url:
+                # 将 ?q=233 这种查询字串编码进path, 详情看config里的说明
+                redirect_to_url = embed_real_url_to_embedded_url(
+                    redirect_to_url, url_mime=url_to_use_cdn[this_request.url_no_scheme][1])
+
+            return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
+
+    if local_cache_enable:
+        resp = try_get_cached_response(this_request.remote_url, this_request.client_header)
+        if resp is not None:
+            dbgprint('CacheHit,Return')
+            if this_request.start_time is not None:
+                resp.headers.set('X-Compute-Time', "%.4f" % (time() - this_request.start_time))
+                # resp.headers.set('X-Req-Time', "0.0000")
+            return resp  # If cache hit, just skip the next steps
+
+
 def rewrite_client_request():
     """
     在这里的所有重写都只作用程序内部, 对请求者不可见
@@ -2158,6 +2145,8 @@ def rewrite_client_request():
     遇到重写后, 不会跳出本函数, 而是会继续下一项. 所以重写顺序很重要
     """
     has_been_rewrited = False
+
+    # ------------- 请求重写代码开始 ----------------
     if cdn_redirect_encode_query_str_into_url:
         try:
             real_url = extract_real_url_from_embedded_url(request.url)
@@ -2183,6 +2172,17 @@ def rewrite_client_request():
                 request.path = urlsplit(_path_query).path
                 has_been_rewrited = True
                 break
+    # ------------- 请求重写代码结束 ----------------
+
+    # 如果进行了重写, 那么 has_been_rewrited 为 True
+    # 在 rewrite_client_request() 函数内部会更改 request.url
+    # 所以此时需要重新解析一遍
+    if has_been_rewrited:
+        _temp = decode_mirror_url()
+        this_request.remote_domain = _temp['domain']  # type: str
+        this_request.is_https = _temp['is_https']  # type: bool
+        this_request.remote_path = _temp['path']  # type: str
+        this_request.remote_path_query = _temp['path_query']  # type: str
 
     return has_been_rewrited
 
@@ -2379,12 +2379,27 @@ def main_function(input_path='/'):
     this_request.is_https = _temp['is_https']  # type: bool
     this_request.remote_path = _temp['path']  # type: str
     this_request.remote_path_query = _temp['path_query']  # type: str
-
-    # 对用户请求进行过滤、重定向和内部重写
-    r = filter_redirect_and_rewrite_request()
     dbgprint('after extract, url:', request.url, '   path:', request.path)
-    if r is not None:  # 如果函数返回值不是None, 则表示需要响应给用户
+
+    # 对用户请求进行检查和过滤
+    # 不符合条件的请求(比如爬虫)将终止执行
+    r = filter_client_request()
+    if r:  # 如果函数返回值不是None, 则表示需要响应给用户
+        dbgprint('-----EndRequest(filtered out)-----')
         return r
+
+    # 对用户请求进行第一级重定向(隐式重写前的重定向)
+    r = prior_request_redirect()
+    if r:
+        return r
+
+    try:
+        # 进行请求的隐式重写/重定向
+        # 隐式重写只对 zmirror 内部生效, 对浏览器透明
+        # 重写可能会修改 flask 的内置 request 变量
+        has_been_rewrited = rewrite_client_request()
+    except:
+        return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
 
     if ssrf_check_layer_1():
         return generate_simple_resp_page(
