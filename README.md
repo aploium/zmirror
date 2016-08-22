@@ -90,7 +90,6 @@ However, due to my limited time, zmirror was only fully tested in:
 
 1. first, install python3  
     **Debian/Ubuntu**  `apt-get install python3`  
-    **CentOS/RHEL**  `yum install python3`  
     **Windows**   go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
 2. install or upgrade flask and requests `python3 -m pip install -U flask requests`  
 3. (recommended) `git clone https://github.com/aploium/zmirror` or download and unzip this package(not recommend).  
