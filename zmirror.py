@@ -1720,11 +1720,9 @@ def assemble_remote_url():
     if this_request.is_external_domain:
         # 请求的是外部域名 (external domains)
         scheme = 'https://' if this_request.is_https else 'http://'
-        dbgprint('remote_url(ext):', this_request.remote_url)
         return urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
     else:
         # 请求的是主域名及可以被当做(alias)主域名的域名
-        dbgprint('remote_url(main):', this_request.remote_url)
         return urljoin(target_scheme + target_domain, this_request.remote_path_query)
 
 
