@@ -1714,6 +1714,7 @@ def response_cookie_rewrite(cookie_string):
 def filter_redirect_and_rewrite_request():
     """
     对用户请求进行过滤、重定向和内部重写
+    :see also: `main_function()`
     :return: 如果正常则返回None, 如果需要终止并响应, 则返回flask.Response
     :rtype: Union[Response, None]
     """
@@ -1751,6 +1752,23 @@ def filter_redirect_and_rewrite_request():
 
     dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
              'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
+
+
+def ssrf_check_layer_1():
+    """
+    SSRF防护, 第一层, 在请求刚开始时被调用, 检查域名是否允许
+    :return: 如果请求触发了SSRF防护, 则返回True
+    :rtype: bool
+    """
+    # Only external in-zone domains are allowed (SSRF check layer 1)
+    if this_request.remote_domain not in allowed_domains_set:
+        if not try_match_and_add_domain_to_rewrite_white_list(this_request.remote_domain):  # 请求的域名是否满足通配符
+            if developer_temporary_disable_ssrf_prevention:  # 是否在设置中临时关闭了SSRF防护
+                add_ssrf_allowed_domain(this_request.remote_domain)
+                return False
+            else:
+                return True
+    return False
 
 
 def extract_client_header():
@@ -2330,22 +2348,16 @@ def main_function(input_path='/'):
     this_request.start_time = time()  # to display compute time
     this_request.temporary_domain_alias = ()  # init temporary_domain_alias
 
-    infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
-
     # 对用户请求进行过滤、重定向和内部重写
     r = filter_redirect_and_rewrite_request()
+    dbgprint('after extract, url:', request.url, '   path:', request.path)
     if r is not None:  # 如果函数返回值不是None, 则表示需要响应给用户
         return r
 
-    # Only external in-zone domains are allowed (SSRF check layer 1)
-    if this_request.remote_domain not in allowed_domains_set:
-        if not try_match_and_add_domain_to_rewrite_white_list(this_request.remote_domain):  # 请求的域名是否满足通配符
-            if developer_temporary_disable_ssrf_prevention:  # 是否在设置中临时关闭了SSRF防护
-                add_ssrf_allowed_domain(this_request.remote_domain)
-            else:
-                return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
+    if ssrf_check_layer_1():
+        return generate_simple_resp_page(
+            b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
-    dbgprint('after extract, url:', request.url, '   path:', request.path)
     if this_request.remote_domain not in domain_alias_to_target_set:
         # 外部域名 (external domains)
         scheme = 'https://' if this_request.is_https else 'http://'
