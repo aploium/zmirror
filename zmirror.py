@@ -1717,7 +1717,7 @@ def assemble_remote_url():
     组装目标服务器URL, 即生成 this_request.remote_url 的值
     :rtype: str
     """
-    if this_request.remote_domain not in domain_alias_to_target_set:
+    if this_request.is_external_domain:
         # 请求的是外部域名 (external domains)
         scheme = 'https://' if this_request.is_https else 'http://'
         dbgprint('remote_url(ext):', this_request.remote_url)
@@ -2009,7 +2009,7 @@ def filter_client_request():
     """过滤用户请求, 视情况拒绝用户的访问
     :rtype: Union[Response, None]
     """
-    if verbose_level >= 3: dbgprint('Client Request Url: ', request.url)
+    dbgprint('Client Request Url: ', request.url)
 
     # crossdomain.xml
     if os.path.basename(request.path) == 'crossdomain.xml':
@@ -2028,13 +2028,13 @@ def filter_client_request():
                  and must_verify_cookies)
             or is_ip_not_in_allow_range(request.remote_addr)
     ):
-        if verbose_level >= 3: dbgprint('ip', request.remote_addr, 'is verifying cookies')
+        dbgprint('ip', request.remote_addr, 'is verifying cookies')
         if 'zmirror_verify' in request.cookies and \
                 ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('zmirror_verify')))
                  or (enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
                         request.cookies.get('zmirror_verify'), request))):
             ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('zmirror_verify'))
-            if verbose_level >= 3: dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
+            dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
                 "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(),
@@ -2045,27 +2045,27 @@ def filter_client_request():
 
 def prior_request_redirect():
     """对用户的请求进行按需重定向处理
-    与rewrite_client_request()不同, 使用301/307等进行外部重定向, 不改变服务器内部数据
-    遇到任意一个需要重定向的, 即跳出本函数
+    与 rewrite_client_request() 不同, 使用301/307等进行外部重定向, 不改变服务器内部数据
+    遇到任意一个需要重定向的, 就跳出本函数
 
     这是第一阶段重定向
 
-    第一阶段重定向, 是在 rewrite_client_request() 内部URL重写 *之前* 的重定向
-    第二阶段重定向, 是在 rewrite_client_request() 内部URL重写 *之后* 的重定向
+    第一阶段重定向, 是在 rewrite_client_request() 内部隐式重写 *之前* 的重定向
+    第二阶段重定向, 是在 rewrite_client_request() 内部隐式重写 *之后* 的重定向
 
     :return: 如果不需要重定向, 则返回None, 否则返回重定向的 Response
     :rtype: Union[Response, None]
     """
-    _temp = decode_mirror_url()
-    hostname, extpath_query = _temp['domain'], _temp['path_query']
-    if hostname in domain_alias_to_target_set and '/extdomains/' == request.path[:12]:
+
+    # hostname, extpath_query = _temp['domain'], _temp['path_query']
+    if this_request.remote_domain in domain_alias_to_target_set and '/extdomains/' == request.path[:12]:
         dbgprint('Requesting main domain in extdomains, redirect back.')
-        return redirect(extpath_query, code=307)
+        return redirect(this_request.remote_path_query, code=307)
 
     if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
         reference_domain = decode_mirror_url(request.headers.get('referer'))['domain']
         if reference_domain in isolated_domains:
-            return redirect(encode_mirror_url(extract_url_path_and_query(), reference_domain), code=307)
+            return redirect(encode_mirror_url(this_request.remote_path_query, reference_domain), code=307)
 
     if url_custom_redirect_enable:
         if request.path in url_custom_redirect_list:
@@ -2082,21 +2082,18 @@ def prior_request_redirect():
 
 def posterior_request_redirect():
     """
+    这是第二阶段重定向, 内部隐式重写 *之后* 的重定向
+    第一阶段重定向, 是在 rewrite_client_request() 内部隐式重写 *之前* 的重定向
+    第二阶段重定向, 是在 rewrite_client_request() 内部隐式重写 *之后* 的重定向
 
-    这是第二阶段重定向, 在 rewrite_client_request() 之后,
-        request_remote_site_and_parse() 之前
+    遇到任意一个需要重定向的, 就跳出本函数
 
-    对于第一阶段重定向的说明, 请看 prior_request_redirect() 函数中的注释
-
-    第二阶段的重定向, 会涉及到经过 zmirror 解析以后的 URL,
-      即请求所对应的远程URL
-      不仅可能会用到 flask 内置的 request 变量,
-      也会用到 zmirror 的 this_request 中的数据
-
-    :return:
-    :rtype:
+    :return: 如果不需要重定向, 则返回None, 否则返回重定向的 Response
+    :rtype: Union[Response, None]
     """
 
+    # CDN软重定向
+    # 具体请看 config 中 cdn_redirect_code_if_cannot_hard_rewrite 选项的说明
     if mime_based_static_resource_CDN:  # CDN总开关
         if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
             # 该URL所对应的资源已知, 即之前已经被成功请求过
@@ -2126,14 +2123,14 @@ def posterior_request_redirect():
 
             return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
 
+    # 本地缓存若命中则直接返回
     if local_cache_enable:
         resp = try_get_cached_response(this_request.remote_url, this_request.client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
             if this_request.start_time is not None:
                 resp.headers.set('X-Compute-Time', "%.4f" % (time() - this_request.start_time))
-                # resp.headers.set('X-Req-Time', "0.0000")
-            return resp  # If cache hit, just skip the next steps
+            return resp
 
 
 def rewrite_client_request():
@@ -2183,6 +2180,9 @@ def rewrite_client_request():
         this_request.is_https = _temp['is_https']  # type: bool
         this_request.remote_path = _temp['path']  # type: str
         this_request.remote_path_query = _temp['path_query']  # type: str
+        this_request.is_external_domain = this_request.remote_domain not in domain_alias_to_target_set
+        this_request.remote_url = assemble_remote_url()  # type: str
+        this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
 
     return has_been_rewrited
 
@@ -2357,18 +2357,19 @@ def main_function(input_path='/'):
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     # 其各个变量的含义如下:
     # this_request.start_time             处理请求开始的时间, unix 时间戳
+    #             .remote_domain          当前请求对应的远程域名
+    #             .is_external_domain     远程域名是否是外部域名, 比如google镜像, www.gstatic.com 就是外部域名
+    #             .is_https               是否需要用https 来请求远程域名
+    #             .remote_url             远程服务器的url, 比如 https://google.com/search?q=233
+    #             .url_no_scheme          没有协议前缀的url,比如 google.com/search?q=233 通常在缓存中用
+    #             .remote_path_query      对应的远程path+query, 比如 /search?q=2333
+    #             .remote_path            对应的远程path,  比如 /search
     #             .client_header          经过转换和重写以后的访问者请求头
     #             .content_type           远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
     #             .mime                   远程服务器响应的MIME, 比如 "text/html"
     #             .cache_control          远程服务器响应的cache_control内容
-    #             .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
-    #             .remote_domain          当前请求对应的远程域名
-    #             .is_https               是否需要用https 来请求远程域名
-    #             .remote_url             远程服务器的url, 比如 https://google.com/search?q=233
-    #             .url_no_scheme          没有协议前缀的url,比如 google.com/search?q=233 通常在缓存中用
-    #             .remote_path            对应的远程path,  比如 /search
-    #             .remote_path_query      对应的远程path+query, 比如 /search?q=2333
     #             .remote_response        远程服务器的响应, requests.Response
+    #             .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
     this_request.start_time = time()  # to display compute time
     this_request.temporary_domain_alias = ()  # init temporary_domain_alias
@@ -2379,24 +2380,30 @@ def main_function(input_path='/'):
     this_request.is_https = _temp['is_https']  # type: bool
     this_request.remote_path = _temp['path']  # type: str
     this_request.remote_path_query = _temp['path_query']  # type: str
+    this_request.is_external_domain = this_request.remote_domain not in domain_alias_to_target_set
+    this_request.remote_url = assemble_remote_url()  # type: str
+    this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
     dbgprint('after extract, url:', request.url, '   path:', request.path)
 
     # 对用户请求进行检查和过滤
     # 不符合条件的请求(比如爬虫)将终止执行
+    # 函数不会修改 this_request
     r = filter_client_request()
-    if r:  # 如果函数返回值不是None, 则表示需要响应给用户
+    if r is not None:  # 如果函数返回值不是None, 则表示需要响应给用户
         dbgprint('-----EndRequest(filtered out)-----')
         return r
 
     # 对用户请求进行第一级重定向(隐式重写前的重定向)
+    # 函数不会修改 this_request
     r = prior_request_redirect()
-    if r:
+    if r is not None:
         return r
 
+    # 进行请求的隐式重写/重定向
+    # 隐式重写只对 zmirror 内部生效, 对浏览器透明
+    # 重写可能会修改 flask 的内置 request 变量
+    # 可能会修改 this_request
     try:
-        # 进行请求的隐式重写/重定向
-        # 隐式重写只对 zmirror 内部生效, 对浏览器透明
-        # 重写可能会修改 flask 的内置 request 变量
         has_been_rewrited = rewrite_client_request()
     except:
         return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
@@ -2405,11 +2412,13 @@ def main_function(input_path='/'):
         return generate_simple_resp_page(
             b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
-    # 组装目标服务器URL, 即生成 this_request.remote_url 的值
-    this_request.remote_url = assemble_remote_url()  # type: str
-    this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
     # 提取出经过必要重写后的客户请求头
     this_request.client_header = extract_client_header()  # type: dict
+
+    # 对用户请求进行第二级重定向(隐式重写后的重定向)
+    r = posterior_request_redirect()
+    if r is not None:
+        return r
 
     try:
         resp = request_remote_site_and_parse()
