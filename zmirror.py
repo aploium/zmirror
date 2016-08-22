@@ -174,6 +174,7 @@ this_request.temporary_domain_alias = None  # 用于纯文本域名替换, 见 `
 this_request.remote_domain = ''  # 当前请求对应的远程域名
 this_request.is_https = ''  # 是否需要用https来请求远程域名
 this_request.remote_url = ''  # 远程服务器的url
+# this_request.url_no_scheme = ''  # 没有 http(s):// 前缀的url
 this_request.remote_path = ''  # 对应的远程path
 this_request.remote_path_query = ''  # 对应的远程path+query string
 this_request.remote_response = None  # 远程服务器的响应, requests.Response
@@ -1947,24 +1948,36 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse():
-    if mime_based_static_resource_CDN:
-        url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]
-        if (cdn_redirect_code_if_cannot_hard_rewrite
-            and url_no_scheme in url_to_use_cdn and url_to_use_cdn[url_no_scheme][0] and request.method == 'GET'
-            and url_to_use_cdn[url_no_scheme][2] > cdn_soft_redirect_minimum_size  # 只有超过大小下限才会重定向
+    if mime_based_static_resource_CDN:  # CDN总开关
+        if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
+            # 该URL所对应的资源已知, 即之前已经被成功请求过
+            and this_request.url_no_scheme in url_to_use_cdn
+            # 并且该资源已经被判断为可以应用CDN
+            and url_to_use_cdn[this_request.url_no_scheme][0]
+            # 只缓存 GET 方法的资源
+            and request.method == 'GET'
+            # 只有超过大小下限才会重定向
+            and url_to_use_cdn[this_request.url_no_scheme][2] > cdn_soft_redirect_minimum_size
+            # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
             and not is_ua_in_whitelist(str(request.user_agent))
             ):
-            _path_for_client = extract_url_path_and_query(request.url)
+            # 下面这个urljoin, 是把形如 https://foo.com/a.png?q=233 的url转化为对应的CDN URL https://cdn.com/a.png?q=233
             redirect_to_url = urljoin(
-                my_host_scheme + CDN_domains[zlib.adler32(url_no_scheme.encode()) % cdn_domains_number],
-                _path_for_client
+                my_host_scheme
+                # 根据url的crc32取余来选取一个CDN域名
+                # 使用crc32, 而不是随机数, 是为了确保相同的URL每次都能应用相同的CDN域名
+                # 以增加CDN和缓存命中率
+                + CDN_domains[zlib.adler32(this_request.url_no_scheme.encode()) % cdn_domains_number],
+                extract_url_path_and_query()  # 得到目标url的 /a.png?q=233 这么个部分
             )
             if cdn_redirect_encode_query_str_into_url:
-                redirect_to_url = embed_real_url_to_embedded_url(redirect_to_url, url_mime=url_to_use_cdn[url_no_scheme][1])
+                # 将 ?q=233 这种查询字串编码进path, 详情看config里的说明
+                redirect_to_url = embed_real_url_to_embedded_url(
+                    redirect_to_url, url_mime=url_to_use_cdn[this_request.url_no_scheme][1])
 
             return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
 
-    client_header = extract_client_header()
+    client_header = extract_client_header()  # 请求头
 
     if local_cache_enable:
         resp = try_get_cached_response(this_request.remote_url, client_header)
@@ -2022,18 +2035,18 @@ def request_remote_site_and_parse():
             and this_request.remote_response.request.method == 'GET' and this_request.remote_response.status_code == 200:
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
-        if url_no_scheme not in url_to_use_cdn:
+        if this_request.url_no_scheme not in url_to_use_cdn:
             # 记录本URL的信息
-            url_to_use_cdn[url_no_scheme] = [False, this_request.mime, len(this_request.remote_response.content)]
+            url_to_use_cdn[this_request.url_no_scheme] = [False, this_request.mime, len(this_request.remote_response.content)]
 
             if is_content_type_using_cdn(this_request.mime):
                 # mark it to use cdn, and record it's url without scheme.
                 # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
                 # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                url_to_use_cdn[url_no_scheme][0] = True  # 标记为使用CDN
-                if verbose_level >= 3: dbgprint('CDN enabled for:', url_no_scheme)
+                url_to_use_cdn[this_request.url_no_scheme][0] = True  # 标记为使用CDN
+                dbgprint('CDN enabled for:', this_request.url_no_scheme)
             else:
-                if verbose_level >= 3: dbgprint('CDN disabled for:', url_no_scheme)
+                dbgprint('CDN disabled for:', this_request.url_no_scheme)
 
     # copy and parse remote response
     resp, req_time_body = copy_response(is_streamed=is_streamed)
@@ -2111,6 +2124,8 @@ def prior_request_redirect():
     """对用户的请求进行按需重定向处理
     与rewrite_client_request()不同, 使用301/307等进行外部重定向, 不改变服务器内部数据
     遇到任意一个需要重定向的, 即跳出本函数
+
+    这是第一阶段重定向, 在 rewrite_client_request() 之前
     """
     _temp = decode_mirror_url()
     hostname, extpath_query = _temp['domain'], _temp['path_query']
@@ -2351,6 +2366,7 @@ def main_function(input_path='/'):
     #             .remote_domain          当前请求对应的远程域名
     #             .is_https               是否需要用https 来请求远程域名
     #             .remote_url             远程服务器的url, 比如 https://google.com/search?q=233
+    #             .url_no_scheme          没有协议前缀的url,比如 google.com/search?q=233 通常在缓存中用
     #             .remote_path            对应的远程path,  比如 /search
     #             .remote_path_query      对应的远程path+query, 比如 /search?q=2333
     #             .remote_response        远程服务器的响应, requests.Response
@@ -2376,7 +2392,8 @@ def main_function(input_path='/'):
             b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     # 组装目标服务器URL, 即生成 this_request.remote_url 的值
-    this_request.remote_url = assemble_remote_url()
+    this_request.remote_url = assemble_remote_url()  # type: str
+    this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
 
     try:
         resp = request_remote_site_and_parse()
