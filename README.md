@@ -194,20 +194,12 @@ All detects and rewrites are completely AUTOMATICALLY
   Local cache will be deleted and cleaned once program exit.  
   
 ### CDN Support
-If you have an CDN service (like qiniu(七牛), cloudflare, etc..), you are able to storge static resource in CDN domains.  
-CDN will dramatically increase your clients' access speed if you have many of them  
-
-Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name). And then add the CDN domain to the config `CDN_domains` section. Program support many CDN domains.  
-Oh, don't forget to turn `enable_static_resource_CDN` to True (case sensitive)  
-
-And, as you think, CDN rewrite is also completely automatically.  
-Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN.  
-
-If your CDN storge your file permanently (like qiniu), you can disable local cache to save space, but if your CDN is temporarily storge (like cloudflare), please keep local cache enabled.
+  please see [使用七牛作为zmirror镜像的CDN](https://github.com/aploium/zmirror/wiki/%E4%BD%BF%E7%94%A8%E4%B8%83%E7%89%9B%E4%BD%9C%E4%B8%BAzmirror%E9%95%9C%E5%83%8F%E7%9A%84CDN)  
   
 
 ## Deploy To Server
-请看这篇教程 [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
+请使用[一键部署脚本](https://github.com/aploium/zmirror-onekey)  
+手动部署可以看 [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
   
   
 Or, if you are family with flask, you can see flask's official deploy tutorial:  
