@@ -252,7 +252,7 @@ url_rewrite_cache_miss_count = 0
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出长得类似于url的东西 ####
 # 如果需要阅读这个表达式, 请一定要在IDE(如PyCharm)的正则高亮下阅读
 # 这个正则并不保证匹配到的东西一定是url, 在 regex_url_reassemble() 中会进行进一步验证是否是url
-regex_adv_url_rewriter = re.compile(  # TODO: Add non-standard port support
+regex_adv_url_rewriter = re.compile(
     # 前缀, 必须有  'action='(表单) 'href='(链接) 'src=' 'url('(css) '@import'(css) '":'(js/json, "key":"value")
     # \s 表示空白字符,如空格tab
     r"""(?P<prefix>\b((action|href|src)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
