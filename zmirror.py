@@ -22,7 +22,7 @@ from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 
 try:
-    from typing import Union  # for python 3.5+ Type Hint
+    from typing import Union, List, Any, Tuple  # for python 3.5+ Type Hint
 except:
     pass
 
@@ -887,7 +887,12 @@ If you can't solve it by your self, here are some ways may help:<br>
 
 def generate_html_redirect_page(target_url, msg='', delay_sec=1):
     """生成一个HTML重定向页面
-    某些浏览器在301/302页面不接受cookies, 所以需要用html重定向页面来传cookie"""
+    某些浏览器在301/302页面不接受cookies, 所以需要用html重定向页面来传cookie
+    :type target_url: str
+    :type msg: str
+    :type delay_sec: int
+    :rtype: Response
+    """
     resp_content = r"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -910,6 +915,7 @@ You are now redirecting to <a href="%s">%s</a>, if it didn't redirect automatica
 
 
 def generate_304_response(_content_type=None):
+    """:rtype Response"""
     r = Response(content_type=_content_type, status=304)
     r.headers.add('X-Cache', 'FileHit-304')
     return r
@@ -921,6 +927,7 @@ def generate_ip_verify_hash(input_dict):
     在 human_ip_verification 功能中使用
     hash一共14位
     hash(前7位+salt) = 后7位 以此来进行验证
+    :rtype str
     """
     strbuff = human_ip_verification_answers_hash_str
     for key in input_dict:
@@ -942,6 +949,7 @@ def verify_ip_hash_cookie(hash_cookie_value):
     hash一共14位
     hash(前7位+salt) = 后7位 以此来进行验证
     :type hash_cookie_value: str
+    :rtype: bool
     """
     try:
         input_key_hash = hash_cookie_value[:8]
@@ -988,7 +996,6 @@ def put_response_to_local_cache(url, _our_resp, without_content=False):
     :param without_content: for stream mode use
     :param url: client request url
     :param _our_resp: our response(flask response object) to client, would be storge
-    :return: None
     """
     # Only cache GET method, and only when remote returns 200(OK) status
     if local_cache_enable and request.method == 'GET' and this_request.remote_response.status_code == 200:
@@ -1018,6 +1025,7 @@ def try_get_cached_response(url, client_header=None):
     尝试从本地缓存中取出响应
     :param url: real url with query string
     :type client_header: dict
+    :rtype: Union[Response, None]
     """
     # Only use cache when client use GET
     if local_cache_enable and request.method == 'GET' and cache.is_cached(url):
@@ -1057,6 +1065,7 @@ def regex_url_reassemble(match_obj):
     Reassemble url parts split by the regex.
     :param match_obj: match object of stdlib re
     :return: re assembled url string (included prefix(url= etc..) and suffix.)
+    :rtype: str
     """
 
     if match_obj.group() in url_rewrite_cache:  # Read Cache
@@ -1369,9 +1378,11 @@ def copy_response(content=None, is_streamed=False):
     """
     Copy and parse remote server's response headers, generate our flask response object
 
+    :type content: str
     :type is_streamed: bool
     :param content: pre-rewrited response content, bytes
     :return: flask response object
+    :rtype: Tuple[Response, float]
     """
     if content is None:
         if is_streamed:
@@ -1488,7 +1499,7 @@ def response_cookies_deep_copy():
 def response_content_rewrite():
     """
     Rewrite requests response's content's url. Auto skip binary (based on MIME).
-    :return: (bytes, float)
+    :return: List[bytes, float]
     """
 
     _start_time = time()
@@ -1559,6 +1570,13 @@ def response_content_rewrite():
 
 
 def response_text_basic_rewrite(resp_text, domain, domain_id=None):
+    """
+
+    :type resp_text: str
+    :type domain: str
+    :type domain_id: int
+    :rtype: str
+    """
     if domain not in domains_alias_to_target_domain:
         domain_prefix = '/extdomains/' + domain
         domain_prefix_https_esc = r'\/extdomains\/' + domain
@@ -1630,6 +1648,7 @@ def response_text_rewrite(resp_text):
     """
     rewrite urls in text-like content (html,css,js)
     :type resp_text: str
+    :rtype: str
     """
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
