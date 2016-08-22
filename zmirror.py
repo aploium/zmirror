@@ -20,6 +20,12 @@ import queue
 from fnmatch import fnmatch
 from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
+
+try:
+    from typing import Union  # for python 3.5+ Type Hint
+except:
+    pass
+
 import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
@@ -292,6 +298,7 @@ def cache_clean(is_force_flush=False):
     包括各种重写缓存, 文件缓存等
     默认仅清理过期的
     :param is_force_flush: 是否无视有效期, 清理所有缓存
+    :type is_force_flush: bool
     """
     global url_rewrite_cache, cache, url_to_use_cdn, connection_pool_per_domain
     if len(url_rewrite_cache) > 16384:
@@ -383,7 +390,10 @@ def cron_task_host():
 
 # noinspection PyShadowingNames
 def calc_domain_replace_prefix(_domain):
-    """生成各种形式的scheme变体"""
+    """生成各种形式的scheme变体
+    :type _domain: str
+    :rtype: bool
+    """
     return dict(
         # normal
         slash='//' + _domain,
@@ -423,6 +433,8 @@ def add_temporary_domain_alias(source_domain, replaced_to_domain):
     用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
     :param source_domain: 被替换的域名
     :param replaced_to_domain: 替换成这个域名
+    :type source_domain: str
+    :type replaced_to_domain: str
     """
     if this_request.temporary_domain_alias is None:
         this_request.temporary_domain_alias = []
@@ -439,6 +451,8 @@ def add_temporary_domain_alias(source_domain, replaced_to_domain):
 def is_domain_match_glob_whitelist(domain):
     """
     域名是否匹配 `domains_whitelist_auto_add_glob_list` 中设置的通配符
+    :type domain: str
+    :rtype: bool
     """
     for domain_glob in domains_whitelist_auto_add_glob_list:
         if fnmatch(domain, domain_glob):
@@ -451,6 +465,9 @@ def is_content_type_streamed(_content_type):
     """
     根据content-type判断是否应该用stream模式传输(服务器下载的同时发送给用户)
      视频/音频/图片等二进制内容默认用stream模式传输
+     :param _content_type: content_type, eg: "plain/text; encoding=utf-8"
+     :type _content_type: str
+     :rtype: bool
     """
     for streamed_keyword in steamed_mime_keywords:
         if streamed_keyword in _content_type:
@@ -466,6 +483,9 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     用于在程序运行过程中动态添加域名到external_domains中
     也可在外部函数(custom_func.py)中使用
     关于 external_domains 更详细的说明, 请看 default_config.py 中对应的文档
+    :type domain: str
+    :type force_add: bool
+    :rtype: bool
     """
     global external_domains, external_domains_set, allowed_domains_set, prefix_buff
 
@@ -497,7 +517,10 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
 
 
 def current_line_number():
-    """Returns the current line number in our program."""
+    """Returns the current line number in our program.
+    :return: current line number
+    :rtype: int
+    """
     import inspect
     return inspect.currentframe().f_back.f_lineno
 
@@ -516,8 +539,10 @@ def extract_real_url_from_embedded_url(embedded_url):
         ---> https://foo.com/a/b/?love=live[and a long long query string] (assume it returns an jpg) (gzip + base64)
     eg4:https://cdn.domain.com/a  (no change)
         ---> (no query string): https://foo.com/a (assume it returns an png) (no change)
-    :param embedded_url: embedded_url
-    :return: real url or None
+    :param embedded_url: 可能被编码的URL
+    :return: 如果传入的是编码后的URL, 则返回解码后的URL, 否则返回None
+    :type embedded_url: str
+    :rtype: Union[str, None]
     """
     if '._' + cdn_url_query_encode_salt + '_.' not in embedded_url[-15:]:  # check url mark
         return None
@@ -551,6 +576,7 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
     在某些对url参数支持不好的CDN中, 可以减少错误
     `cdn_redirect_encode_query_str_into_url`设置依赖于本函数, 详细说明可以看配置文件中的对应部分
     解码由 extract_real_url_from_embedded_url() 函数进行, 对应的例子也请看这个函数
+    :rtype: str
     """
     # dbgprint(real_url_raw, url_mime, escape_slash)
     if escape_slash:
@@ -591,9 +617,8 @@ def decode_mirror_url(mirror_url=None):
     若参数留空, 则使用当前用户正在请求的url
     支持json (处理 \/ 和 \. 的转义)
 
-    :param mirror_url:
-    :return: dict(domain, is_https, path, path_query)
-    :rtype: {'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
+    :rtype: dict[str, Union[str, bool]]
+    :return: {'domain':str, 'is_https':bool, 'path':str, 'path_query':str}
     """
     _is_escaped_dot = False
     _is_escaped_slash = False
@@ -653,7 +678,13 @@ extract_from_url_may_have_extdomains = decode_mirror_url
 
 # noinspection PyShadowingNames
 def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_escape=False):
-    """convert url from remote to mirror url"""
+    """convert url from remote to mirror url
+    :type raw_url_or_path: str
+    :type remote_domain: str
+    :type is_scheme: bool
+    :type is_escape: bool
+    :rtype: str
+    """
 
     if is_escape:
         _raw_url_or_path = raw_url_or_path.replace('r\/', r'/')
@@ -706,7 +737,9 @@ def get_ext_domain_inurl_scheme_prefix(ext_domain, force_https=None):
 
 
 def add_ssrf_allowed_domain(domain):
-    """添加域名到ssrf白名单, 不支持通配符"""
+    """添加域名到ssrf白名单, 不支持通配符
+    :type domain: str
+    """
     global allowed_domains_set
     allowed_domains_set.add(domain)
 
@@ -718,6 +751,9 @@ def set_request_for_debug(dummy_request):
 
 
 def strx(*args, sep=' '):
+    """
+    :return: str
+    """
     output = ''
     for arg in args:
         output += str(arg) + sep
@@ -753,7 +789,9 @@ def is_mime_represents_text(input_mime):
 
 @lru_cache(maxsize=128)
 def extract_mime_from_content_type(_content_type):
-    """从content-type中提取出mime, 如 'text/html; encoding=utf-8' --> 'text/html' """
+    """从content-type中提取出mime, 如 'text/html; encoding=utf-8' --> 'text/html'
+    :rtype: str
+    """
     c = _content_type.find(';')
     if c == -1:
         return _content_type
@@ -774,6 +812,12 @@ def is_content_type_using_cdn(_content_type):
 
 
 def generate_simple_resp_page(errormsg=b'We Got An Unknown Error', error_code=500):
+    """
+
+    :type errormsg: bytes
+    :type error_code: int
+    :rtype: Response
+    """
     return make_response(errormsg, error_code)
 
 
@@ -783,6 +827,7 @@ def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=F
     :type errormsg: Union(str, bytes)
     :type error_code: int
     :type is_traceback: bool
+    :rtype: Union[Response, str]
     """
     if isinstance(errormsg, bytes):
         errormsg = errormsg.decode()
