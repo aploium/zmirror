@@ -2000,7 +2000,9 @@ def request_remote_site_and_parse():
 
 
 def filter_client_request():
-    """过滤用户请求, 视情况拒绝用户的访问"""
+    """过滤用户请求, 视情况拒绝用户的访问
+    :rtype: Union[Response, None]
+    """
     if verbose_level >= 3: dbgprint('Client Request Url: ', request.url)
 
     # crossdomain.xml
@@ -2268,52 +2270,76 @@ def main_function(input_path='/'):
     """本程序的实际入口函数"""
     dbgprint('-----BeginRequest-----')
 
+    # this_request 类似于 flask 的 request, 是 zmirror 特有的一个 thread-local 变量
+    # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
+    # 其各个变量的含义如下:
+    # this_request.start_time             处理请求开始的时间, unix 时间戳
+    #             .content_type           远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
+    #             .mime                   远程服务器响应的MIME, 比如 "text/html"
+    #             .cache_control          远程服务器响应的cache_control内容
+    #             .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
+    #             .remote_domain          当前请求对应的远程域名
+    #             .is_https               是否需要用https 来请求远程域名
+    #             .remote_url             远程服务器的url, 比如 https://google.com/search?q=233
+    #             .remote_path            对应的远程path,  比如 /search
+    #             .remote_path_query      对应的远程path+query, 比如 /search?q=2333
+    #             .remote_response        远程服务器的响应, requests.Response
+
     this_request.start_time = time()  # to display compute time
     this_request.temporary_domain_alias = ()  # init temporary_domain_alias
 
     infoprint('From', request.remote_addr, request.method, request.url, request.user_agent)
 
-    _temp = decode_mirror_url()
-    this_request.remote_domain = _temp['domain']
-    this_request.is_https = _temp['is_https']
-    this_request.remote_path = _temp['path']
-    this_request.remote_path_query = _temp['path_query']
+    _temp = decode_mirror_url()  # 将用户请求的URL解析为对应的目标服务器URL
+    this_request.remote_domain = _temp['domain']  # type: str
+    this_request.is_https = _temp['is_https']  # type: bool
+    this_request.remote_path = _temp['path']  # type: str
+    this_request.remote_path_query = _temp['path_query']  # type: str
 
-    # pre-filter client's request
+    # 对请求进行过滤和检查, 不符合条件的请求(比如爬虫)将终止执行
+    # 某些合法请求, 但是需要重定向的, 也在此处理
+    # 其中, filter_client_request() 是过滤不合法的, is_client_request_need_redirect() 是处理合法请求的重定向
     filter_or_rewrite_result = filter_client_request() or is_client_request_need_redirect()
     if filter_or_rewrite_result is not None:
         dbgprint('-----EndRequest(redirect)-----')
         return filter_or_rewrite_result  # Ban or redirect if need
 
     try:
+        # 进行请求的隐式重写/重定向
+        # 隐式重写只对 zmirror 内部生效, 对浏览器透明
         has_been_rewrited = rewrite_client_request()  # this process may change the global flask request object
     except:
         return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
 
     if has_been_rewrited:
+        # 如果进行了重写, 那么 has_been_rewrited 为 True
+        # 在 rewrite_client_request() 函数内部会更改 request.url
+        # 所以此时需要重新解析一遍
         _temp = decode_mirror_url()
-        this_request.remote_domain = _temp['domain']
-        this_request.is_https = _temp['is_https']
-        this_request.remote_path = _temp['path']
-        this_request.remote_path_query = _temp['path_query']
+        this_request.remote_domain = _temp['domain']  # type: str
+        this_request.is_https = _temp['is_https']  # type: bool
+        this_request.remote_path = _temp['path']  # type: str
+        this_request.remote_path_query = _temp['path_query']  # type: str
 
     dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
              'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
 
     # Only external in-zone domains are allowed (SSRF check layer 1)
     if this_request.remote_domain not in allowed_domains_set:
-        if not try_match_and_add_domain_to_rewrite_white_list(this_request.remote_domain):
-            if developer_temporary_disable_ssrf_prevention:
+        if not try_match_and_add_domain_to_rewrite_white_list(this_request.remote_domain):  # 请求的域名是否满足通配符
+            if developer_temporary_disable_ssrf_prevention:  # 是否在设置中临时关闭了SSRF防护
                 add_ssrf_allowed_domain(this_request.remote_domain)
             else:
                 return generate_simple_resp_page(b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
-    if verbose_level >= 3: dbgprint('after extract, url:', request.url, '   path:', request.path)
+    dbgprint('after extract, url:', request.url, '   path:', request.path)
     if this_request.remote_domain not in domain_alias_to_target_set:
+        # 外部域名 (external domains)
         scheme = 'https://' if this_request.is_https else 'http://'
         this_request.remote_url = urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
         dbgprint('remote_url(ext):', this_request.remote_url)
     else:
+        # 主域名及可以被当做(alias)主域名的域名
         this_request.remote_url = urljoin(target_scheme + target_domain, this_request.remote_path_query)
         dbgprint('remote_url(main):', this_request.remote_url)
 
