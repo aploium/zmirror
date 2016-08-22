@@ -1719,12 +1719,6 @@ def filter_redirect_and_rewrite_request():
     :rtype: Union[Response, None]
     """
 
-    _temp = decode_mirror_url()  # 将用户请求的URL解析为对应的目标服务器URL
-    this_request.remote_domain = _temp['domain']  # type: str
-    this_request.is_https = _temp['is_https']  # type: bool
-    this_request.remote_path = _temp['path']  # type: str
-    this_request.remote_path_query = _temp['path_query']  # type: str
-
     # 对请求进行过滤和检查, 不符合条件的请求(比如爬虫)将终止执行
     # 某些合法请求, 但是需要重定向的, 也在此处理
     # 其中, filter_client_request() 是过滤不合法的, is_client_request_need_redirect() 是处理合法请求的重定向
@@ -1752,6 +1746,21 @@ def filter_redirect_and_rewrite_request():
 
     dbgprint('ResolveRequestUrl hostname:', this_request.remote_domain,
              'is_https:', this_request.is_https, 'exturi:', this_request.remote_path_query)
+
+
+def assemble_remote_url():
+    """
+    组装目标服务器URL, 没有返回值, 结果被记录在 this_request.remote_url 变量中
+    """
+    if this_request.remote_domain not in domain_alias_to_target_set:
+        # 请求的是外部域名 (external domains)
+        scheme = 'https://' if this_request.is_https else 'http://'
+        this_request.remote_url = urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
+        dbgprint('remote_url(ext):', this_request.remote_url)
+    else:
+        # 请求的是主域名及可以被当做(alias)主域名的域名
+        this_request.remote_url = urljoin(target_scheme + target_domain, this_request.remote_path_query)
+        dbgprint('remote_url(main):', this_request.remote_url)
 
 
 def ssrf_check_layer_1():
@@ -2348,6 +2357,13 @@ def main_function(input_path='/'):
     this_request.start_time = time()  # to display compute time
     this_request.temporary_domain_alias = ()  # init temporary_domain_alias
 
+    # 将用户请求的URL解析为对应的目标服务器URL
+    _temp = decode_mirror_url()
+    this_request.remote_domain = _temp['domain']  # type: str
+    this_request.is_https = _temp['is_https']  # type: bool
+    this_request.remote_path = _temp['path']  # type: str
+    this_request.remote_path_query = _temp['path_query']  # type: str
+
     # 对用户请求进行过滤、重定向和内部重写
     r = filter_redirect_and_rewrite_request()
     dbgprint('after extract, url:', request.url, '   path:', request.path)
@@ -2358,15 +2374,8 @@ def main_function(input_path='/'):
         return generate_simple_resp_page(
             b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
-    if this_request.remote_domain not in domain_alias_to_target_set:
-        # 外部域名 (external domains)
-        scheme = 'https://' if this_request.is_https else 'http://'
-        this_request.remote_url = urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
-        dbgprint('remote_url(ext):', this_request.remote_url)
-    else:
-        # 主域名及可以被当做(alias)主域名的域名
-        this_request.remote_url = urljoin(target_scheme + target_domain, this_request.remote_path_query)
-        dbgprint('remote_url(main):', this_request.remote_url)
+    # 组装目标服务器URL, 即生成 this_request.remote_url 的值
+    assemble_remote_url()
 
     try:
         resp = request_remote_site_and_parse()
