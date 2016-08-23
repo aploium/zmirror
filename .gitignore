@@ -2,7 +2,7 @@
 ### Project Special
 /custom_func.py
 /config.py
-/tests/sample
+/test/sample
 /ip_whitelist.txt
 ### Vim template
 # swap
@@ -331,3 +331,10 @@ flycheck_*.el
 # Linux trash folder which might appear on any partition or disk
 .Trash-*
 # Created by .ignore support plugin (hsz.mobi)
+_temp/
+"config - \345\211\257\346\234\254.py"
+config_t.py
+config_zjumail.py
+custom_func_.py
+custom_func_t.py
+img/
