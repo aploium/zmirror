@@ -22,7 +22,7 @@ class ZmirrorTestBase(unittest.TestCase):
         restore_config_file()
         super().tearDownClass()
 
-    def setUp(self):
+    def reload_zmirror(self, configs_dict=None):
         importlib.reload(config)
 
         config.enable_cron_tasks = False  # 为了避免多余的线程, 需要先关闭 cron_task
@@ -32,6 +32,13 @@ class ZmirrorTestBase(unittest.TestCase):
             config_value = getattr(self.ZmirrorInitConfig, config_name)
             setattr(config, config_name, config_value)
 
+        if configs_dict is not None:
+            for config_name, config_value in configs_dict.items():
+                setattr(config, config_name, config_value)
+
         importlib.reload(zmirror)
 
         self.app = zmirror.app.test_client()
+
+    def setUp(self):
+        self.reload_zmirror()
