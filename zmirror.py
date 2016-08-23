@@ -166,19 +166,19 @@ if cdn_redirect_encode_query_str_into_url:
 
 # ## thread local var ##
 # 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
-this_request = threading.local()
-this_request.start_time = None  # 处理请求开始的时间, unix
-this_request.content_type = ''  # 远程服务器响应头中的content_type
-this_request.mime = ''  # 远程服务器响应的MIME
-this_request.cache_control = ''  # 远程服务器响应的cache_control内容
-this_request.temporary_domain_alias = None  # 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
-this_request.remote_domain = ''  # 当前请求对应的远程域名
-this_request.is_https = ''  # 是否需要用https来请求远程域名
-this_request.remote_url = ''  # 远程服务器的url
-# this_request.url_no_scheme = ''  # 没有 http(s):// 前缀的url
-this_request.remote_path = ''  # 对应的远程path
-this_request.remote_path_query = ''  # 对应的远程path+query string
-this_request.remote_response = None  # 远程服务器的响应, requests.Response
+parse = threading.local()
+parse.start_time = None  # 处理请求开始的时间, unix
+parse.content_type = ''  # 远程服务器响应头中的content_type
+parse.mime = ''  # 远程服务器响应的MIME
+parse.cache_control = ''  # 远程服务器响应的cache_control内容
+parse.temporary_domain_alias = None  # 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
+parse.remote_domain = ''  # 当前请求对应的远程域名
+parse.is_https = ''  # 是否需要用https来请求远程域名
+parse.remote_url = ''  # 远程服务器的url
+# parse.url_no_scheme = ''  # 没有 http(s):// 前缀的url
+parse.remote_path = ''  # 对应的远程path
+parse.remote_path_query = ''  # 对应的远程path+query string
+parse.remote_response = None  # 远程服务器的响应, requests.Response
 
 # task_scheduler
 task_scheduler = sched.scheduler(time, sleep)
@@ -230,7 +230,6 @@ if enable_custom_access_cookie_generate_and_verify:
 if not is_use_proxy:
     requests_proxies = None
 if human_ip_verification_enabled:
-
     buff = []
     for network in human_ip_verification_default_whitelist_networks:
         buff.append(ipaddress.ip_network(network, strict=False))
@@ -451,15 +450,15 @@ def add_temporary_domain_alias(source_domain, replaced_to_domain):
     :type source_domain: str
     :type replaced_to_domain: str
     """
-    if this_request.temporary_domain_alias is None:
-        this_request.temporary_domain_alias = []
+    if parse.temporary_domain_alias is None:
+        parse.temporary_domain_alias = []
     else:
-        this_request.temporary_domain_alias = list(this_request.temporary_domain_alias)
+        parse.temporary_domain_alias = list(parse.temporary_domain_alias)
 
-    this_request.temporary_domain_alias.append((source_domain, replaced_to_domain))
-    this_request.temporary_domain_alias = tuple(this_request.temporary_domain_alias)
+    parse.temporary_domain_alias.append((source_domain, replaced_to_domain))
+    parse.temporary_domain_alias = tuple(parse.temporary_domain_alias)
     dbgprint('A domain', source_domain, 'to', replaced_to_domain, 'added to temporary_domain_alias',
-             this_request.temporary_domain_alias)
+             parse.temporary_domain_alias)
 
 
 @lru_cache(maxsize=1024)
@@ -708,7 +707,7 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
     sp = urlsplit(_raw_url_or_path)
     if '/extdomains/' == sp.path[:12]:
         return raw_url_or_path
-    domain = remote_domain or sp.netloc or this_request.remote_domain or target_domain
+    domain = remote_domain or sp.netloc or parse.remote_domain or target_domain
     if domain not in allowed_domains_set:
         return raw_url_or_path
 
@@ -848,9 +847,9 @@ def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=F
         errormsg = errormsg.decode()
 
     request_detail = ""
-    for attrib in filter(lambda x: x[:2] != '__' and x[-2:] != '__', dir(this_request)):
+    for attrib in filter(lambda x: x[:2] != '__' and x[-2:] != '__', dir(parse)):
         request_detail += "<tr><td>{attrib}</td><td>{value}</td></tr>" \
-            .format(attrib=attrib, value=html_escape(str(this_request.__getattribute__(attrib))))
+            .format(attrib=attrib, value=html_escape(str(parse.__getattribute__(attrib))))
 
     error_page = """<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8">
 <title>zmirror internal error</title>
@@ -999,7 +998,7 @@ def update_content_in_local_cache(url, content, method='GET'):
             url,
             resp,
             obj_size=len(content),
-            expires=get_expire_from_mime(this_request.mime),
+            expires=get_expire_from_mime(parse.mime),
             last_modified=info_dict.get('last_modified'),
             info_dict=info_dict,
         )
@@ -1013,21 +1012,21 @@ def put_response_to_local_cache(url, _our_resp, without_content=False):
     :param _our_resp: our response(flask response object) to client, would be storge
     """
     # Only cache GET method, and only when remote returns 200(OK) status
-    if local_cache_enable and request.method == 'GET' and this_request.remote_response.status_code == 200:
+    if local_cache_enable and request.method == 'GET' and parse.remote_response.status_code == 200:
         if without_content:
             our_resp = copy.copy(_our_resp)
             our_resp.response = None  # delete iterator
         else:
             our_resp = _our_resp
         # the header's character cases are different in flask/apache(win)/apache(linux)
-        last_modified = this_request.remote_response.headers.get('last-modified', None) \
-                        or this_request.remote_response.headers.get('Last-Modified', None)
+        last_modified = parse.remote_response.headers.get('last-modified', None) \
+                        or parse.remote_response.headers.get('Last-Modified', None)
         dbgprint('PuttingCache:', url)
         cache.put_obj(
             url,
             our_resp,
-            expires=get_expire_from_mime(this_request.mime),
-            obj_size=0 if without_content else len(this_request.remote_response.content),
+            expires=get_expire_from_mime(parse.mime),
+            obj_size=0 if without_content else len(parse.remote_response.content),
             last_modified=last_modified,
             info_dict={'without_content': without_content,
                        'last_modified': last_modified,
@@ -1115,10 +1114,10 @@ def regex_url_reassemble(match_obj):
         # if we have quote_left, it must equals to the right
         or (quote_left and quote_left != quote_right)
         # in javascript, those 'path' contains one or only two slash, should not be rewrited (for potential error)
-        # or (this_request.mime == 'application/javascript' and path.count('/') < 2)
+        # or (parse.mime == 'application/javascript' and path.count('/') < 2)
         # in javascript, we only rewrite those with explicit scheme ones.
         # v0.21.10+ in "key":"value" format, we should ignore those path without scheme
-        or (not scheme and ('javascript' in this_request.mime or '"' in prefix))
+        or (not scheme and ('javascript' in parse.mime or '"' in prefix))
         ):
         # dbgprint('returned_un_touch', whole_match_string)
         return whole_match_string
@@ -1131,7 +1130,7 @@ def regex_url_reassemble(match_obj):
     # dbgprint(match_obj.groups(), v=5)
     # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
 
-    domain = match_domain or this_request.remote_domain
+    domain = match_domain or parse.remote_domain
     # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
@@ -1140,9 +1139,9 @@ def regex_url_reassemble(match_obj):
 
     # this resource's absolute url path to the domain root.
     # dbgprint('match path', path, v=5)
-    path = urljoin(this_request.remote_path, path)
+    path = urljoin(parse.remote_path, path)
     # dbgprint('middle path', path, v=5)
-    if ':' not in this_request.remote_domain:  # the python's builtin urljoin has a bug, cannot join domain with port correctly
+    if ':' not in parse.remote_domain:  # the python's builtin urljoin has a bug, cannot join domain with port correctly
         url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
     else:
         url_no_scheme = domain + '/' + path.lstrip('/')
@@ -1175,7 +1174,7 @@ def regex_url_reassemble(match_obj):
         # http://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.pw/css/main.css
         replace_to_scheme_domain = my_host_scheme + CDN_domains[zlib.adler32(path.encode()) % cdn_domains_number]
 
-    # else:  # this_request.mime == 'application/javascript':
+    # else:  # parse.mime == 'application/javascript':
     #     replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
     elif not scheme:
         replace_to_scheme_domain = ''
@@ -1320,7 +1319,7 @@ def iter_streamed_response_async():
 
     t = threading.Thread(
         target=preload_streamed_response_content_async,
-        args=(this_request.remote_response, buffer_queue),
+        args=(parse.remote_response, buffer_queue),
         daemon=True,
     )
     t.start()
@@ -1351,8 +1350,8 @@ def iter_streamed_response_async():
             yield particle_content
         else:
             if local_cache_enable and not _disable_cache_temporary:
-                update_content_in_local_cache(this_request.remote_url, _content_buffer,
-                                              method=this_request.remote_response.request.method)
+                update_content_in_local_cache(parse.remote_url, _content_buffer,
+                                              method=parse.remote_response.request.method)
             return
 
         if verbose_level >= 4:
@@ -1368,7 +1367,7 @@ def iter_streamed_response():
     _content_buffer = b''
     _disable_cache_temporary = False
 
-    for particle_content in this_request.remote_response.iter_content(stream_transfer_buffer_size):
+    for particle_content in parse.remote_response.iter_content(stream_transfer_buffer_size):
         if verbose_level >= 4:
             total_size += len(particle_content)
             dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
@@ -1385,8 +1384,8 @@ def iter_streamed_response():
         yield particle_content
 
     if local_cache_enable and not _disable_cache_temporary:
-        update_content_in_local_cache(this_request.remote_url, _content_buffer,
-                                      method=this_request.remote_response.request.method)
+        update_content_in_local_cache(parse.remote_url, _content_buffer,
+                                      method=parse.remote_response.request.method)
 
 
 def copy_response(content=None, is_streamed=False):
@@ -1403,29 +1402,29 @@ def copy_response(content=None, is_streamed=False):
         if is_streamed:
             req_time_body = 0
             if not enable_stream_transfer_async_preload:
-                dbgprint('TransferUsingStreamMode(basic):', this_request.remote_response.url, this_request.mime)
+                dbgprint('TransferUsingStreamMode(basic):', parse.remote_response.url, parse.mime)
                 content = iter_streamed_response()
             else:
-                dbgprint('TransferUsingStreamMode(async):', this_request.remote_response.url, this_request.mime)
+                dbgprint('TransferUsingStreamMode(async):', parse.remote_response.url, parse.mime)
                 content = iter_streamed_response_async()
         else:
             content, req_time_body = response_content_rewrite()
     else:
         req_time_body = 0
 
-    if verbose_level >= 3: dbgprint('RemoteRespHeaders', this_request.remote_response.headers)
-    resp = Response(content, status=this_request.remote_response.status_code)
+    if verbose_level >= 3: dbgprint('RemoteRespHeaders', parse.remote_response.headers)
+    resp = Response(content, status=parse.remote_response.status_code)
 
-    for header_key in this_request.remote_response.headers:
+    for header_key in parse.remote_response.headers:
         header_key_lower = header_key.lower()
         # Add necessary response headers from the origin site, drop other headers
         if header_key_lower in allowed_remote_response_headers:
             if header_key_lower == 'location':
-                _location = this_request.remote_response.headers[header_key]
+                _location = parse.remote_response.headers[header_key]
                 # try to apply custom rewrite function
                 try:
                     if custom_text_rewriter_enable:
-                        _loc_rewrite = custom_response_text_rewriter(_location, 'mwm/headers-location', this_request.remote_url)
+                        _loc_rewrite = custom_response_text_rewriter(_location, 'mwm/headers-location', parse.remote_url)
                         if isinstance(_loc_rewrite, str):
                             _location = _loc_rewrite
                 except Exception as _e:  # just print err and fallback to normal rewrite
@@ -1436,10 +1435,10 @@ def copy_response(content=None, is_streamed=False):
 
             elif header_key_lower == 'content-type':
                 # force add utf-8 to content-type if it is text
-                if is_mime_represents_text(this_request.mime) and 'utf-8' not in this_request.content_type:
-                    resp.headers[header_key] = this_request.mime + '; charset=utf-8'
+                if is_mime_represents_text(parse.mime) and 'utf-8' not in parse.content_type:
+                    resp.headers[header_key] = parse.mime + '; charset=utf-8'
                 else:
-                    resp.headers[header_key] = this_request.remote_response.headers[header_key]
+                    resp.headers[header_key] = parse.remote_response.headers[header_key]
 
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
                 if custom_allowed_origin is None:
@@ -1451,7 +1450,7 @@ def copy_response(content=None, is_streamed=False):
                     resp.headers[header_key] = custom_allowed_origin
 
             else:
-                resp.headers[header_key] = this_request.remote_response.headers[header_key]
+                resp.headers[header_key] = parse.remote_response.headers[header_key]
 
         # If we have the Set-Cookie header, we should extract the raw ones
         #   and then change the cookie domain to our domain
@@ -1487,7 +1486,7 @@ def response_cookies_deep_copy():
     ('Date', 'Tue, 26 Apr 2016 12:32:40 GMT')]
 
     """
-    raw_headers = this_request.remote_response.raw._original_response.headers._headers
+    raw_headers = parse.remote_response.raw._original_response.headers._headers
     header_cookies_string_list = []
     for name, value in raw_headers:
         if name.lower() == 'set-cookie':
@@ -1503,9 +1502,9 @@ def response_cookies_deep_copy():
                     # 重写HttpOnly Cookies的path到当前url下
                     # eg(/extdomains/a.foobar.com): path=/verify; -> path=/extdomains/a.foobar.com/verify
 
-                    if this_request.remote_domain not in domain_alias_to_target_set:  # do not rewrite main domains
+                    if parse.remote_domain not in domain_alias_to_target_set:  # do not rewrite main domains
                         value = regex_cookie_path_rewriter.sub(
-                            '\g<prefix>=/extdomains/' + this_request.remote_domain + '\g<path>', value)
+                            '\g<prefix>=/extdomains/' + parse.remote_domain + '\g<path>', value)
 
             header_cookies_string_list.append(value)
     return header_cookies_string_list
@@ -1518,30 +1517,30 @@ def response_content_rewrite():
     """
 
     _start_time = time()
-    _content = this_request.remote_response.content
+    _content = parse.remote_response.content
     req_time_body = time() - _start_time
 
-    if this_request.mime and is_mime_represents_text(this_request.mime):
+    if parse.mime and is_mime_represents_text(parse.mime):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
-        if verbose_level >= 3: dbgprint('Text-like', this_request.content_type,
-                                        this_request.remote_response.text[:15], _content[:15])
+        if verbose_level >= 3: dbgprint('Text-like', parse.content_type,
+                                        parse.remote_response.text[:15], _content[:15])
 
         if force_decode_remote_using_encode is not None:
-            this_request.remote_response.encoding = force_decode_remote_using_encode
+            parse.remote_response.encoding = force_decode_remote_using_encode
         elif possible_charsets:
             for charset in possible_charsets:
                 try:
-                    this_request.remote_response.content.decode(charset)
+                    parse.remote_response.content.decode(charset)
                 except:
                     pass
                 else:
-                    this_request.remote_response.encoding = charset
+                    parse.remote_response.encoding = charset
                     break
         elif cchardet_available:  # detect the encoding using cchardet (if we have)
-            this_request.remote_response.encoding = c_chardet(_content)
+            parse.remote_response.encoding = c_chardet(_content)
 
         # simply copy the raw text, for custom rewriter function first.
-        resp_text = this_request.remote_response.text
+        resp_text = parse.remote_response.text
 
         if developer_string_trace is not None and developer_string_trace in resp_text:
             infoprint('StringTrace: appears in the RAW remote response text, code line no. ', current_line_number())
@@ -1549,7 +1548,7 @@ def response_content_rewrite():
         # try to apply custom rewrite function
         try:
             if custom_text_rewriter_enable:
-                resp_text2 = custom_response_text_rewriter(resp_text, this_request.mime, this_request.remote_url)
+                resp_text2 = custom_response_text_rewriter(resp_text, parse.mime, parse.remote_url)
                 if isinstance(resp_text2, str):
                     resp_text = resp_text2
                 elif isinstance(resp_text2, tuple) or isinstance(resp_text2, list):
@@ -1580,7 +1579,7 @@ def response_content_rewrite():
         return resp_text.encode(encoding='utf-8'), req_time_body  # return bytes
     else:
         # simply don't touch binary response content
-        dbgprint('Binary', this_request.content_type)
+        dbgprint('Binary', parse.content_type)
         return _content, req_time_body
 
 
@@ -1667,7 +1666,7 @@ def response_text_rewrite(resp_text):
     """
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
-        for before_replace, after_replace in (plain_replace_domain_alias + this_request.temporary_domain_alias):
+        for before_replace, after_replace in (plain_replace_domain_alias + parse.temporary_domain_alias):
             # _before_e = before_replace.replace('/', r'\/')
             # _after_e = after_replace.replace('/', r'\/')
             # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
@@ -1728,16 +1727,16 @@ def response_cookie_rewrite(cookie_string):
 # ################# Begin Client Request Handler #################
 def assemble_remote_url():
     """
-    组装目标服务器URL, 即生成 this_request.remote_url 的值
+    组装目标服务器URL, 即生成 parse.remote_url 的值
     :rtype: str
     """
-    if this_request.is_external_domain:
+    if parse.is_external_domain:
         # 请求的是外部域名 (external domains)
-        scheme = 'https://' if this_request.is_https else 'http://'
-        return urljoin(scheme + this_request.remote_domain, this_request.remote_path_query)
+        scheme = 'https://' if parse.is_https else 'http://'
+        return urljoin(scheme + parse.remote_domain, parse.remote_path_query)
     else:
         # 请求的是主域名及可以被当做(alias)主域名的域名
-        return urljoin(target_scheme + target_domain, this_request.remote_path_query)
+        return urljoin(target_scheme + target_domain, parse.remote_path_query)
 
 
 def ssrf_check_layer_1():
@@ -1747,10 +1746,10 @@ def ssrf_check_layer_1():
     :rtype: bool
     """
     # Only external in-zone domains are allowed (SSRF check layer 1)
-    if this_request.remote_domain not in allowed_domains_set:
-        if not try_match_and_add_domain_to_rewrite_white_list(this_request.remote_domain):  # 请求的域名是否满足通配符
+    if parse.remote_domain not in allowed_domains_set:
+        if not try_match_and_add_domain_to_rewrite_white_list(parse.remote_domain):  # 请求的域名是否满足通配符
             if developer_temporary_disable_ssrf_prevention:  # 是否在设置中临时关闭了SSRF防护
-                add_ssrf_allowed_domain(this_request.remote_domain)
+                add_ssrf_allowed_domain(parse.remote_domain)
                 return False
             else:
                 return True
@@ -1926,39 +1925,39 @@ def request_remote_site_and_parse():
     try:  # send request to remote server
         data = client_requests_bin_rewrite(request.get_data())
         # server's request won't follow 301 or 302 redirection
-        this_request.remote_response, req_time_headers = send_request(
-            this_request.remote_url,
+        parse.remote_response, req_time_headers = send_request(
+            parse.remote_url,
             method=request.method,
-            headers=this_request.client_header,
+            headers=parse.client_header,
             data=data,  # client_requests_bin_rewrite(request.get_data()),
         )
-        if this_request.remote_response.url != this_request.remote_url:
-            warnprint('requests\'s remote url' + this_request.remote_response.url
-                      + 'does no equals our rewrited url' + this_request.remote_url)
+        if parse.remote_response.url != parse.remote_url:
+            warnprint('requests\'s remote url' + parse.remote_response.url
+                      + 'does no equals our rewrited url' + parse.remote_url)
     except Exception as _e:
         errprint(_e)  # ERROR :( so sad
         traceback.print_exc()
         return generate_error_page(errormsg="Error occurs when requesting remote server", is_traceback=True)
 
     # extract response's mime to thread local var
-    this_request.content_type = this_request.remote_response.headers.get('Content-Type', '') \
-                                or this_request.remote_response.headers.get('content-type', '')
-    this_request.mime = extract_mime_from_content_type(this_request.content_type)
+    parse.content_type = parse.remote_response.headers.get('Content-Type', '') \
+                         or parse.remote_response.headers.get('content-type', '')
+    parse.mime = extract_mime_from_content_type(parse.content_type)
 
     # only_serve_static_resources
-    if only_serve_static_resources and not is_content_type_using_cdn(this_request.content_type):
+    if only_serve_static_resources and not is_content_type_using_cdn(parse.content_type):
         return generate_simple_resp_page(b'This site is just for static resources.', error_code=403)
 
     # is streamed
-    is_streamed = enable_stream_content_transfer and is_content_type_streamed(this_request.content_type)
+    is_streamed = enable_stream_content_transfer and is_content_type_streamed(parse.content_type)
 
     # extract cache control header, if not cache, we should disable local cache
-    this_request.cache_control = this_request.remote_response.headers.get('Cache-Control', '') \
-                                 or this_request.remote_response.headers.get('cache-control', '')
-    _response_no_cache = 'no-store' in this_request.cache_control or 'must-revalidate' in this_request.cache_control
+    parse.cache_control = parse.remote_response.headers.get('Cache-Control', '') \
+                          or parse.remote_response.headers.get('cache-control', '')
+    _response_no_cache = 'no-store' in parse.cache_control or 'must-revalidate' in parse.cache_control
 
     if verbose_level >= 4:
-        dbgprint('Response Content-Type:', this_request.content_type,
+        dbgprint('Response Content-Type:', parse.content_type,
                  'IsStreamed:', is_streamed,
                  'is_no_cache:', _response_no_cache,
                  'Line', current_line_number(), v=4)
@@ -1967,34 +1966,34 @@ def request_remote_site_and_parse():
     #   next time we access this url, we would know it's mime
     # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
     if mime_based_static_resource_CDN and not _response_no_cache \
-            and this_request.remote_response.request.method == 'GET' and this_request.remote_response.status_code == 200:
+            and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200:
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
-        if this_request.url_no_scheme not in url_to_use_cdn:
+        if parse.url_no_scheme not in url_to_use_cdn:
             # 记录本URL的信息
-            url_to_use_cdn[this_request.url_no_scheme] = [False, this_request.mime, len(this_request.remote_response.content)]
+            url_to_use_cdn[parse.url_no_scheme] = [False, parse.mime, len(parse.remote_response.content)]
 
-            if is_content_type_using_cdn(this_request.mime):
+            if is_content_type_using_cdn(parse.mime):
                 # mark it to use cdn, and record it's url without scheme.
                 # eg: If SERVER's request url is http://example.com/2333?a=x, we record example.com/2333?a=x
                 # because the same url for http and https SHOULD be the same, drop the scheme would increase performance
-                url_to_use_cdn[this_request.url_no_scheme][0] = True  # 标记为使用CDN
-                dbgprint('CDN enabled for:', this_request.url_no_scheme)
+                url_to_use_cdn[parse.url_no_scheme][0] = True  # 标记为使用CDN
+                dbgprint('CDN enabled for:', parse.url_no_scheme)
             else:
-                dbgprint('CDN disabled for:', this_request.url_no_scheme)
+                dbgprint('CDN disabled for:', parse.url_no_scheme)
 
     # copy and parse remote response
     resp, req_time_body = copy_response(is_streamed=is_streamed)
 
     # storge entire our server's response (headers included)
     if local_cache_enable and not _response_no_cache:
-        put_response_to_local_cache(this_request.remote_url, resp, without_content=is_streamed)
+        put_response_to_local_cache(parse.remote_url, resp, without_content=is_streamed)
 
-    if this_request.start_time is not None and not is_streamed:
+    if parse.start_time is not None and not is_streamed:
         # remote request time should be excluded when calculating total time
         resp.headers.add('X-Header-Req-Time', "%.4f" % req_time_headers)
         resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
-        resp.headers.add('X-Compute-Time', "%.4f" % (time() - this_request.start_time - req_time_headers - req_time_body))
+        resp.headers.add('X-Compute-Time', "%.4f" % (time() - parse.start_time - req_time_headers - req_time_body))
 
     resp.headers.add('X-Powered-By', 'zmirror/%s' % __VERSION__)
 
@@ -2007,7 +2006,7 @@ def request_remote_site_and_parse():
                 pickle.dump(
                     (_time_str,
                      (repr(request.url), repr(request.headers), repr(request.get_data())),
-                     this_request.remote_response, resp
+                     parse.remote_response, resp
                      ),
                     fp)
         except:
@@ -2070,15 +2069,15 @@ def prior_request_redirect():
     """
 
     # 非外部域名被错误地当成了外部域名, 则需要重定向修正
-    if not this_request.is_external_domain and '/extdomains/' == request.path[:12]:
+    if not parse.is_external_domain and '/extdomains/' == request.path[:12]:
         dbgprint('Requesting main domain in extdomains, redirect back.')
-        return redirect(this_request.remote_path_query, code=307)
+        return redirect(parse.remote_path_query, code=307)
 
     # 镜像隔离机制, 根据 referer 判断当前所处的镜像, 在子镜像中, 若请求不包含 /extdomains/ 的url, 将会被重定向修正
     if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
         reference_domain = decode_mirror_url(request.headers.get('referer'))['domain']
         if reference_domain in isolated_domains:
-            return redirect(encode_mirror_url(this_request.remote_path_query, reference_domain), code=307)
+            return redirect(encode_mirror_url(parse.remote_path_query, reference_domain), code=307)
 
     if url_custom_redirect_enable:
         # 简单的自定义重定向, 详见 config: url_custom_redirect_list
@@ -2089,8 +2088,8 @@ def prior_request_redirect():
 
         # 基于正则的自定义重定向, 详见 config: url_custom_redirect_regex
         for regex_match, regex_replace in url_custom_redirect_regex:
-            if re.match(regex_match, this_request.remote_path_query, flags=re.IGNORECASE) is not None:
-                redirect_to = re.sub(regex_match, regex_replace, this_request.remote_path_query, flags=re.IGNORECASE)
+            if re.match(regex_match, parse.remote_path_query, flags=re.IGNORECASE) is not None:
+                redirect_to = re.sub(regex_match, regex_replace, parse.remote_path_query, flags=re.IGNORECASE)
                 dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)
 
@@ -2112,13 +2111,13 @@ def posterior_request_redirect():
     if mime_based_static_resource_CDN:  # CDN总开关
         if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
             # 该URL所对应的资源已知, 即之前已经被成功请求过
-            and this_request.url_no_scheme in url_to_use_cdn
+            and parse.url_no_scheme in url_to_use_cdn
             # 并且该资源已经被判断为可以应用CDN
-            and url_to_use_cdn[this_request.url_no_scheme][0]
+            and url_to_use_cdn[parse.url_no_scheme][0]
             # 只缓存 GET 方法的资源
             and request.method == 'GET'
             # 只有超过大小下限才会重定向
-            and url_to_use_cdn[this_request.url_no_scheme][2] > cdn_soft_redirect_minimum_size
+            and url_to_use_cdn[parse.url_no_scheme][2] > cdn_soft_redirect_minimum_size
             # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
             and not is_ua_in_whitelist(str(request.user_agent))
             ):
@@ -2128,23 +2127,23 @@ def posterior_request_redirect():
                 # 根据url的crc32取余来选取一个CDN域名
                 # 使用crc32, 而不是随机数, 是为了确保相同的URL每次都能应用相同的CDN域名
                 # 以增加CDN和缓存命中率
-                + CDN_domains[zlib.adler32(this_request.url_no_scheme.encode()) % cdn_domains_number],
+                + CDN_domains[zlib.adler32(parse.url_no_scheme.encode()) % cdn_domains_number],
                 extract_url_path_and_query()  # 得到目标url的 /a.png?q=233 这么个部分
             )
             if cdn_redirect_encode_query_str_into_url:
                 # 将 ?q=233 这种查询字串编码进path, 详情看config里的说明
                 redirect_to_url = embed_real_url_to_embedded_url(
-                    redirect_to_url, url_mime=url_to_use_cdn[this_request.url_no_scheme][1])
+                    redirect_to_url, url_mime=url_to_use_cdn[parse.url_no_scheme][1])
 
             return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
 
     # 本地缓存若命中则直接返回
     if local_cache_enable:
-        resp = try_get_cached_response(this_request.remote_url, this_request.client_header)
+        resp = try_get_cached_response(parse.remote_url, parse.client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
-            if this_request.start_time is not None:
-                resp.headers.set('X-Compute-Time', "%.4f" % (time() - this_request.start_time))
+            if parse.start_time is not None:
+                resp.headers.set('X-Compute-Time', "%.4f" % (time() - parse.start_time))
             return resp
 
 
@@ -2191,13 +2190,13 @@ def rewrite_client_request():
     # 所以此时需要重新解析一遍
     if has_been_rewrited:
         _temp = decode_mirror_url()
-        this_request.remote_domain = _temp['domain']  # type: str
-        this_request.is_https = _temp['is_https']  # type: bool
-        this_request.remote_path = _temp['path']  # type: str
-        this_request.remote_path_query = _temp['path_query']  # type: str
-        this_request.is_external_domain = this_request.remote_domain not in domain_alias_to_target_set
-        this_request.remote_url = assemble_remote_url()  # type: str
-        this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
+        parse.remote_domain = _temp['domain']  # type: str
+        parse.is_https = _temp['is_https']  # type: bool
+        parse.remote_path = _temp['path']  # type: str
+        parse.remote_path_query = _temp['path_query']  # type: str
+        parse.is_external_domain = parse.remote_domain not in domain_alias_to_target_set
+        parse.remote_url = assemble_remote_url()  # type: str
+        parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
 
     return has_been_rewrited
 
@@ -2381,48 +2380,48 @@ def main_function(input_path='/'):
     """
     dbgprint('-----BeginRequest-----')
 
-    # this_request 类似于 flask 的 request, 是 zmirror 特有的一个 thread-local 变量
+    # parse 类似于 flask 的 request, 是 zmirror 特有的一个 thread-local 变量
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     # 其各个变量的含义如下:
-    # this_request.start_time             处理请求开始的时间, unix 时间戳
-    #             .remote_domain          当前请求对应的远程域名
-    #             .is_external_domain     远程域名是否是外部域名, 比如google镜像, www.gstatic.com 就是外部域名
-    #             .is_https               是否需要用https 来请求远程域名
-    #             .remote_url             远程服务器的url, 比如 https://google.com/search?q=233
-    #             .url_no_scheme          没有协议前缀的url,比如 google.com/search?q=233 通常在缓存中用
-    #             .remote_path_query      对应的远程path+query, 比如 /search?q=2333
-    #             .remote_path            对应的远程path,  比如 /search
-    #             .client_header          经过转换和重写以后的访问者请求头
-    #             .content_type           远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
-    #             .mime                   远程服务器响应的MIME, 比如 "text/html"
-    #             .cache_control          远程服务器响应的cache_control内容
-    #             .remote_response        远程服务器的响应, requests.Response
-    #             .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
+    # parse.start_time          处理请求开始的时间, unix 时间戳
+    #      .remote_domain       当前请求对应的远程域名
+    #      .is_external_domain  远程域名是否是外部域名, 比如google镜像, www.gstatic.com 就是外部域名
+    #      .is_https            是否需要用https 来请求远程域名
+    #      .remote_url          远程服务器的url, 比如 https://google.com/search?q=233
+    #      .url_no_scheme       没有协议前缀的url,比如 google.com/search?q=233 通常在缓存中用
+    #      .remote_path_query   对应的远程path+query, 比如 /search?q=2333
+    #      .remote_path         对应的远程path,  比如 /search
+    #      .client_header       经过转换和重写以后的访问者请求头
+    #      .content_type        远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
+    #      .mime                远程服务器响应的MIME, 比如 "text/html"
+    #      .cache_control       远程服务器响应的cache_control内容
+    #      .remote_response     远程服务器的响应, requests.Response
+    #      .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
-    this_request.start_time = time()  # to display compute time
-    this_request.temporary_domain_alias = ()  # init temporary_domain_alias
+    parse.start_time = time()  # to display compute time
+    parse.temporary_domain_alias = ()  # init temporary_domain_alias
 
     # 将用户请求的URL解析为对应的目标服务器URL
     _temp = decode_mirror_url()
-    this_request.remote_domain = _temp['domain']  # type: str
-    this_request.is_https = _temp['is_https']  # type: bool
-    this_request.remote_path = _temp['path']  # type: str
-    this_request.remote_path_query = _temp['path_query']  # type: str
-    this_request.is_external_domain = this_request.remote_domain not in domain_alias_to_target_set
-    this_request.remote_url = assemble_remote_url()  # type: str
-    this_request.url_no_scheme = this_request.remote_url[this_request.remote_url.find('//') + 2:]  # type: str
+    parse.remote_domain = _temp['domain']  # type: str
+    parse.is_https = _temp['is_https']  # type: bool
+    parse.remote_path = _temp['path']  # type: str
+    parse.remote_path_query = _temp['path_query']  # type: str
+    parse.is_external_domain = parse.remote_domain not in domain_alias_to_target_set
+    parse.remote_url = assemble_remote_url()  # type: str
+    parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
     dbgprint('after extract, url:', request.url, '   path:', request.path)
 
     # 对用户请求进行检查和过滤
     # 不符合条件的请求(比如爬虫)将终止执行
-    # 函数不会修改 this_request
+    # 函数不会修改 parse
     r = filter_client_request()
     if r is not None:  # 如果函数返回值不是None, 则表示需要响应给用户
         dbgprint('-----EndRequest(filtered out)-----')
         return r
 
     # 对用户请求进行第一级重定向(隐式重写前的重定向)
-    # 函数不会修改 this_request
+    # 函数不会修改 parse
     r = prior_request_redirect()
     if r is not None:
         return r
@@ -2430,7 +2429,7 @@ def main_function(input_path='/'):
     # 进行请求的隐式重写/重定向
     # 隐式重写只对 zmirror 内部生效, 对浏览器透明
     # 重写可能会修改 flask 的内置 request 变量
-    # 可能会修改 this_request
+    # 可能会修改 parse
     try:
         has_been_rewrited = rewrite_client_request()
     except:
@@ -2441,7 +2440,7 @@ def main_function(input_path='/'):
             b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
 
     # 提取出经过必要重写后的客户请求头
-    this_request.client_header = extract_client_header()  # type: dict
+    parse.client_header = extract_client_header()  # type: dict
 
     # 对用户请求进行第二级重定向(隐式重写后的重定向)
     r = posterior_request_redirect()
