@@ -338,3 +338,4 @@ config_zjumail.py
 custom_func_.py
 custom_func_t.py
 img/
+/tests/sample/

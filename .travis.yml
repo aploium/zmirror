@@ -22,7 +22,7 @@ sudo: false
 
 # command to run tests
 script:
-  - coverage run test/test.py
+  - coverage run tests/runner.py
 
 notifications:
   webhooks:

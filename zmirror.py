@@ -19,6 +19,7 @@ from time import time, sleep
 import queue
 from fnmatch import fnmatch
 from html import escape as html_escape
+import ipaddress
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 
 try:
@@ -229,7 +230,6 @@ if enable_custom_access_cookie_generate_and_verify:
 if not is_use_proxy:
     requests_proxies = None
 if human_ip_verification_enabled:
-    import ipaddress
 
     buff = []
     for network in human_ip_verification_default_whitelist_networks:
@@ -2492,6 +2492,8 @@ for _domain in allowed_domains_set:
 
 if human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
+else:
+    single_ip_allowed_set = set()
 
 if custom_text_rewriter_enable:
     try:
