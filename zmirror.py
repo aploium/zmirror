@@ -369,6 +369,13 @@ def cron_task_container(task_dict, add_task_only=False):
             errprint('ErrorWhenProcessingCronTasks', task_dict)
             traceback.print_exc()
 
+    # 当全局开关关闭时, 自动退出线程
+    if not enable_cron_tasks:
+        if threading.current_thread() != threading.main_thread():
+            exit()
+        else:
+            return
+
     # 添加下一次定时任务
     task_scheduler.enter(
         task_dict.get('interval', 300),
@@ -381,6 +388,13 @@ def cron_task_container(task_dict, add_task_only=False):
 def cron_task_host():
     """定时任务宿主, 每分钟检查一次列表, 运行时间到了的定时任务"""
     while True:
+        # 当全局开关关闭时, 自动退出线程
+        if not enable_cron_tasks:
+            if threading.current_thread() != threading.main_thread():
+                exit()
+            else:
+                return
+
         sleep(60)
         try:
             task_scheduler.run()
