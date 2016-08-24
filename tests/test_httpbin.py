@@ -53,18 +53,25 @@ class TestHttpbin(ZmirrorTestBase):
             rv = c.get(
                 self.url("/headers"),
                 environ_base=env(),
-                headers=headers(others={
-                    "Host": self.C.my_host_name,
-                    "Referer": self.url("/extdomains/eu.httpbin.org/headers"),
-                    "Cookie": "_ga=GA1.2.1161994079.1471765883",
-                    "Hello-World": "love_luciaz",
-                }),
+                headers=headers(
+                    accept_encoding="gzip, deflate, sdch, br",
+                    others={
+                        "Host": self.C.my_host_name,
+                        "Referer": self.url("/extdomains/eu.httpbin.org/headers"),
+                        "Cookie": "_ga=GA1.2.1161994079.1471765883",
+                        "Hello-World": "love_luciaz",
+                    }),
             )
 
-            parse_values = var_attributes_value_to_text(self.zmirror.parse)
             # 黑盒检查
+            parse_values = var_attributes_value_to_text(self.zmirror.parse)
             self.assertEqual("application/json", self.zmirror.parse.content_type)
 
+            self.assertEqual(
+                "gzip, deflate",
+                self.zmirror.parse.client_header['accept-encoding'],
+                msg=parse_values
+            )
             self.assertEqual(
                 "https://eu.httpbin.org/headers",
                 self.zmirror.parse.client_header['referer'],
@@ -88,6 +95,7 @@ class TestHttpbin(ZmirrorTestBase):
             self.assertEqual("https://eu.httpbin.org/headers", h['Referer'], msg=h)
             self.assertEqual("_ga=GA1.2.1161994079.1471765883", h['Cookie'], msg=h)
             self.assertEqual("love_luciaz", h['Hello-World'], msg=h)
+            self.assertEqual("gzip, deflate", h['Accept-Encoding'], msg=h)
 
     def test_thread_local_var(self):
         """https://httpbin.org/"""

@@ -1771,8 +1771,9 @@ def extract_client_header():
         if (head_name_l not in ('host', 'content-length', 'content-type')) \
                 or (head_name_l == 'content-type' and head_value != ''):
             # For Firefox, they may send 'Accept-Encoding: gzip, deflate, br'
-            #   however, this program cannot decode the br encode, so we have to remove it from the request header.
-            if head_name_l == 'accept-encoding' and 'br' in head_value:
+            # For Chrome, they may send 'Accept-Encoding: gzip, deflate, sdch, br'
+            #   however, requests cannot decode the br encode, so we have to remove it from the request header.
+            if head_name_l == 'accept-encoding' and ('br' in head_value or 'sdch' in head_value):
                 _str_buff = ''
                 if 'gzip' in head_value:
                     _str_buff += 'gzip, '
