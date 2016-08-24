@@ -6,7 +6,6 @@ from .base_class import ZmirrorTestBase
 from .utils import env, headers, DEFAULT_USER_AGENT, load_rv_json
 
 
-
 class TestHttpbin(ZmirrorTestBase):
     """testing using https://httpbin.org/"""
 
@@ -24,7 +23,7 @@ class TestHttpbin(ZmirrorTestBase):
     def test_homepage(self):
         """https://httpbin.org/"""
 
-        rv = self.app.get("https://b.test.com/", environ_base=env())
+        rv = self.app.get(self.url("/"), environ_base=env())
         assert isinstance(rv, Response)
         self.assertIn(b'httpbin', rv.data)
 
@@ -32,7 +31,7 @@ class TestHttpbin(ZmirrorTestBase):
         """https://httpbin.org/user-agent"""
 
         rv = self.app.get(
-            "https://b.test.com/user-agent",
+            self.url("/user-agent"),
             environ_base=env(),
             headers=headers()
         )

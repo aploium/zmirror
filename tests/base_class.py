@@ -3,6 +3,7 @@ import sys
 import importlib
 import unittest
 import random
+from urllib.parse import urljoin
 
 from flask.testing import FlaskClient
 
@@ -36,7 +37,6 @@ class ZmirrorTestBase(unittest.TestCase):
         try:
             del self.app
             del self.zmirror
-            importlib.reload(cache_system)
         except:
             pass
 
@@ -52,6 +52,7 @@ class ZmirrorTestBase(unittest.TestCase):
             for config_name, config_value in configs_dict.items():
                 setattr(config, config_name, config_value)
 
+        importlib.reload(cache_system)
         import zmirror
         importlib.reload(zmirror)
         zmirror.app.config['TESTING'] = True
@@ -66,6 +67,10 @@ class ZmirrorTestBase(unittest.TestCase):
         try:
             del self.app
             del self.zmirror
-            importlib.reload(cache_system)
         except:
             pass
+
+    def url(self, path):
+        domain = getattr(self.ZmirrorInitConfig, "my_host_name", "127.0.0.1")
+        scheme = getattr(self.ZmirrorInitConfig, "my_host_scheme", "http://")
+        return urljoin(scheme + domain, path)
