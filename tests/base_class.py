@@ -8,7 +8,6 @@ from flask.testing import FlaskClient
 
 from .utils import copy_default_config_file, restore_config_file
 
-import config
 import cache_system
 
 
@@ -41,6 +40,7 @@ class ZmirrorTestBase(unittest.TestCase):
         except:
             pass
 
+        import config
         importlib.reload(config)
 
         test_config_names = (name for name in dir(self.ZmirrorInitConfig) if name[:2] != '__' and name[-2:] != '__')
