@@ -31,7 +31,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.25.0'
+__VERSION__ = '0.25.1'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -108,6 +108,11 @@ if my_host_port is not None:
 else:
     my_host_name_urlencoded = my_host_name
 static_file_extensions_list = set(static_file_extensions_list)
+
+if external_domains is None:
+    external_domains = []
+external_domains = list([d.strip("./ \t").replace("https://", "").replace("http://", "") for d in external_domains])
+
 external_domains_set = set(external_domains or [])
 allowed_domains_set = external_domains_set.copy()
 allowed_domains_set.add(target_domain)
@@ -1806,8 +1811,14 @@ def client_requests_text_rewrite(raw_text):
 
     # dbgprint('after regex_request_rewriter', replaced)
 
+    if developer_string_trace is not None and developer_string_trace in replaced:
+        infoprint('StringTrace: appears client_requests_text_rewrite, code line no. ', current_line_number())
+
     # 32MB == 33554432
     replaced = client_requests_bin_rewrite(replaced.encode(), max_len=33554432).decode()
+
+    if developer_string_trace is not None and developer_string_trace in replaced:
+        infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
 
     if verbose_level >= 3 and raw_text != replaced:
         dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
@@ -1841,19 +1852,20 @@ def client_requests_bin_rewrite(raw_bin, max_len=2097152):  # 2097152=2MB
         raw_bin = raw_bin.replace(my_host_name.encode(), target_domain.encode())
         raw_bin = raw_bin.replace(my_host_name_no_port.encode(), target_domain.encode())
 
-        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2Fhttps-', b'')
-        raw_bin = raw_bin.replace(b'%5c%2fextdomains%5c%2fhttps-', b'')
-        raw_bin = raw_bin.replace(b'%2Fextdomains%2Fhttps-', b'')
-        raw_bin = raw_bin.replace(b'%2fextdomains%2fhttps-', b'')
-        raw_bin = raw_bin.replace(b'\\/extdomains\\/https-', b'')
-        raw_bin = raw_bin.replace(b'/extdomains/https-', b'')
+        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2Fhttps-', b'%5C%2F')
+        raw_bin = raw_bin.replace(b'%5c%2fextdomains%5c%2fhttps-', b'%5c%2f')
+        raw_bin = raw_bin.replace(b'%2Fextdomains%2Fhttps-', b'%2F')
+        raw_bin = raw_bin.replace(b'%2fextdomains%2fhttps-', b'%2f')
+        raw_bin = raw_bin.replace(b'\\/extdomains\\/https-', b'\\/')
+        raw_bin = raw_bin.replace(b'/extdomains/https-', b'/')
 
-        raw_bin = raw_bin.replace(b'%2Fextdomains%2F', b'')
-        raw_bin = raw_bin.replace(b'%2fextdomains%2f', b'')
-        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2F', b'')
-        raw_bin = raw_bin.replace(b'%5c%2cextdomains%5c%2c', b'')
-        raw_bin = raw_bin.replace(b'\\/extdomains\\/', b'')
-        raw_bin = raw_bin.replace(b'/extdomains/', b'')
+        raw_bin = raw_bin.replace(b'%2Fextdomains%2F', b'%2F')
+        raw_bin = raw_bin.replace(b'%2fextdomains%2f', b'%2f')
+        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2F', b'%5C%2F')
+
+        raw_bin = raw_bin.replace(b'%5c%2cextdomains%5c%2c', b'%5c%2c')
+        raw_bin = raw_bin.replace(b'\\/extdomains\\/', b'\\/')
+        raw_bin = raw_bin.replace(b'/extdomains/', b'/')
 
         return raw_bin
 
@@ -1930,6 +1942,10 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 def request_remote_site_and_parse():
     try:  # send request to remote server
         data = client_requests_bin_rewrite(request.get_data())
+
+        if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
+            infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
+
         # server's request won't follow 301 or 302 redirection
         parse.remote_response, req_time_headers = send_request(
             parse.remote_url,

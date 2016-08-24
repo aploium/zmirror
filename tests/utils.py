@@ -53,7 +53,7 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (K
 
 
 def headers(
-        accept_encoding="gzip, deflate",
+        accept_encoding="gzip, deflate, sdch, br",
         user_agent=DEFAULT_USER_AGENT,
         others=None,
         **kwargs

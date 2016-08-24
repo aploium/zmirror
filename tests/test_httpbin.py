@@ -1,5 +1,6 @@
 # coding=utf-8
 import json
+from pprint import pprint
 from flask import Response
 import requests
 
@@ -15,11 +16,13 @@ class TestHttpbin(ZmirrorTestBase):
         my_host_scheme = 'https://'
         target_domain = 'httpbin.org'
         target_scheme = 'https://'
-        external_domains = ('http://eu.httpbin.org/',)
+        external_domains = ('eu.httpbin.org',)
         force_https_domains = 'ALL'
         enable_automatic_domains_whitelist = False
         verbose_level = 3
         possible_charsets = None
+
+        developer_string_trace = "omains/http://eu.h"
 
         # developer_do_not_verify_ssl = True
         # is_use_proxy = True
@@ -97,13 +100,64 @@ class TestHttpbin(ZmirrorTestBase):
             self.assertEqual("love_luciaz", h['Hello-World'], msg=h)
             self.assertEqual("gzip, deflate", h['Accept-Encoding'], msg=h)
 
-    def test_thread_local_var(self):
-        """https://httpbin.org/"""
+    def test_post_json(self):
+        """POST https://httpbin.org/post"""
+
         with self.app.test_client() as c:
-            rv = c.get(self.url("/"), environ_base=env())
+            rv = c.post(
+                self.url("/post"),
+                environ_base=env(),
+                content_type="application/json",
+                data=json.dumps(
+                    {"x": 233,
+                     "domain1": self.C.my_host_name,
+                     "url1": "http://eu.httpbin.org/",
+                     "url2": self.url("/post"),
+                     "url3": "https://%s/extdomains/eu.httpbin.org/xxx?a=235" % self.C.my_host_name,
+                     "url4": "//%s/extdomains/eu.httpbin.org/xxx?a=235" % self.C.my_host_name,
+                     "url5": "http://%s/extdomains/eu.httpbin.org/xxx?a=235" % self.C.my_host_name,
+                     "url6": "http://%s/extdomains/httpbin.org/xxx.png?a=235" % self.C.my_host_name,
+                     "chinese": "吱吱我爱你~ :)",
+                     }
+                ),
+                headers=headers(
+                    others={
+                        "Accept": "application/json",
+                    }
+                ),
+            )
 
-            print(dir(self.zmirror.parse))
-            print(self.zmirror.parse.remote_domain)
+            # 黑盒检查
+            parse_values = var_attributes_value_to_text(self.zmirror.parse)
+            remote_resp = self.zmirror.parse.remote_response  # type: requests.Response
+            remote_resp_json = json.loads(remote_resp.text)  # type: dict
+            zmirror_req = remote_resp.request  # type: requests.PreparedRequest
 
-            assert isinstance(rv, Response)
-            self.assertIn(b'httpbin', rv.data)
+            self.assertEqual(
+                "application/json",
+                self.zmirror.parse.client_header['content-type'],
+                msg=parse_values
+            )
+
+            print(parse_values)
+            print("---------- remote_resp_json --------")
+            pprint(remote_resp_json)
+            print("---------- zmirror_req.headers --------")
+            pprint(zmirror_req.headers)
+            print("---------- zmirror_req.body --------")
+            pprint(json.loads(zmirror_req.body.decode()))
+
+            # 白盒检查
+            r = load_rv_json(rv)
+            print("---------- r --------")
+            pprint(r)
+            r_json = r['json']
+            self.assertEqual("吱吱我爱你~ :)", r_json['chinese'])
+            self.assertEqual(self.C.my_host_name, r_json['domain1'])
+
+            self.assertEqual("https://%s/extdomains/eu.httpbin.org/" % self.C.my_host_name, r_json['url1'])
+            self.assertEqual("https://%s/post" % self.C.my_host_name, r_json['url2'])
+            self.assertEqual("https://%s/extdomains/eu.httpbin.org/xxx?a=235" % self.C.my_host_name, r_json['url3'])
+            self.assertEqual("https://%s/extdomains/eu.httpbin.org/xxx?a=235" % self.C.my_host_name, r_json['url4'])
+            self.assertEqual("https://%s/extdomains/eu.httpbin.org/xxx?a=235" % self.C.my_host_name, r_json['url5'])
+            self.assertEqual("https://%s/xxx.png?a=235" % self.C.my_host_name, r_json['url6'])
