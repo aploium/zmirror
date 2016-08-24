@@ -1,8 +1,10 @@
 # coding=utf-8
+import json
 from flask import Response
+import requests
 
 from .base_class import ZmirrorTestBase
-from .utils import env, headers, DEFAULT_USER_AGENT, load_rv_json
+from .utils import env, headers, DEFAULT_USER_AGENT, load_rv_json, var_attributes_value_to_text
 
 
 class TestHttpbin(ZmirrorTestBase):
@@ -47,29 +49,49 @@ class TestHttpbin(ZmirrorTestBase):
 
     def test_headers(self):
         """https://httpbin.org/headers"""
+        with self.app.test_client() as c:
+            rv = c.get(
+                self.url("/headers"),
+                environ_base=env(),
+                headers=headers(others={
+                    "Host": self.C.my_host_name,
+                    "Referer": self.url("/extdomains/eu.httpbin.org/headers"),
+                    "Cookie": "_ga=GA1.2.1161994079.1471765883",
+                    "Hello-World": "love_luciaz",
+                }),
+            )
 
-        rv = self.client.get(
-            self.url("/headers"),
-            environ_base=env(),
-            headers=headers(others={
-                "Host": self.C.my_host_name,
-                "Referer": self.url("/extdomains/eu.httpbin.org/headers"),
-                "Cookie": "_ga=GA1.2.1161994079.1471765883",
-                "Hello-World": "love_luciaz",
-            }),
-        )
+            parse_values = var_attributes_value_to_text(self.zmirror.parse)
+            # 黑盒检查
+            self.assertEqual("application/json", self.zmirror.parse.content_type)
 
-        json = load_rv_json(rv)['headers']
-        print(json)
-        self.assertEqual(self.C.my_host_name, json['Host'], msg=json)
-        self.assertEqual("https://eu.httpbin.org/headers", json['Referer'], msg=json)
-        self.assertEqual("_ga=GA1.2.1161994079.1471765883", json['Cookie'], msg=json)
-        self.assertEqual("love_luciaz", json['Hello-World'], msg=json)
+            self.assertEqual(
+                "https://eu.httpbin.org/headers",
+                self.zmirror.parse.client_header['referer'],
+                msg=parse_values
+            )
+            self.assertEqual(
+                "love_luciaz",
+                self.zmirror.parse.client_header['hello-world'],
+                msg=parse_values
+            )
+            self.assertEqual("httpbin.org", self.zmirror.parse.remote_domain)
+            self.assertEqual("/headers", self.zmirror.parse.remote_path)
 
-    def test_thread_local_ver(self):
+            remote_resp = self.zmirror.parse.remote_response  # type: requests.Response
+            remote_resp_json = json.loads(remote_resp.text)  # type: dict
+            self.assertEqual(self.C.target_domain, remote_resp_json['headers']['Host'])
+
+            # 白盒检查
+            h = load_rv_json(rv)['headers']
+            self.assertEqual(self.C.my_host_name, h['Host'], msg=h)
+            self.assertEqual("https://eu.httpbin.org/headers", h['Referer'], msg=h)
+            self.assertEqual("_ga=GA1.2.1161994079.1471765883", h['Cookie'], msg=h)
+            self.assertEqual("love_luciaz", h['Hello-World'], msg=h)
+
+    def test_thread_local_var(self):
         """https://httpbin.org/"""
         with self.app.test_client() as c:
-
             rv = c.get(self.url("/"), environ_base=env())
 
             print(dir(self.zmirror.parse))

@@ -76,3 +76,21 @@ def load_rv_json(rv):
     :rtype: dict
     """
     return json.loads(rv.data.decode(encoding='utf-8'))
+
+
+def var_attributes_value_to_text(var):
+    def _strx(*_args, _sep=' '):
+        """
+        :return: str
+        """
+        _output = ''
+        for _arg in _args:
+            _output += str(_arg) + _sep
+        _output.rstrip(_sep)
+        return _output
+
+    output = ""
+    for name in dir(var):
+        if name[:2] != '__' and name[-2:] != '__':
+            output += _strx(name, ":", getattr(var, name), "\n")
+    return output
