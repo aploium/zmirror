@@ -31,7 +31,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.24.1'
+__VERSION__ = '0.25.0'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -82,7 +82,8 @@ except:
     )
     raise  # v0.23.1+ 当config文件存在错误或不存在时, 程序会终止运行
 else:
-    infoprint('config file found')
+    target_domain = target_domain.strip("./ \t").replace("https://", "").replace("http://", "")
+    infoprint('config file found, mirroring: ', target_domain)
 
 if local_cache_enable:
     try:
@@ -286,8 +287,10 @@ regex_request_rewriter = re.compile(
     temp + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
     flags=re.IGNORECASE)
 
-# Flask main app
-app = Flask(__name__)
+app = Flask(  # type: Flask
+    __name__ if not unittest_mode
+    else 'unittest' + str(random.random()).replace('.', '')
+)
 
 
 # ########## Begin Utils #############
@@ -2474,9 +2477,13 @@ def about_zmirror():
 version: {version}
 Author: {author}
 Github: {github_url}
-Mirroring: {source_site}
 Note: Love Luciaz Forever!
-""".format(version=__VERSION__, author=__AUTHOR__, github_url=__GITHUB_URL__, source_site=target_domain),
+
+Mirroring: {source_site}
+This site: {my_domain}
+""".format(version=__VERSION__, author=__AUTHOR__,
+           github_url=__GITHUB_URL__, source_site=target_domain,
+           my_domain=my_host_name),
                     content_type='text/plain')
 
 
@@ -2493,6 +2500,18 @@ if human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
 else:
     single_ip_allowed_set = set()
+
+try:
+    if unittest_mode:
+        import importlib
+
+        # 在 unittest 中, 由于 custom_func 也会引用 zmirror
+        # 带来一个额外的引用计数
+        # 所以在 unittest 中, 每次重载 zmirror 的时候, 都需要重载一次 custom_func
+        importlib.reload(importlib.import_module("custom_func"))
+    from custom_func import *
+except:
+    pass
 
 if custom_text_rewriter_enable:
     try:
@@ -2523,11 +2542,6 @@ if enable_custom_access_cookie_generate_and_verify:
                  ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')
         traceback.print_exc()
         raise
-
-try:
-    from custom_func import *
-except:
-    pass
 
 if enable_cron_tasks:
     for _task_dict in cron_tasks_list:

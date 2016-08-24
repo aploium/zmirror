@@ -3,8 +3,6 @@ from flask import Response
 
 from .base_class import ZmirrorTestBase
 
-import zmirror
-
 
 class TestDefaultMirror(ZmirrorTestBase):
     def test_kernel_pages(self):

@@ -711,3 +711,6 @@ developer_dump_all_traffics = False
 
 # v0.20.4+ temporary disable SSRF prevention
 developer_temporary_disable_ssrf_prevention = False
+
+# v0.25.0+
+unittest_mode = False
