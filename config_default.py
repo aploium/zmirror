@@ -714,3 +714,7 @@ developer_temporary_disable_ssrf_prevention = False
 
 # v0.25.0+
 unittest_mode = False
+
+# v0.25.0+
+# 强制内部requests在请求远程服务器时不验证SSL证书
+developer_do_not_verify_ssl = False

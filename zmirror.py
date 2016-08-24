@@ -1905,8 +1905,10 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     r = _requester.request(
         method, url,
         params=param_get, headers=headers, data=data,
-        proxies=requests_proxies, allow_redirects=False,
+        proxies=requests_proxies,
+        allow_redirects=False,
         stream=enable_stream_content_transfer,
+        verify=not developer_do_not_verify_ssl,
     )
     # remote request time
     req_time = time() - req_start_time
