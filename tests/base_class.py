@@ -35,7 +35,7 @@ class ZmirrorTestBase(unittest.TestCase):
         super().tearDownClass()
 
     def reload_zmirror(self, configs_dict=None):
-        self.tearDown()
+        self.del_temp_var()
 
         import config
         importlib.reload(config)
@@ -61,7 +61,7 @@ class ZmirrorTestBase(unittest.TestCase):
     def setUp(self):
         self.reload_zmirror()
 
-    def tearDown(self):
+    def del_temp_var(self):
         try:
             del self.client
         except:
@@ -74,6 +74,9 @@ class ZmirrorTestBase(unittest.TestCase):
             del self.zmirror
         except:
             pass
+
+    def tearDown(self):
+        self.del_temp_var()
 
     def url(self, path):
         domain = getattr(self.C, "my_host_name", "127.0.0.1")
