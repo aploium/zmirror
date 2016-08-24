@@ -29,7 +29,7 @@ except:
 
 import requests
 from flask import Flask, request, make_response, Response, redirect
-from ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
+from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
 __VERSION__ = '0.25.0'
 __AUTHOR__ = 'Aploium <i@z.codes>'

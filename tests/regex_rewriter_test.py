@@ -1,15 +1,10 @@
 # coding=utf-8
-import re
-from time import time,sleep
 import os
-from config import *
-from zmirror import regex_adv_url_rewriter, regex_url_reassemble, \
-    static_file_extensions_list, external_domains_set, allowed_domains_set, myurl_prefix, cdn_domains_number, \
-    static_file_extensions_list,prefix_buff
+from time import time
+
 import zmirror
-from urllib.parse import urljoin
-from ColorfulPyPrint import *
-from pprint import pprint
+from external_pkgs.ColorfulPyPrint import *
+from zmirror import regex_adv_url_rewriter, regex_url_reassemble
 
 test_cases = (
     (

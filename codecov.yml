@@ -11,7 +11,7 @@ codecov:
 coverage:
   range: "0...100"
   ignore:
-  - ColorfulPyPrint/.*
+  - external_pkgs/.*
   - more_configs/.*
   - tests/.*
   - wsgi.py
