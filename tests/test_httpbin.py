@@ -95,7 +95,7 @@ class TestHttpbin(ZmirrorTestBase):
             # 白盒检查
             h = load_rv_json(rv)['headers']
             self.assertEqual(self.C.my_host_name, h['Host'], msg=h)
-            self.assertEqual("https://eu.httpbin.org/headers", h['Referer'], msg=h)
+            self.assertEqual("https://%s/extdomains/eu.httpbin.org/headers" % self.C.my_host_name, h['Referer'], msg=h)
             self.assertEqual("_ga=GA1.2.1161994079.1471765883", h['Cookie'], msg=h)
             self.assertEqual("love_luciaz", h['Hello-World'], msg=h)
             self.assertEqual("gzip, deflate", h['Accept-Encoding'], msg=h)
