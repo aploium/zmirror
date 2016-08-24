@@ -5,6 +5,7 @@ import unittest
 import random
 from urllib.parse import urljoin
 
+from flask import Flask
 from flask.testing import FlaskClient
 
 from .utils import copy_default_config_file, restore_config_file
@@ -17,7 +18,7 @@ import cache_system
 
 
 class ZmirrorTestBase(unittest.TestCase):
-    class ZmirrorInitConfig:
+    class C:
         verbose_level = 2
         unittest_mode = True
         enable_cron_tasks = False
@@ -34,18 +35,14 @@ class ZmirrorTestBase(unittest.TestCase):
         super().tearDownClass()
 
     def reload_zmirror(self, configs_dict=None):
-        try:
-            del self.app
-            del self.zmirror
-        except:
-            pass
+        self.tearDown()
 
         import config
         importlib.reload(config)
 
-        test_config_names = (name for name in dir(self.ZmirrorInitConfig) if name[:2] != '__' and name[-2:] != '__')
+        test_config_names = (name for name in dir(self.C) if name[:2] != '__' and name[-2:] != '__')
         for config_name in test_config_names:
-            config_value = getattr(self.ZmirrorInitConfig, config_name)
+            config_value = getattr(self.C, config_name)
             setattr(config, config_name, config_value)
 
         if configs_dict is not None:
@@ -57,7 +54,8 @@ class ZmirrorTestBase(unittest.TestCase):
         importlib.reload(zmirror)
         zmirror.app.config['TESTING'] = True
 
-        self.app = zmirror.app.test_client()  # type: FlaskClient
+        self.client = zmirror.app.test_client()  # type: FlaskClient
+        self.app = zmirror.app  # type: Flask
         self.zmirror = zmirror
 
     def setUp(self):
@@ -65,12 +63,19 @@ class ZmirrorTestBase(unittest.TestCase):
 
     def tearDown(self):
         try:
+            del self.client
+        except:
+            pass
+        try:
             del self.app
+        except:
+            pass
+        try:
             del self.zmirror
         except:
             pass
 
     def url(self, path):
-        domain = getattr(self.ZmirrorInitConfig, "my_host_name", "127.0.0.1")
-        scheme = getattr(self.ZmirrorInitConfig, "my_host_scheme", "http://")
+        domain = getattr(self.C, "my_host_name", "127.0.0.1")
+        scheme = getattr(self.C, "my_host_scheme", "http://")
         return urljoin(scheme + domain, path)

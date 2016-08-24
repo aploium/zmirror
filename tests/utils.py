@@ -23,7 +23,7 @@ def copy_default_config_file():
     shutil.copy(zmirror_file('config_default.py'), zmirror_file('config.py'))
     shutil.copy(zmirror_file('custom_func.sample.py'), zmirror_file('custom_func.py'))
 
-    # 下面是flask的一个trick, 强行生成多个不同的flask app 对象
+    # 下面是flask的一个trick, 强行生成多个不同的flask client 对象
     # with open(zmirror_file('config.py'), 'a', encoding='utf-8') as fp:
     #     fp.write('\n')
     #     fp.write('import random\n')
@@ -55,6 +55,7 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (K
 def headers(
         accept_encoding="gzip, deflate",
         user_agent=DEFAULT_USER_AGENT,
+        others=None,
         **kwargs
 ):
     """
@@ -63,6 +64,8 @@ def headers(
     result = {"accept-encoding": accept_encoding,
               "user-agent": user_agent}
     result.update(kwargs)
+    if others is not None:
+        result.update(others)
     return result
 
 

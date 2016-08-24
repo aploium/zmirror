@@ -65,7 +65,7 @@ mime_expire_list = {
     'application/xml': EXPIRE_NOW,
     'text/xml': EXPIRE_NOW,
     'text/html': EXPIRE_NOW,
-    'application/x-web-app-manifest+json': EXPIRE_NOW,
+    'application/x-web-client-manifest+json': EXPIRE_NOW,
     'text/cache-manifest': EXPIRE_NOW,
 }
 
