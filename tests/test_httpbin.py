@@ -21,12 +21,12 @@ class TestHttpbin(ZmirrorTestBase):
         verbose_level = 3
         possible_charsets = None
 
-        developer_do_not_verify_ssl = True
-        is_use_proxy = True
-        requests_proxies = dict(
-            http='http://127.0.0.1:8882',
-            https='https://127.0.0.1:8882',
-        )
+        # developer_do_not_verify_ssl = True
+        # is_use_proxy = True
+        # requests_proxies = dict(
+        #     http='http://127.0.0.1:8882',
+        #     https='https://127.0.0.1:8882',
+        # )
 
     def test_homepage(self):
         """https://httpbin.org/"""
