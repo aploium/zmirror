@@ -164,7 +164,7 @@ if enable_keep_alive_per_domain:
         connection_pool_per_domain[_domain] = {'session': requests.Session(),}
 
 # 在 cdn_redirect_encode_query_str_into_url 中用于标示编码进url的分隔串
-cdn_url_query_encode_salt = 'zm24'
+cdn_url_query_encode_salt = 'zm26'
 _url_salt = re.escape(cdn_url_query_encode_salt)
 if cdn_redirect_encode_query_str_into_url:
     # 两个选项冲突. 当本选项开启时, 会清空掉 `target_static_domains`
