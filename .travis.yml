@@ -15,8 +15,8 @@ python:
 
 # command to install dependencies
 install:
-  - pip install -U -q -r requirements.txt
-  - pip install coverage
+  - pip3 install -U -q -r requirements.txt
+  - pip3 install coverage
 
 sudo: false
 

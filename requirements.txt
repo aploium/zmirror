@@ -1,2 +1,4 @@
-requests>=2.10
+requests>=2.11
 flask>=0.11
+cchardet>=1.0
+fastcache>=1.0.2
