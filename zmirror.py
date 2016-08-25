@@ -31,7 +31,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.26.0'
+__VERSION__ = '0.26.1'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -2131,7 +2131,7 @@ def filter_client_request():
             dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
-                "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(),
+                "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(encoding='utf-8'),
                 code=302)
 
     return None
@@ -2382,10 +2382,10 @@ def ip_ban_verify_page():
 
         record_dict = {}
         for rec_explain_string, rec_name, form_type in human_ip_verification_identity_record:
-            if rec_name not in request.form:
-                return generate_simple_resp_page(b'Param Missing: ' + rec_explain_string.encode(), 200)
+            if rec_name not in request.form or not request.form[rec_name]:
+                return generate_simple_resp_page(b'Param Missing or Blank: ' + rec_explain_string.encode(), 200)
             else:
-                record_dict[rec_name] = request.form.get(rec_name)
+                record_dict[rec_name] = request.form[rec_name]
 
         origin = '/'
         if 'origin' in request.form:

@@ -9,6 +9,7 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, '..')))
 
 from .test_default_mirror import TestDefaultMirror
 from .test_httpbin import TestHttpbin
+from .test_verification import TestVerification
 
 if __name__ == '__main__':
     unittest.main()

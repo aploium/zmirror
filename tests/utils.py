@@ -23,12 +23,25 @@ def copy_default_config_file():
     shutil.copy(zmirror_file('config_default.py'), zmirror_file('config.py'))
     shutil.copy(zmirror_file('custom_func.sample.py'), zmirror_file('custom_func.py'))
 
-    # 下面是flask的一个trick, 强行生成多个不同的flask client 对象
-    # with open(zmirror_file('config.py'), 'a', encoding='utf-8') as fp:
-    #     fp.write('\n')
-    #     fp.write('import random\n')
-    #     fp.write('from flask import Flask\n')
-    #     fp.write("unittest_app = Flask('unittest' + str(random.random()).replace('.', ''))\n")
+    try:
+        os.remove(zmirror_file('ip_whitelist.txt'))
+    except:
+        pass
+    try:
+        os.remove(zmirror_file('ip_whitelist.log'))
+    except:
+        pass
+    try:
+        os.remove(zmirror_file('automatic_domains_whitelist.log'))
+    except:
+        pass
+
+        # 下面是flask的一个trick, 强行生成多个不同的flask client 对象
+        # with open(zmirror_file('config.py'), 'a', encoding='utf-8') as fp:
+        #     fp.write('\n')
+        #     fp.write('import random\n')
+        #     fp.write('from flask import Flask\n')
+        #     fp.write("unittest_app = Flask('unittest' + str(random.random()).replace('.', ''))\n")
 
 
 def restore_config_file():
@@ -38,6 +51,19 @@ def restore_config_file():
         shutil.move(zmirror_file('config.py._unittest_raw'), zmirror_file('config.py'))
     if os.path.exists(zmirror_file('custom_func.py._unittest_raw')):
         shutil.move(zmirror_file('custom_func.py._unittest_raw'), zmirror_file('custom_func.py'))
+
+    try:
+        os.remove(zmirror_file('ip_whitelist.txt'))
+    except:
+        pass
+    try:
+        os.remove(zmirror_file('ip_whitelist.log'))
+    except:
+        pass
+    try:
+        os.remove(zmirror_file('automatic_domains_whitelist.log'))
+    except:
+        pass
 
 
 def env(ip="1.2.3.4", **kwargs):
@@ -78,7 +104,7 @@ def load_rv_json(rv):
     return json.loads(rv.data.decode(encoding='utf-8'))
 
 
-def var_attributes_value_to_text(var):
+def attributes(var):
     def _strx(*_args, _sep=' '):
         """
         :return: str

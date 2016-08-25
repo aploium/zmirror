@@ -20,7 +20,7 @@ class TestHttpbin(ZmirrorTestBase):
         external_domains = ('eu.httpbin.org',)
         force_https_domains = 'ALL'
         enable_automatic_domains_whitelist = False
-        verbose_level = 3
+        # verbose_level = 2
         possible_charsets = None
 
         # developer_string_trace = r"http:\\/\\/httpbin.org\\/extdomains\\/httpbin.org\\/4xxx.png?a=238"
@@ -65,10 +65,10 @@ class TestHttpbin(ZmirrorTestBase):
                         "Cookie": "_ga=GA1.2.1161994079.1471765883",
                         "Hello-World": "love_luciaz",
                     }),
-            )
+            )  # type: Response
 
             # 白盒检查
-            parse_values = var_attributes_value_to_text(self.zmirror.parse)
+            parse_values = attributes(self.zmirror.parse)
             self.assertEqual("application/json", self.zmirror.parse.content_type)
 
             self.assertEqual(
@@ -133,10 +133,10 @@ class TestHttpbin(ZmirrorTestBase):
                         "Accept": "application/json",
                     }
                 ),
-            )
+            )  # type: Response
 
             # 白盒检查
-            parse_values = var_attributes_value_to_text(self.zmirror.parse)
+            parse_values = attributes(self.zmirror.parse)
             remote_resp = self.zmirror.parse.remote_response  # type: requests.Response
             remote_resp_json = json.loads(remote_resp.text)  # type: dict
             zmirror_req = remote_resp.request  # type: requests.PreparedRequest
@@ -147,12 +147,12 @@ class TestHttpbin(ZmirrorTestBase):
                 msg=parse_values
             )
 
-            print(parse_values)
-            print("---------- zmirror_req.headers --------")
-            pprint(zmirror_req.headers)
-            print("---------- zmirror_req.body --------")
+            # print(parse_values)
+            # print("---------- zmirror_req.headers --------")
+            # pprint(zmirror_req.headers)
+            # print("---------- zmirror_req.body --------")
             req_body = json.loads(zmirror_req.body.decode(encoding='utf-8'))  # type: dict
-            pprint(json.loads(zmirror_req.body.decode()))
+            # pprint(json.loads(zmirror_req.body.decode()))
 
             self.assertEqual("吱吱我爱你~ :)", req_body['chinese'])
             self.assertEqual(self.C.target_domain, req_body['domain1'])
@@ -165,8 +165,8 @@ class TestHttpbin(ZmirrorTestBase):
             self.assertEqual("https://eu.httpbin.org/3xxx?a=237", req_body['url5'])
             self.assertEqual("https://httpbin.org/4xxx.png?a=238", req_body['url6'])
 
-            print("---------- remote_resp_json --------")
-            pprint(remote_resp_json)
+            # print("---------- remote_resp_json --------")
+            # pprint(remote_resp_json)
             j = remote_resp_json['json']
             self.assertEqual("吱吱我爱你~ :)", j['chinese'])
             self.assertEqual(self.C.target_domain, j['domain1'])
@@ -180,11 +180,11 @@ class TestHttpbin(ZmirrorTestBase):
             self.assertEqual("https://httpbin.org/4xxx.png?a=238", j['url6'])
 
             # 黑盒检查
-            print("---------- r-data --------")
-            print(rv.data.decode())
+            # print("---------- r-data --------")
+            # print(rv.data.decode())
             r = load_rv_json(rv)
-            print("---------- r --------")
-            pprint(r)
+            # print("---------- r --------")
+            # pprint(r)
             r_json = r['json']
             self.assertEqual("application/json", r["headers"]['Content-Type'])
             self.assertEqual(self.C.my_host_name, r["headers"]['Host'])
