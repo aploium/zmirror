@@ -94,3 +94,19 @@ def var_attributes_value_to_text(var):
         if name[:2] != '__' and name[-2:] != '__':
             output += _strx(name, ":", getattr(var, name), "\n")
     return output
+
+
+def slash_esc(string):
+    """
+    :type string: str
+    :rtype: str
+    """
+    return string.replace("/", r"\/")
+
+
+def slash_unesc(string):
+    """
+    :type string: str
+    :rtype: str
+    """
+    return string.replace(r"\/", "/")

@@ -31,7 +31,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.25.1'
+__VERSION__ = '0.26.0'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -254,6 +254,20 @@ url_rewrite_cache_hit_count = 0
 url_rewrite_cache_miss_count = 0
 
 # ########### PreCompile Regex ###############
+
+# 冒号(colon :)可能的值为:
+#    : %3A %253A
+REGEX_COLON = r"""(?::|%(?:25)?3[Aa])"""
+# 斜线(slash /)可能的值为(包括大小写):
+#    / \/ \\/ \\\(N个反斜线)/ %2F %5C%2F %5C%5C(N个5C)%2F %255C%252F %255C%255C%252F \x2F
+REGEX_SLASH = r"""(?:\\*/|(?:%(?:25)?5[Cc])*%(?:25)?2[Ff]|(?:\\|%5[Cc])x2[Ff])"""
+# 代表本镜像域名的正则
+if my_host_port is not None:
+    REGEX_MY_HOST_NAME = r'(?:' + re.escape(my_host_name_no_port) + REGEX_COLON + re.escape(str(my_host_port)) \
+                         + r'|' + re.escape(my_host_name_no_port) + r')'
+else:
+    REGEX_MY_HOST_NAME = re.escape(my_host_name)
+
 # Advanced url rewriter, see function response_text_rewrite()
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出长得类似于url的东西 ####
 # 如果需要阅读这个表达式, 请一定要在IDE(如PyCharm)的正则高亮下阅读
@@ -283,14 +297,40 @@ regex_extract_base64_from_embedded_url = re.compile(
 # Response Cookies Rewriter, see response_cookie_rewrite()
 regex_cookie_rewriter = re.compile(r'\bdomain=(\.?([\w-]+\.)+\w+)\b', flags=re.IGNORECASE)
 regex_cookie_path_rewriter = re.compile(r'(?P<prefix>[pP]ath)=(?P<path>[\w\._/-]+?;)')
+
 # Request Domains Rewriter, see client_requests_text_rewrite()
-if my_host_port is not None:
-    temp = r'(' + re.escape(my_host_name) + r'|' + re.escape(my_host_name_no_port) + r')'
-else:
-    temp = re.escape(my_host_name)
-regex_request_rewriter = re.compile(
-    temp + r'(/|(%2F))extdomains(/|(%2F))(https-)?(?P<origin_domain>\.?([\w-]+\.)+\w+)\b',
-    flags=re.IGNORECASE)
+# 该正则用于匹配类似于下面的东西
+#   [[[http(s):]//]www.mydomain.com/]extdomains/(https-)target.com
+# 兼容各种urlencode/escape
+#
+# 注意, 若想阅读下面的正则表达式, 请一定要在 Pycharm 的正则高亮下进行
+# 否则不对可能的头晕/恶心负责
+# 下面那个正则, 在组装以后的样子大概是这样的(已大幅简化):
+# 假设b.test.com是本机域名
+#   ((https?:/{2})?b\.test\.com/)?extdomains/(https-)?((?:[\w-]+\.)+\w+)\b
+regex_request_rewriter_extdomains = re.compile(
+    r"""(?P<domain_prefix>""" +
+    (  # [[[http(s):]//]www.mydomain.com/]
+        r"""(?P<scheme>""" +
+        (  # [[http(s):]//]
+            (  # [http(s):]
+                r"""https?(?P<colon>{REGEX_COLON})""".format(REGEX_COLON=REGEX_COLON)  # https?:
+            ) +
+            r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH
+        ) +
+        r""")?""" +  # //
+        REGEX_MY_HOST_NAME +  # www.mydomain.com[:port] 本部分的正则在上面单独组装
+        r"""{REGEX_SLASH}""".format(REGEX_SLASH=REGEX_SLASH)  # # /
+    ) +
+    r""")?""" +
+
+    r"""extdomains{REGEX_SLASH}(?P<is_https>https-)?""".format(REGEX_SLASH=REGEX_SLASH) +  # extdomains/(https-)
+    r"""(?P<real_domain>(?:[\w-]+\.)+\w+)\b""",  # target.com
+    flags=re.IGNORECASE,
+)
+regex_request_rewriter_main_domain = re.compile(REGEX_MY_HOST_NAME)
+
+# ########## Flask app ###########
 
 app = Flask(  # type: Flask
     __name__ if not unittest_mode
@@ -299,6 +339,40 @@ app = Flask(  # type: Flask
 
 
 # ########## Begin Utils #############
+
+def encoding_detect(byte_content):
+    """
+    试图解析并返回二进制串的编码, 如果失败, 则返回 None
+    :param byte_content: 待解码的二进制串
+    :type byte_content: bytes
+    :return: 编码类型或None
+    :rtype: Union[str, None]
+    """
+
+    if force_decode_remote_using_encode is not None:
+        return force_decode_remote_using_encode
+    if possible_charsets:
+        for charset in possible_charsets:
+            try:
+                byte_content.decode(encoding=charset)
+            except:
+                pass
+            else:
+                return charset
+    if cchardet_available:  # detect the encoding using cchardet (if we have)
+        return c_chardet(byte_content)['encoding']
+
+    return None
+
+
+def s_esc(s):
+    """
+    equivalent to s.replace("/",r"\/")
+    :type s: str
+    :rtype: str
+    """
+    return s.replace("/", r"\/")
+
 
 def cache_clean(is_force_flush=False):
     """
@@ -427,15 +501,19 @@ def calc_domain_replace_prefix(_domain):
         hex_lower=('//' + _domain).replace('/', r'\x2f'),
         hex_upper=('//' + _domain).replace('/', r'\x2F'),
         # escape slash
-        slash_esc=('//' + _domain).replace('/', r'\/'),
-        http_esc=('http://' + _domain).replace('/', r'\/'),
-        https_esc=('https://' + _domain).replace('/', r'\/'),
-        double_quoted_esc='\\"%s\\"' % _domain,
-        single_quoted_esc="\\'%s\\'" % _domain,
+        slash_esc=s_esc('//' + _domain),
+        http_esc=s_esc('http://' + _domain),
+        https_esc=s_esc('https://' + _domain),
+        double_quoted_esc=r'\"%s\"' % _domain,
+        single_quoted_esc=r"\'%s\'" % _domain,
         # double escape slash
-        slash_double_esc=('//' + _domain).replace('/', r'\\\/'),
-        http_double_esc=('http://' + _domain).replace('/', r'\\\/'),
-        https_double_esc=('https://' + _domain).replace('/', r'\\\/'),
+        slash_double_esc=('//' + _domain).replace('/', r'\\/'),
+        http_double_esc=('http://' + _domain).replace('/', r'\\/'),
+        https_double_esc=('https://' + _domain).replace('/', r'\\/'),
+        # triple escape slash
+        slash_triple_esc=('//' + _domain).replace('/', r'\\\/'),
+        http_triple_esc=('http://' + _domain).replace('/', r'\\\/'),
+        https_triple_esc=('https://' + _domain).replace('/', r'\\\/'),
         # urlencoded
         slash_ue=quote_plus('//' + _domain),
         http_ue=quote_plus('http://' + _domain),
@@ -443,9 +521,9 @@ def calc_domain_replace_prefix(_domain):
         double_quoted_ue=quote_plus('"%s"' % _domain),
         single_quoted_ue=quote_plus("'%s'" % _domain),
         # escaped and urlencoded
-        slash_esc_ue=quote_plus(('//' + _domain).replace('/', r'\/')),
-        http_esc_ue=quote_plus(('http://' + _domain).replace('/', r'\/')),
-        https_esc_ue=quote_plus(('https://' + _domain).replace('/', r'\/')),
+        slash_esc_ue=quote_plus(s_esc('//' + _domain)),
+        http_esc_ue=quote_plus(s_esc('http://' + _domain)),
+        https_esc_ue=quote_plus(s_esc('https://' + _domain)),
     )
 
 
@@ -1186,6 +1264,8 @@ def regex_url_reassemble(match_obj):
     #     replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
     elif not scheme:
         replace_to_scheme_domain = ''
+    elif 'http' not in scheme:
+        replace_to_scheme_domain = '//' + my_host_name
     else:
         replace_to_scheme_domain = myurl_prefix
 
@@ -1533,19 +1613,10 @@ def response_content_rewrite():
         if verbose_level >= 3: dbgprint('Text-like', parse.content_type,
                                         parse.remote_response.text[:15], _content[:15])
 
-        if force_decode_remote_using_encode is not None:
-            parse.remote_response.encoding = force_decode_remote_using_encode
-        elif possible_charsets:
-            for charset in possible_charsets:
-                try:
-                    parse.remote_response.content.decode(charset)
-                except:
-                    pass
-                else:
-                    parse.remote_response.encoding = charset
-                    break
-        elif cchardet_available:  # detect the encoding using cchardet (if we have)
-            parse.remote_response.encoding = c_chardet(_content)
+        # 自己进行编码检测, 因为 requests 内置的编码检测在天朝GBK面前非常弱鸡
+        encoding = encoding_detect(parse.remote_response.content)
+        if encoding is not None:
+            parse.remote_response.encoding = encoding
 
         # simply copy the raw text, for custom rewriter function first.
         resp_text = parse.remote_response.text
@@ -1602,6 +1673,7 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     if domain not in domains_alias_to_target_domain:
         domain_prefix = '/extdomains/' + domain
         domain_prefix_https_esc = r'\/extdomains\/' + domain
+        infoprint(domain, "not in domains_alias_to_target_domain", domains_alias_to_target_domain, current_line_number())
     else:
         domain_prefix = ''
         domain_prefix_https_esc = ''
@@ -1622,7 +1694,8 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     prefix = prefix_buff[domain]
 
     # Explicit HTTPS scheme must be kept
-    resp_text = resp_text.replace(prefix['https_double_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\\/'))
+    resp_text = resp_text.replace(prefix['https_triple_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\\/'))
+    resp_text = resp_text.replace(prefix['https_double_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\/'))
     resp_text = resp_text.replace(prefix['https_esc'], _myurl_prefix_escaped + domain_prefix_https_esc)
     resp_text = resp_text.replace(prefix['https'], _myurl_prefix + domain_prefix)
 
@@ -1636,11 +1709,14 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     else:
         _buff = _my_host_name
     _buff_esc = _buff.replace('/', r'\/')
-    _buff_double_esc = _buff.replace('/', r'\\\/')
+    _buff_double_esc = _buff.replace('/', r'\\/')
+    _buff_triple_esc = _buff.replace('/', r'\\\/')
 
-    resp_text = resp_text.replace(prefix['http_double_esc'], my_host_scheme_escaped + _buff_double_esc)
+    resp_text = resp_text.replace(prefix['http_double_esc'], (my_host_scheme + _buff).replace("/", r"\\/"))
     resp_text = resp_text.replace(prefix['http_esc'], my_host_scheme_escaped + _buff_esc)
     resp_text = resp_text.replace(prefix['http'], my_host_scheme + _buff)
+
+    resp_text = resp_text.replace(prefix['slash_triple_esc'], r'\\\/\\\/' + _buff_triple_esc)
     resp_text = resp_text.replace(prefix['slash_double_esc'], r'\\\/\\\/' + _buff_double_esc)
     resp_text = resp_text.replace(prefix['slash_esc'], r'\/\/' + _buff_esc)
     resp_text = resp_text.replace(prefix['slash'], '//' + _buff)
@@ -1804,70 +1880,47 @@ def client_requests_text_rewrite(raw_text):
     eg2. foo.bar/foobar to www.google.com/foobar
     eg3. http%3a%2f%2fg.zju.tools%2fextdomains%2Faccounts.google.com%2f233
             to http%3a%2f%2faccounts.google.com%2f233
-    """
-    replaced = regex_request_rewriter.sub('\g<origin_domain>', raw_text)
-    # replaced = replaced.replace(my_host_name_urlencoded, target_domain)
-    # replaced = replaced.replace(my_host_name_no_port, target_domain)
 
-    # dbgprint('after regex_request_rewriter', replaced)
+    :type raw_text: str
+    :rtype: str
+    """
+
+    def replace_to_real_domain(match_obj):
+        scheme = get_group("scheme", match_obj)  # type: str
+        colon = match_obj.group("colon")  # type: str
+        scheme_slash = get_group("scheme_slash", match_obj)  # type: str
+        _is_https = bool(get_group("is_https", match_obj))  # type: bool
+        real_domain = match_obj.group("real_domain")  # type: str
+
+        result = ""
+        if scheme:
+            if "http" in scheme:
+                if _is_https or is_target_domain_use_https(real_domain):
+                    result += "https" + colon
+                else:
+                    result += "http" + colon
+
+            result += scheme_slash * 2
+
+        result += real_domain
+
+        return result
+
+    # 使用一个复杂的正则进行替换, 这次替换以后, 理论上所有 extdomains 都会被剔除
+    # 详见本文件顶部, regex_request_rewriter_extdomains 本体
+    replaced = regex_request_rewriter_extdomains.sub(replace_to_real_domain, raw_text)
 
     if developer_string_trace is not None and developer_string_trace in replaced:
         infoprint('StringTrace: appears client_requests_text_rewrite, code line no. ', current_line_number())
 
-    # 32MB == 33554432
-    replaced = client_requests_bin_rewrite(replaced.encode(), max_len=33554432).decode()
+    # 正则替换掉单独的, 不含 /extdomains/ 的主域名
+    replaced = regex_request_rewriter_main_domain.sub(target_domain, replaced)
 
-    if developer_string_trace is not None and developer_string_trace in replaced:
-        infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
+    # 为了保险起见, 再进行一次裸的替换
+    replaced = replaced.replace(my_host_name, target_domain)
 
-    if verbose_level >= 3 and raw_text != replaced:
-        dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
+    dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
     return replaced
-
-
-def client_requests_bin_rewrite(raw_bin, max_len=2097152):  # 2097152=2MB
-    """
-
-    :type max_len: int
-    :type raw_bin: byte
-    """
-    if raw_bin is None or len(raw_bin) > max_len:
-        return raw_bin
-    else:
-        _str_buff = my_host_name + '/extdomains'
-
-        for _str_buff2 in (_str_buff + '/https-', _str_buff + '/', _str_buff):
-            raw_bin = raw_bin.replace(quote_plus(_str_buff2.replace('/', r'\/')).encode(), b'')
-            raw_bin = raw_bin.replace(quote_plus(_str_buff2.replace('/', r'\/')).lower().encode(), b'')
-
-            raw_bin = raw_bin.replace(quote_plus(_str_buff2).encode(), b'')
-            raw_bin = raw_bin.replace(quote_plus(_str_buff2).lower().encode(), b'')
-
-            raw_bin = raw_bin.replace(_str_buff2.replace('/', r'\/').encode(), b'')
-            raw_bin = raw_bin.replace(_str_buff2.replace('/', r'\/').lower().encode(), b'')
-
-            raw_bin = raw_bin.replace(_str_buff2.encode(), b'')
-
-        raw_bin = raw_bin.replace(quote_plus(my_host_name).encode(), quote_plus(target_domain).encode())
-        raw_bin = raw_bin.replace(my_host_name.encode(), target_domain.encode())
-        raw_bin = raw_bin.replace(my_host_name_no_port.encode(), target_domain.encode())
-
-        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2Fhttps-', b'%5C%2F')
-        raw_bin = raw_bin.replace(b'%5c%2fextdomains%5c%2fhttps-', b'%5c%2f')
-        raw_bin = raw_bin.replace(b'%2Fextdomains%2Fhttps-', b'%2F')
-        raw_bin = raw_bin.replace(b'%2fextdomains%2fhttps-', b'%2f')
-        raw_bin = raw_bin.replace(b'\\/extdomains\\/https-', b'\\/')
-        raw_bin = raw_bin.replace(b'/extdomains/https-', b'/')
-
-        raw_bin = raw_bin.replace(b'%2Fextdomains%2F', b'%2F')
-        raw_bin = raw_bin.replace(b'%2fextdomains%2f', b'%2f')
-        raw_bin = raw_bin.replace(b'%5C%2Fextdomains%5C%2F', b'%5C%2F')
-
-        raw_bin = raw_bin.replace(b'%5c%2cextdomains%5c%2c', b'%5c%2c')
-        raw_bin = raw_bin.replace(b'\\/extdomains\\/', b'\\/')
-        raw_bin = raw_bin.replace(b'/extdomains/', b'/')
-
-        return raw_bin
 
 
 def extract_url_path_and_query(full_url=None, no_query=False):
@@ -1941,7 +1994,15 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 def request_remote_site_and_parse():
     try:  # send request to remote server
-        data = client_requests_bin_rewrite(request.get_data())
+        data = request.get_data()  # type: bytes
+
+        # 尝试解析浏览器传入的是否是文本内容
+        encoding = encoding_detect(data)
+        # 如果是文本内容, 则解码并进行重写, 如果是二进制内容, 则跳过
+        if encoding is not None:
+            data = data.decode(encoding=encoding)  # type: str
+            data = client_requests_text_rewrite(data)  # type: str
+            data = data.encode(encoding=encoding)  # type: bytes
 
         if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
             infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
