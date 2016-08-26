@@ -1,50 +1,34 @@
 #!/usr/bin/env python3
 # coding=utf-8
 import os
-# noinspection PyUnresolvedReferences
-from itertools import count
-
-if os.path.dirname(__file__) != '':
-    os.chdir(os.path.dirname(__file__))
-import traceback
-import pickle
-from datetime import datetime, timedelta
 import re
-import base64
-import zlib
-import random
-import sched
 import copy
-from time import time, sleep
+import zlib
+import sched
 import queue
-from fnmatch import fnmatch
-from html import escape as html_escape
+import pickle
+import base64
+import random
+import traceback
 import ipaddress
+import threading
+from fnmatch import fnmatch
+from time import time, sleep
+from html import escape as html_escape
+from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
-
-try:
-    from typing import Union, List, Any, Tuple  # for python 3.5+ Type Hint
-except:
-    pass
-
 import requests
 from flask import Flask, request, make_response, Response, redirect
-from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
 __VERSION__ = '0.26.2'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
-infoprint('zmirror version: {version} author: {author}'.format(version=__VERSION__, author=__AUTHOR__))
-infoprint('Github: {site_url}'.format(site_url=__GITHUB_URL__))
-
 try:
-    import threading
-except ImportError:  # 在某些罕见的系统环境下,threading包可能失效,用dummy代替
-    import dummy_threading as threading
-
-from threadlocal import ZmirrorThreadLocal
-
+    # for python 3.5+ Type Hint
+    from typing import Union, List, Any, Tuple
+except:
+    pass
 try:  # 用于检测html的文本编码, cchardet是chardet的c语言实现, 非常快
     from cchardet import detect as c_chardet
 except:
@@ -52,15 +36,36 @@ except:
 else:
     cchardet_available = True
 
+if os.path.dirname(__file__) != '':
+    os.chdir(os.path.dirname(__file__))
+from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib logging
+
+if "ZMIRROR_UNITTEST" not in os.environ:
+    # 这边根据环境变量得到的unittest_mode信息会被config中的覆盖掉
+    # 只是因为此时还没有加载 config, 所以先根据env里的临时定一下
+    unittest_mode = True
+else:
+    unittest_mode = False
+
 try:  # lru_cache的c语言实现, 比Python内置lru_cache更快
     from fastcache import lru_cache  # lru_cache用于缓存函数的执行结果
 except:
     from functools import lru_cache
 
-    warnprint('package fastcache not found, fallback to stdlib lru_cache, no FUNCTION is effected, only maybe a bit slower. '
-              'Considering install it using "pip3 install fastcache"')
+    warnprint('package fastcache not found, '
+              'fallback to stdlib lru_cache, '
+              'no FUNCTION is effected, only maybe a bit slower. '
+              'Considering install it using "pip3 install fastcache"'
+              )
 else:
-    infoprint('lru_cache loaded successfully from fastcache')
+    if not unittest_mode:
+        infoprint('lru_cache loaded successfully from fastcache')
+
+from threadlocal import ZmirrorThreadLocal
+
+if not unittest_mode:  # 在unittest时不输出这几行
+    infoprint('zmirror version: {version} author: {author}'.format(version=__VERSION__, author=__AUTHOR__))
+    infoprint('Github: {site_url}'.format(site_url=__GITHUB_URL__))
 
 try:  # 加载默认设置
     from config_default import *
@@ -97,7 +102,8 @@ if local_cache_enable:
         errprint('Can Not Create Local File Cache: ', e, ' local file cache is disabled automatically.')
         local_cache_enable = False
     else:
-        infoprint('Local file cache enabled')
+        if not unittest_mode:
+            infoprint('Local file cache enabled')
 
 # ########## Basic Init #############
 # 开始从配置文件加载配置, 在读代码时可以先跳过这部分, 从 main_function() 开始看
