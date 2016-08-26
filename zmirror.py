@@ -1669,7 +1669,6 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     if domain not in domains_alias_to_target_domain:
         domain_prefix = '/extdomains/' + domain
         domain_prefix_https_esc = r'\/extdomains\/' + domain
-        infoprint(domain, "not in domains_alias_to_target_domain", domains_alias_to_target_domain, current_line_number())
     else:
         domain_prefix = ''
         domain_prefix_https_esc = ''
@@ -2011,8 +2010,8 @@ def request_remote_site_and_parse():
             data=data,  # client_requests_bin_rewrite(request.get_data()),
         )
         if parse.remote_response.url != parse.remote_url:
-            warnprint('requests\'s remote url' + parse.remote_response.url
-                      + 'does no equals our rewrited url' + parse.remote_url)
+            warnprint('requests\'s remote url', parse.remote_response.url
+                      , 'does no equals our rewrited url', parse.remote_url)
     except Exception as _e:
         errprint(_e)  # ERROR :( so sad
         traceback.print_exc()
