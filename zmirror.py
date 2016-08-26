@@ -31,7 +31,7 @@ import requests
 from flask import Flask, request, make_response, Response, redirect
 from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib
 
-__VERSION__ = '0.26.1'
+__VERSION__ = '0.26.2'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -42,6 +42,8 @@ try:
     import threading
 except ImportError:  # 在某些罕见的系统环境下,threading包可能失效,用dummy代替
     import dummy_threading as threading
+
+from threadlocal import ZmirrorThreadLocal
 
 try:  # 用于检测html的文本编码, cchardet是chardet的c语言实现, 非常快
     from cchardet import detect as c_chardet
@@ -172,19 +174,7 @@ if cdn_redirect_encode_query_str_into_url:
 
 # ## thread local var ##
 # 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
-parse = threading.local()
-parse.start_time = None  # 处理请求开始的时间, unix
-parse.content_type = ''  # 远程服务器响应头中的content_type
-parse.mime = ''  # 远程服务器响应的MIME
-parse.cache_control = ''  # 远程服务器响应的cache_control内容
-parse.temporary_domain_alias = None  # 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
-parse.remote_domain = ''  # 当前请求对应的远程域名
-parse.is_https = ''  # 是否需要用https来请求远程域名
-parse.remote_url = ''  # 远程服务器的url
-# parse.url_no_scheme = ''  # 没有 http(s):// 前缀的url
-parse.remote_path = ''  # 对应的远程path
-parse.remote_path_query = ''  # 对应的远程path+query string
-parse.remote_response = None  # 远程服务器的响应, requests.Response
+parse = ZmirrorThreadLocal()
 
 # task_scheduler
 task_scheduler = sched.scheduler(time, sleep)
@@ -2131,7 +2121,8 @@ def filter_client_request():
             dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
         else:
             return redirect(
-                "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(encoding='utf-8'),
+                "/ip_ban_verify_page?origin=" + base64.urlsafe_b64encode(str(request.url).encode(encoding='utf-8')).decode(
+                    encoding='utf-8'),
                 code=302)
 
     return None

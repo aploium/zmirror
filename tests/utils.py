@@ -117,7 +117,7 @@ def attributes(var):
 
     output = ""
     for name in dir(var):
-        if name[:2] != '__' and name[-2:] != '__':
+        if name[0] != '_' and name[-2:] != '__':
             output += _strx(name, ":", getattr(var, name), "\n")
     return output
 
