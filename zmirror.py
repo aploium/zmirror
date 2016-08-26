@@ -2588,7 +2588,6 @@ if custom_text_rewriter_enable:
     try:
         from custom_func import custom_response_text_rewriter
     except:
-        identity_verify_required = False
         warnprint('Cannot import custom_response_text_rewriter custom_func.py,'
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
         traceback.print_exc()

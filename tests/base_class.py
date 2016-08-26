@@ -23,6 +23,9 @@ class ZmirrorTestBase(unittest.TestCase):
         unittest_mode = True
         enable_cron_tasks = False
 
+    class CaseCfg:
+        pass
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

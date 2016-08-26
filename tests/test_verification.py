@@ -33,6 +33,9 @@ class TestVerification(ZmirrorTestBase):
         )
         must_verify_cookies = True
 
+    class CaseCfg(ZmirrorTestBase.CaseCfg):
+        tip_texts_in_verification_page = "你需要回答出以下<b>所有问题</b>"
+
     def setUp(self):
         super().setUp()
 
@@ -62,17 +65,6 @@ class TestVerification(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
 
-            # 白盒检查
-            # parse_values = attributes(self.zmirror.parse)
-
-            # remote_resp = self.zmirror.parse.remote_response  # type: requests.Response
-            # remote_resp_json = json.loads(remote_resp.text)  # type: dict
-
-            # 黑盒检查
-            # pprint(rv.data.decode())
-            # print(attributes(rv))
-            # a = load_rv_json(rv)['args']
-
             # 当需要验证出现重定向
             self.assertEqual(302, rv.status_code, msg=attributes(rv))
             self.assertIn(
@@ -93,10 +85,11 @@ class TestVerification(ZmirrorTestBase):
                 ),
                 headers=headers(),
             )  # type: Response
-            # print(attributes(verify_page))
-            # print("----------------")
+
             page_content = rv.data.decode()  # type: str
-            print(page_content)
+
+            self.assertIn(self.CaseCfg.tip_texts_in_verification_page,
+                          page_content, msg=attributes(rv))
 
             self.assertIn(self.zmirror.human_ip_verification_title,
                           page_content, msg=attributes(rv))
@@ -131,10 +124,7 @@ class TestVerification(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
 
-            # print(attributes(verify_failed_page))
-            # print("----------------")
             page_content = rv.data.decode()  # type: str
-            # print(page_content)
 
             self.assertIn("Please answer question: " +
                           self.C.human_ip_verification_questions[0][0],
@@ -155,10 +145,7 @@ class TestVerification(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
 
-            # print(attributes(rv))
-            # print("----------------")
             page_content = rv.data.decode()  # type: str
-            # print(page_content)
 
             self.assertIn("Wrong answer in: " +
                           self.C.human_ip_verification_questions[0][0],
@@ -179,10 +166,7 @@ class TestVerification(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
 
-            # print(attributes(rv))
-            # print("----------------")
             page_content = rv.data.decode()  # type: str
-            # print(page_content)
 
             self.assertIn("Param Missing or Blank: " +
                           self.C.human_ip_verification_identity_record[0][0],
@@ -205,10 +189,7 @@ class TestVerification(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
 
-            # print(attributes(rv))
-            # print("----------------")
             page_content = rv.data.decode()  # type: str
-            # print(page_content)
 
             self.assertIn("Page Redirect", page_content, msg=attributes(rv))
             self.assertIn(self.zmirror.human_ip_verification_success_msg, page_content, msg=attributes(rv))
@@ -231,3 +212,37 @@ class TestVerification(ZmirrorTestBase):
                 "!Password1",
                 open(zmirror_file("ip_whitelist.log"), 'r', encoding='utf-8').read()
             )
+
+
+class TestVerificationSingleAnswer(TestVerification):
+    """testing using https://httpbin.org/"""
+
+    class C(TestVerification.C):
+        human_ip_verification_answer_any_one_questions_is_ok = True
+        human_ip_verification_questions = (
+            ('Unittest question one', '答案', 'Placeholder (Optional)'),
+            ('Unittest question two', '答案2', ''),
+        )
+        human_ip_verification_identity_record = (
+            ("Id verify question 1 stuid", "student_id", "text"),
+            ("Id verify question 2 passwd", "password", "password"),
+        )
+
+    class CaseCfg(TestVerification.CaseCfg):
+        tip_texts_in_verification_page = "只需要回答出以下<b>任意一个</b>问题即可"
+
+    def test_not_answer_question(self):
+        """未回答问题"""
+        with self.app.test_client() as c:
+            rv = c.post(
+                self.verify_page_url,
+                environ_base=env(
+                    ip='1.2.3.4'
+                ),
+                headers=headers(),
+            )  # type: Response
+
+            page_content = rv.data.decode()  # type: str
+
+            self.assertIn("Please answer at least ONE question",
+                          page_content, attributes(rv))
