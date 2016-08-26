@@ -2,6 +2,7 @@
 from flask import Response
 
 from .base_class import ZmirrorTestBase
+from .utils import *
 
 
 class TestDefaultMirror(ZmirrorTestBase):
@@ -66,18 +67,6 @@ class TestDefaultMirror(ZmirrorTestBase):
         self.assertEqual(rv.status_code, 403)
         self.assertIn(b'Spiders Are Not Allowed To This Site', rv.data)
 
-    # def test_verification(self):
-    #     zmirror.human_ip_verification_enabled = True
-    #
-    #     rv = self.client.get('/', environ_base={'REMOTE_ADDR': '1.2.3.4'})
-    #     self.assertIn(b'ip_ban_verify_page', rv.data)
-    #
-    #     rv = self.client.get('/', environ_base={'REMOTE_ADDR': '1.2.3.4'}, follow_redirects=True)
-    #     print(rv.data)
-    #     rv = self.client.post('/ip_ban_verify_page', data={"0": "CorrectAnswer",
-    #                                                     "student_id": "2333",
-    #                                                     "password": "123456",
-    #                                                     "origin": "aHR0cDovL2xvY2FsaG9zdC8="},
-    #                        environ_base={'REMOTE_ADDR': '1.2.3.4'}, follow_redirects=True
-    #                        )
-    #     print(rv.data)
+    def test_about_zmirror(self):
+        rv = self.client.get('/about_zmirror', headers=headers(), environ_base=env())
+        self.assertIn(b"Love Luciaz Forever", rv.data)
