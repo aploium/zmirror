@@ -361,6 +361,7 @@ def encoding_detect(byte_content):
     return None
 
 
+@lru_cache(maxsize=1024)
 def s_esc(s):
     """
     equivalent to s.replace("/",r"\/")
@@ -701,7 +702,7 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
         raise
     else:
         if escape_slash:
-            result = result.replace('/', r'\/')
+            result = s_esc(result)
         # dbgprint('embed:', real_url_raw, 'to:', result)
         return result
 
@@ -750,7 +751,7 @@ def decode_mirror_url(mirror_url=None):
         real_path_query = client_requests_text_rewrite(real_path_query)
 
         if _is_escaped_dot: real_path_query = real_path_query.replace('.', r'\.')
-        if _is_escaped_slash: real_path_query = real_path_query.replace('/', r'\/')
+        if _is_escaped_slash: real_path_query = s_esc(real_path_query)
         result['domain'] = real_domain
         result['is_https'] = _is_https
         result['path_query'] = real_path_query
@@ -760,7 +761,7 @@ def decode_mirror_url(mirror_url=None):
     input_path_query = client_requests_text_rewrite(input_path_query)
 
     if _is_escaped_dot: input_path_query = input_path_query.replace('.', r'\.')
-    if _is_escaped_slash: input_path_query = input_path_query.replace('/', r'\/')
+    if _is_escaped_slash: input_path_query = s_esc(input_path_query)
     result['domain'] = target_domain
     result['is_https'] = (target_scheme == 'https://')
     result['path_query'] = input_path_query
@@ -806,7 +807,7 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
     result = urljoin(our_prefix + middle_part + '/',
                      extract_url_path_and_query(_raw_url_or_path).lstrip('/'))
     if is_escape:
-        result = result.replace('/', r'\/')
+        result = s_esc(result)
 
     return response_text_rewrite(result)
 
@@ -1274,7 +1275,7 @@ def regex_url_reassemble(match_obj):
         )
 
     if require_slash_escape:
-        reassembled_url = reassembled_url.replace("/", r"\/")
+        reassembled_url = s_esc(reassembled_url)
 
     # reassemble!
     # prefix: src=  quote_left: "
@@ -1679,7 +1680,7 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
         cdn_id = domain_id if domain_id is not None else zlib.adler32(domain.encode())
         _my_host_name = CDN_domains[cdn_id % cdn_domains_number]
         _myurl_prefix = my_host_scheme + _my_host_name
-        _myurl_prefix_escaped = _myurl_prefix.replace('/', r'\/')
+        _myurl_prefix_escaped = s_esc(_myurl_prefix)
     else:
         _my_host_name = my_host_name
         _myurl_prefix = myurl_prefix
@@ -1703,7 +1704,7 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
         _buff = _my_host_name + domain_prefix
     else:
         _buff = _my_host_name
-    _buff_esc = _buff.replace('/', r'\/')
+    _buff_esc = s_esc(_buff)
     _buff_double_esc = _buff.replace('/', r'\\/')
     _buff_triple_esc = _buff.replace('/', r'\\\/')
 
@@ -1727,8 +1728,8 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace(prefix['double_quoted'], '"%s"' % _buff)
     resp_text = resp_text.replace(prefix['single_quoted'], "'%s'" % _buff)
-    resp_text = resp_text.replace(prefix['double_quoted_esc'], '\\"%s\\"' % _buff)
-    resp_text = resp_text.replace(prefix['single_quoted_esc'], "\\'%s\\'" % _buff)
+    resp_text = resp_text.replace(prefix['double_quoted_esc'], r'\"%s\"' % _buff)
+    resp_text = resp_text.replace(prefix['single_quoted_esc'], r"\'%s\'" % _buff)
     resp_text = resp_text.replace(prefix['double_quoted_ue'], quote_plus('"%s"' % _buff))
     resp_text = resp_text.replace(prefix['single_quoted_ue'], quote_plus("'%s'" % _buff))
 
@@ -1746,8 +1747,8 @@ def response_text_rewrite(resp_text):
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
         for before_replace, after_replace in (plain_replace_domain_alias + parse.temporary_domain_alias):
-            # _before_e = before_replace.replace('/', r'\/')
-            # _after_e = after_replace.replace('/', r'\/')
+            # _before_e = s_esc(before_replace)
+            # _after_e = s_esc(after_replace)
             # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
             # resp_text = resp_text.replace(_before_e, _after_e)
             # resp_text = resp_text.replace(quote_plus(before_replace), quote_plus(after_replace))
