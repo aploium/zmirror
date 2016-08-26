@@ -20,7 +20,7 @@ class TestVerification(ZmirrorTestBase):
         external_domains = ('eu.httpbin.org',)
         force_https_domains = 'ALL'
         enable_automatic_domains_whitelist = False
-        verbose_level = 4
+        # verbose_level = 4
         possible_charsets = None
 
         human_ip_verification_enabled = True

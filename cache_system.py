@@ -1,8 +1,14 @@
 # coding=utf-8
+import os
 import tempfile
 import time
 import pickle
 from datetime import datetime
+
+try:
+    from typing import Union
+except:
+    pass
 
 EXPIRE_NOW = 0
 EXPIRE_1MIN = 60
@@ -75,6 +81,12 @@ def get_expire_from_mime(mime):
 
 
 def _time_str_to_unix(timestring):
+    """
+    :type timestring: Union[str, int]
+    :rtype: Union[int, None]
+    """
+    if isinstance(timestring, (int, float)):
+        return timestring
     try:
         t = int(time.mktime(datetime.strptime(timestring, '%a, %d %b %Y %H:%M:%S %Z').timetuple()))
     except:
@@ -84,11 +96,13 @@ def _time_str_to_unix(timestring):
 
 class FileCache:
     def __init__(self, max_size_kb=8192):
-        self.cachedir = tempfile.TemporaryDirectory(prefix='mirror_')
         self.items_dict = {}
         self.max_size_byte = max_size_kb * 1024
 
-    def put_obj(self, key, obj, expires=43200, obj_size=0, last_modified=None, info_dict=None):
+    def __del__(self):
+        self.flush_all()
+
+    def put_obj(self, key, obj, expires=DEFAULT_EXPIRE, obj_size=0, last_modified=None, info_dict=None):
         """
 
         :param last_modified: str  format: "Mon, 18 Nov 2013 09:02:42 GMT"
@@ -104,28 +118,38 @@ class FileCache:
 
         self.delete(key)
 
-        temp_file = tempfile.TemporaryFile(dir=self.cachedir.name)
+        temp_file = tempfile.NamedTemporaryFile(prefix="zmirror_", suffix=".tmp", delete=False)
         pickle.dump(obj, temp_file, protocol=pickle.HIGHEST_PROTOCOL)
 
         cache_item = (
-            temp_file,  # 0 cache file object
+            temp_file.name,  # 0 cache file path
             info_dict,  # 1 custom dict contains information
             int(time.time()),  # 2 added time (unix time)
             expires,  # 3 expires second
             _time_str_to_unix(last_modified),  # 4 last modified, unix time
         )
+        temp_file.close()
         self.items_dict[key] = cache_item
         return True
 
     def delete(self, key):
         if self._is_item_exist(key):
-            self.items_dict[key][0].close()
+            file_path = self.items_dict[key][0]
             del self.items_dict[key]
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+    def flush_all(self):
+        for key in list(self.items_dict.keys()):
+            self.delete(key)
 
     def check_all_expire(self, force_flush_all=False):
+        if force_flush_all:
+            self.flush_all()
+            return
         keys_to_delete = []
         for item_key in self.items_dict:
-            if self.is_expires(item_key) or force_flush_all:
+            if self.is_expires(item_key):
                 keys_to_delete.append(item_key)
         for key in keys_to_delete:
             self.delete(key)
@@ -140,21 +164,27 @@ class FileCache:
             return True
 
     def get_obj(self, key):
-        if self._is_item_exist(key):
-            fp = self.items_dict[key][0]
-            fp.seek(0)
-            return pickle.load(fp)
+        if self.is_cached(key):
+            file_path = self.items_dict[key][0]
+            try:
+                with open(file_path, "rb") as fp:
+                    obj = pickle.load(fp)
+            except:
+                self.delete(key)
+                return None
+            else:
+                return obj
         else:
             return None
 
     def get_info(self, key):
-        if self._is_item_exist(key):
+        if self.is_cached(key):
             return self.items_dict[key][1]
         else:
             return None
 
     def is_unchanged(self, key, last_modified=None):
-        if not self._is_item_exist(key) or last_modified is None:
+        if not self.is_cached(key) or last_modified is None:
             return False
         else:
             ct = self.items_dict[key][4]
