@@ -1,6 +1,6 @@
 # coding=utf-8
 import threading
-
+import requests
 
 class ZmirrorThreadLocal(threading.local):
     """
@@ -204,13 +204,13 @@ class ZmirrorThreadLocal(threading.local):
     def remote_response(self):
         """
         远程服务器的响应, 对象, requests.Response
-        :rtype: str
+        :rtype: requests.Response
         """
         return self.__getattribute__("_remote_response")
 
     @remote_response.setter
     def remote_response(self, value):
-        """:type value: str"""
+        """:type value: requests.Response"""
         self.__setattr__("_remote_response", value)
 
     @property
