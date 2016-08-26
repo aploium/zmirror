@@ -20,7 +20,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import requests
 from flask import Flask, request, make_response, Response, redirect
 
-__VERSION__ = '0.26.2'
+__VERSION__ = '0.26.3'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
