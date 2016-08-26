@@ -1444,35 +1444,6 @@ def iter_streamed_response_async():
             dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
 
 
-def iter_streamed_response():
-    """非异步, 读取一小部分远程响应, 发送给用户, 再读取下一小部分. 已不推荐使用"""
-    total_size = 0
-    _start_time = time()
-
-    _content_buffer = b''
-    _disable_cache_temporary = False
-
-    for particle_content in parse.remote_response.iter_content(stream_transfer_buffer_size):
-        if verbose_level >= 4:
-            total_size += len(particle_content)
-            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
-
-        if particle_content is not None:
-            # 由于stream的特性, content会被消耗掉, 所以需要额外储存起来
-            if local_cache_enable and not _disable_cache_temporary:
-                if len(_content_buffer) > 8 * 1024 * 1024:  # 8MB
-                    _disable_cache_temporary = True
-                    _content_buffer = None
-                else:
-                    _content_buffer += particle_content
-
-        yield particle_content
-
-    if local_cache_enable and not _disable_cache_temporary:
-        update_content_in_local_cache(parse.remote_url, _content_buffer,
-                                      method=parse.remote_response.request.method)
-
-
 def copy_response(content=None, is_streamed=False):
     """
     Copy and parse remote server's response headers, generate our flask response object
@@ -1486,12 +1457,7 @@ def copy_response(content=None, is_streamed=False):
     if content is None:
         if is_streamed:
             req_time_body = 0
-            if not enable_stream_transfer_async_preload:
-                dbgprint('TransferUsingStreamMode(basic):', parse.remote_response.url, parse.mime)
-                content = iter_streamed_response()
-            else:
-                dbgprint('TransferUsingStreamMode(async):', parse.remote_response.url, parse.mime)
-                content = iter_streamed_response_async()
+            content = iter_streamed_response_async()
         else:
             content, req_time_body = response_content_rewrite()
     else:
