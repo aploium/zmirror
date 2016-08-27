@@ -37,7 +37,7 @@ branches:
   - master
 
 after_success:
-  - CODECLIMATE_REPO_TOKEN=064d9f71234284540b02b3be9093a97ebf58f1caa3571474f84acd1d4ebe0c1d codeclimate-test-reporter
+  - codeclimate-test-reporter --token 064d9f71234284540b02b3be9093a97ebf58f1caa3571474f84acd1d4ebe0c1d
   - bash <(curl -s https://codecov.io/bash)
 
 addons:
