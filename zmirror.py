@@ -204,7 +204,7 @@ if not url_custom_redirect_enable:
     url_custom_redirect_list = {}
     url_custom_redirect_regex = ()
     shadow_url_redirect_regex = ()
-    plain_replace_domain_alias = ()
+    plain_replace_domain_alias = []
 
 if not enable_stream_content_transfer:
     enable_stream_transfer_async_preload = False
@@ -2419,7 +2419,6 @@ def main_function(input_path='/'):
     #      .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
     parse.start_time = time()  # to display compute time
-    parse.temporary_domain_alias = ()  # init temporary_domain_alias
 
     # 将用户请求的URL解析为对应的目标服务器URL
     _temp = decode_mirror_url()

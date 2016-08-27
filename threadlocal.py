@@ -44,7 +44,7 @@ class ZmirrorThreadLocal(threading.local):
         self.mime = None
         self.cache_control = None
         self.remote_response = None
-        self.temporary_domain_alias = ()
+        self.temporary_domain_alias = []
 
     @property
     def start_time(self):
@@ -219,11 +219,11 @@ class ZmirrorThreadLocal(threading.local):
     def temporary_domain_alias(self):
         """
         用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
-        :rtype: Union[list, tuple]
+        :rtype: list
         """
         return self.__getattribute__("_temporary_domain_alias")
 
     @temporary_domain_alias.setter
     def temporary_domain_alias(self, value):
-        """:type value: Union[list, tuple]"""
+        """:type value: list"""
         self.__setattr__("_temporary_domain_alias", value)

@@ -66,6 +66,7 @@ class TestRedirection(ZmirrorTestBase):
 
         self.assertEqual(200, self.rv.status_code, msg=self.dump())
         self.assertEqual("/get?dog=furry-dog", self.zmirror.parse.remote_path_query, msg=self.dump())
+        print(self.rv.data.decode())
         self.assertEqual(
             "furry-dog",
             json.loads(self.rv.data.decode())["args"].get("dog"),

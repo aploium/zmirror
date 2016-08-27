@@ -340,10 +340,10 @@ shadow_url_redirect_regex = (
 # 注意: 如果你需要同时替换二级域名和根域名, 请把二级域名放在根域名前面, 因为二级域名在替换时也会被根域名匹配到
 #
 # Dependency: url_custom_redirect_enable == True
-plain_replace_domain_alias = (
+plain_replace_domain_alias = [
     # ('www.twitter.com', 'twitter.your-website-mirror.com'),
     # ('www.youtube.com', 'youtube.your-website-mirror.com'),
-)
+]
 
 # ############## Individual Sites Isolation ##############
 # Referer based individual sites isolation (v0.18.0+)
