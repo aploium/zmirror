@@ -20,7 +20,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import requests
 from flask import Flask, request, make_response, Response, redirect
 
-__VERSION__ = '0.26.3'
+__VERSION__ = '0.26.4'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -185,10 +185,6 @@ parse = ZmirrorThreadLocal()
 # task_scheduler
 task_scheduler = sched.scheduler(time, sleep)
 # ########## Handle dependencies #############
-if not enable_static_resource_CDN:
-    mime_based_static_resource_CDN = False
-if not mime_based_static_resource_CDN:
-    cdn_redirect_code_if_cannot_hard_rewrite = 0  # record incoming urls if we should use cdn on it
 
 # 记录一个URL的一些信息, 以及是否应该使用CDN
 # 结构例子见下
@@ -1232,7 +1228,7 @@ def regex_url_reassemble(match_obj):
         path = '/extdomains/' + url_no_scheme
 
     # dbgprint('final_path', path, v=5)
-    if mime_based_static_resource_CDN and url_no_scheme in url_to_use_cdn:
+    if enable_static_resource_CDN and url_no_scheme in url_to_use_cdn:
         # dbgprint('We Know:', url_no_scheme,v=5)
         _we_knew_this_url = True
         _this_url_mime_cdn = url_to_use_cdn[url_no_scheme][0]
@@ -1279,7 +1275,7 @@ def regex_url_reassemble(match_obj):
     reassembled = prefix + quote_left + reassembled_url + quote_right + get_group('right_suffix', match_obj)
 
     # write the adv rewrite cache only if we disable CDN or we known whether this url is CDN-able
-    if not mime_based_static_resource_CDN or _we_knew_this_url:
+    if not enable_static_resource_CDN or _we_knew_this_url:
         url_rewrite_cache[match_obj.group()] = reassembled  # write cache
         url_rewrite_cache_miss_count += 1
     # dbgprint('---------------------', v=5)
@@ -2005,8 +2001,7 @@ def request_remote_site_and_parse():
 
     # add url's MIME info to record, for MIME-based CDN rewrite,
     #   next time we access this url, we would know it's mime
-    # Notice: mime_based_static_resource_CDN will be auto disabled above when global CDN option are False
-    if mime_based_static_resource_CDN and not _response_no_cache \
+    if enable_static_resource_CDN and not _response_no_cache \
             and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200:
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
@@ -2150,7 +2145,7 @@ def posterior_request_redirect():
 
     # CDN软重定向
     # 具体请看 config 中 cdn_redirect_code_if_cannot_hard_rewrite 选项的说明
-    if mime_based_static_resource_CDN:  # CDN总开关
+    if enable_static_resource_CDN:  # CDN总开关
         if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
             # 该URL所对应的资源已知, 即之前已经被成功请求过
             and parse.url_no_scheme in url_to_use_cdn

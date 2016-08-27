@@ -473,7 +473,10 @@ enable_static_resource_CDN = False
 #    好处: 避免缓存了一些一次性的资源
 #
 # Dependency 依赖: enable_static_resource_CDN == True
-mime_based_static_resource_CDN = True
+#
+# v0.26.4+ 该*选项*被移除, 程序只会根据MIME来判断资源类型(相当于被固化为 True)
+# mime_based_static_resource_CDN = True
+
 
 # v0.14.0+ Soft CDN Redirect 软CDN重定向
 # Normally, we are trying to rewrite the URL in document(html/css/js) hard-code,
