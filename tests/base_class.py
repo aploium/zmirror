@@ -119,16 +119,20 @@ class ZmirrorTestBase(unittest.TestCase):
 
         dump += "\n------------- zmirror parse -------------\n"
         dump += attributes(self.zmirror.parse)
-        dump += "\n------------- zmirror remote request -------------\n"
-        dump += attributes(self.zmirror.parse.remote_response.request)
-        dump += "\n------------- zmirror remote response -------------\n"
-        dump += attributes(self.zmirror.parse.remote_response)
+        if self.zmirror.parse.remote_response is not None:
+            dump += "\n------------- zmirror remote request -------------\n"
+            dump += attributes(self.zmirror.parse.remote_response.request)
+            dump += "\n------------- zmirror remote response -------------\n"
+            dump += attributes(self.zmirror.parse.remote_response)
 
         for rv_name in ([select] if select != "all" else ["rv", "rv2", "rv3"]):
             if not hasattr(self, rv_name):
                 continue
 
             rv = getattr(self, rv_name)  # type: Response
+
+            if not isinstance(rv, Response):
+                continue
 
             dump += "\n------------- {} -------------\n".format(rv_name)
             dump += attributes(rv)

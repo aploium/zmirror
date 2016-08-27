@@ -43,26 +43,26 @@ class TestCacheSystem(ZmirrorTestBase):
 
     def test_img_cache(self):
         # 第一次请求, 从服务器获取, 没有cache
-        rv = self.client.get(
+        self.rv = self.client.get(
             self.url("/image/png"),
             environ_base=env(),
             headers=headers()
         )  # type: Response
         # 由于flaks的惰性, 需要先实际获取一次结果, 缓存才能实际被存储生效
-        self.assertEqual("image/png", rv.content_type)
-        self.assertIn(b'\x89PNG', rv.data)
-        self.assertEqual(8090, len(rv.data))
+        self.assertEqual("image/png", self.rv.content_type, msg=self.dump())
+        self.assertIn(b'\x89PNG', self.rv.data, msg=self.dump())
+        self.assertEqual(8090, len(self.rv.data), msg=self.dump())
 
         with self.app.test_client() as c:
-            rv2 = c.get(
+            self.rv2 = c.get(
                 self.url("/image/png"),
                 environ_base=env(),
                 headers=headers()
             )  # type: Response
 
-            self.assertEqual("FileHit", rv2.headers.get("x-zmirror-cache"))
-            self.assertEqual("image/png", rv2.content_type)
-            self.assertEqual(rv.data, rv2.data)
+            self.assertEqual("FileHit", self.rv2.headers.get("x-zmirror-cache"), msg=self.dump())
+            self.assertEqual("image/png", self.rv2.content_type, msg=self.dump())
+            self.assertEqual(self.rv.data, self.rv2.data, msg=self.dump())
 
     def test_io_and_many_files(self):
         import os

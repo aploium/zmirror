@@ -2,6 +2,7 @@
 import threading
 import requests
 
+
 class ZmirrorThreadLocal(threading.local):
     """
     由于Python内置thread-local对代码补全的提示非常不友好, 所以自己继承一个
@@ -39,6 +40,7 @@ class ZmirrorThreadLocal(threading.local):
         self.remote_path_query = None
         self.client_header = None
         self.content_type = None
+        self.remote_path = None
         self.mime = None
         self.cache_control = None
         self.remote_response = None
