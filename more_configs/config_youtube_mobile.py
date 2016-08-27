@@ -1,6 +1,6 @@
 # coding=utf-8
-# 这是为Youtube(PC ONLY)镜像配置的示例配置文件
-# Youtube手机站的配置文件是 config_youtube_mobile.py
+# 这是为Youtube(Mobile ONLY)镜像配置的示例配置文件
+# Youtube PC站的配置文件是 config_youtube.py
 #
 # 请耐心看完注释
 # 请耐心看完注释
@@ -33,7 +33,6 @@
 #       比如, PC镜像域名为 pc.my-youtube.com:81 PC镜像使用独立的视频服务器,域名为  pc-video1.lucia.net 和 pc-video2.lucia.net
 #           而手机站域名为 mobile.my-youtube.com 或者 pc.my-youtube.com:82 使用独立的视频服务器, 域名为 mob-video1.lucia.net 和 mob-video2.lucia.net
 #   总之, 虽然YoutubePC和YoutubeMobile的配置文件只相差一点点, 但是它们必须分别被架设为独立的镜像
-#
 # ######### 重要 重要 重要 重要 重要 #########
 # ######### 重要 重要 重要 重要 重要 #########
 # ######### 重要 重要 重要 重要 重要 #########
@@ -44,15 +43,14 @@ my_host_scheme = 'http://'
 my_host_port = None  # None表示使用默认端口, 可以设置成非标准端口, 比如 81
 
 # ############## Target Domain Settings ##############
-target_domain = 'www.youtube.com'
+target_domain = 'm.youtube.com'
 target_scheme = 'https://'
 
 # 这里面大部分域名都是通过 `enable_automatic_domains_whitelist` 自动采集的, 我只是把它们复制黏贴到了这里
 # 实际镜像一个新的站时, 手动只需要添加很少的几个域名就可以了.
 # 自动采集会不断告诉你新域名
 external_domains = [
-    'm.youtube.com',
-
+    'www.youtube.com',
     's.youtube.com',
     'accounts.youtube.com',
 
