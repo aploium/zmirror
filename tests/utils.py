@@ -105,7 +105,7 @@ def load_rv_json(rv):
 
 
 def attributes(var):
-    def _strx(*_args, _sep=' '):
+    def _strx(_sep=' ', *_args):
         """
         :return: str
         """

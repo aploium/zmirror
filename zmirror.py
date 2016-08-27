@@ -847,7 +847,7 @@ def set_request_for_debug(dummy_request):
     request = dummy_request
 
 
-def strx(*args, sep=' '):
+def strx(sep=' ', *args):
     """
     :return: str
     """
