@@ -10,6 +10,7 @@ class TestDefaultMirror(ZmirrorTestBase):
         """
         default config is a mirror of https://www.kernel.org/
         """
+        self.reload_zmirror({"developer_string_trace": "/"})
         # https://www.kernel.org/
         rv = self.client.get('/', environ_base={'REMOTE_ADDR': '1.2.3.4'})
         assert isinstance(rv, Response)

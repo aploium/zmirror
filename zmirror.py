@@ -833,20 +833,14 @@ def add_ssrf_allowed_domain(domain):
     allowed_domains_set.add(domain)
 
 
-# noinspection PyGlobalUndefined
-def set_request_for_debug(dummy_request):
-    global request
-    request = dummy_request
-
-
-def strx(sep=' ', *args):
+def strx(*args):
     """
     :return: str
     """
     output = ''
     for arg in args:
-        output += str(arg) + sep
-    output.rstrip(sep)
+        output += str(arg) + ' '
+    output.rstrip(' ')
     return output
 
 
@@ -1406,11 +1400,6 @@ def iter_streamed_response_async():
         except queue.Empty:
             warnprint('WeGotAnSteamTimeout')
             traceback.print_exc()
-            try:
-                # noinspection PyProtectedMember
-                t._stop()
-            except:
-                pass
             return
         buffer_queue.task_done()
 
@@ -1432,7 +1421,7 @@ def iter_streamed_response_async():
 
         if verbose_level >= 4:
             total_size += len(particle_content)
-            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time))
+            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time + 0.000001))
 
 
 def copy_response(content=None, is_streamed=False):
@@ -1454,7 +1443,7 @@ def copy_response(content=None, is_streamed=False):
     else:
         req_time_body = 0
 
-    if verbose_level >= 3: dbgprint('RemoteRespHeaders', parse.remote_response.headers)
+    dbgprint('RemoteRespHeaders', parse.remote_response.headers)
     resp = Response(content, status=parse.remote_response.status_code)
 
     for header_key in parse.remote_response.headers:
@@ -1505,7 +1494,7 @@ def copy_response(content=None, is_streamed=False):
                     return generate_error_page(
                         "Error occurs when copying remote 'set-cookie' headers:" + str(cookie_string), is_traceback=True), 0
 
-    if verbose_level >= 3: dbgprint('OurRespHeaders:\n', resp.headers)
+    dbgprint('OurRespHeaders:\n', resp.headers)
 
     return resp, req_time_body
 
@@ -1704,11 +1693,6 @@ def response_text_rewrite(resp_text):
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
         for before_replace, after_replace in (plain_replace_domain_alias + parse.temporary_domain_alias):
-            # _before_e = s_esc(before_replace)
-            # _after_e = s_esc(after_replace)
-            # resp_text = resp_text.replace(quote_plus(_before_e), quote_plus(_after_e))
-            # resp_text = resp_text.replace(_before_e, _after_e)
-            # resp_text = resp_text.replace(quote_plus(before_replace), quote_plus(after_replace))
             dbgprint('plain_replace_domain_alias', before_replace, after_replace, v=4)
             resp_text = resp_text.replace(before_replace, after_replace)
 

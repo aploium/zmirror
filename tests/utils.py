@@ -2,6 +2,8 @@
 import os
 import shutil
 import json
+import random
+from flask import Response
 
 basedir = os.path.dirname(os.path.abspath(__file__))
 zmirror_dir = os.path.abspath(os.path.join(basedir, '..'))
@@ -105,20 +107,25 @@ def load_rv_json(rv):
 
 
 def attributes(var):
-    def _strx(_sep=' ', *_args):
+    def _strx(*_args):
         """
         :return: str
         """
         _output = ''
         for _arg in _args:
-            _output += str(_arg) + _sep
-        _output.rstrip(_sep)
+            _output += str(_arg) + ' '
+        _output.rstrip(' ')
         return _output
 
     output = ""
     for name in dir(var):
         if name[0] != '_' and name[-2:] != '__':
-            output += _strx(name, ":", getattr(var, name), "\n")
+            value = str(getattr(var, name))
+            length = len(value)
+
+            if length > 1024:
+                value = value[:1024] + "....(total:{})".format(length)
+            output += _strx(name, ":", value, "\n")
     return output
 
 
@@ -136,3 +143,24 @@ def slash_unesc(string):
     :rtype: str
     """
     return string.replace(r"\/", "/")
+
+
+def rand_unicode(length=8):
+    """
+    :type length: int
+    :rtype: str
+    """
+    return "".join(chr(random.randint(0, 50000)) for _ in range(length))
+
+
+def rv_dmp(rv):
+    """
+    :type rv: Response
+    :rtype: str
+    """
+    from pprint import pformat
+    dump = "\n------------- rv -------------\n"
+    dump += attributes(rv)
+    dump += "\n------------- rv.headers -------------\n"
+    dump += pformat(rv.headers.items())
+    dump += "\n------------- end dump -------------\n"

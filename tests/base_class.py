@@ -5,16 +5,17 @@ import unittest
 import random
 from urllib.parse import urljoin
 
-from flask import Flask
+from flask import Flask, Response
 from flask.testing import FlaskClient
 
-from .utils import copy_default_config_file, restore_config_file
+from .utils import copy_default_config_file, restore_config_file, attributes
 
 import cache_system
 
-
-# config.enable_cron_tasks = False  # 为了避免多余的线程, 需要先关闭 cron_task
-# import zmirror
+try:
+    from typing import Union
+except:
+    pass
 
 
 class ZmirrorTestBase(unittest.TestCase):
@@ -63,6 +64,9 @@ class ZmirrorTestBase(unittest.TestCase):
 
     def setUp(self):
         self.reload_zmirror()
+        self.rv = None
+        self.rv2 = None
+        self.rv3 = None
 
     def del_temp_var(self):
         try:
@@ -77,6 +81,18 @@ class ZmirrorTestBase(unittest.TestCase):
             del self.zmirror
         except:
             pass
+        try:
+            del self.rv
+        except:
+            pass
+        try:
+            del self.rv2
+        except:
+            pass
+        try:
+            del self.rv3
+        except:
+            pass
 
     def tearDown(self):
         self.del_temp_var()
@@ -85,3 +101,40 @@ class ZmirrorTestBase(unittest.TestCase):
         domain = getattr(self.C, "my_host_name", "127.0.0.1")
         scheme = getattr(self.C, "my_host_scheme", "http://")
         return urljoin(scheme + domain, path)
+
+    def dump(self, select='all'):
+        """
+        :type select: Union[int, str]
+        :rtype: str
+        """
+        from pprint import pformat
+
+        select = {
+            "all": "all",
+            1: "rv",
+            2: "rv2",
+            3: "rv3",
+        }[select]
+        dump = "\n------------- begin dump -------------"
+
+        dump += "\n------------- zmirror parse -------------\n"
+        dump += attributes(self.zmirror.parse)
+        dump += "\n------------- zmirror remote request -------------\n"
+        dump += attributes(self.zmirror.parse.remote_response.request)
+        dump += "\n------------- zmirror remote response -------------\n"
+        dump += attributes(self.zmirror.parse.remote_response)
+
+        for rv_name in ([select] if select != "all" else ["rv", "rv2", "rv3"]):
+            if not hasattr(self, rv_name):
+                continue
+
+            rv = getattr(self, rv_name)  # type: Response
+
+            dump += "\n------------- {} -------------\n".format(rv_name)
+            dump += attributes(rv)
+            dump += "\n------------- {}.headers -------------\n".format(rv_name)
+            dump += pformat(list(rv.headers.items()))
+
+        dump += "\n------------- end dump -------------\n"
+
+        return dump
