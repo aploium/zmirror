@@ -197,19 +197,22 @@ class TestVerification(ZmirrorTestBase):
         self.assertTrue(os.path.exists(zmirror_file("ip_whitelist.log")), msg=os.listdir(zmirror_dir))
         self.assertTrue(os.path.exists(zmirror_file("ip_whitelist.txt")), msg=os.listdir(zmirror_dir))
 
-        self.assertIn(
-            "1.2.3.4",
-            open(zmirror_file("ip_whitelist.txt"), 'r', encoding='utf-8').read()
-        )
+        with open(zmirror_file("ip_whitelist.txt"), 'r', encoding='utf-8') as fp:
+            self.assertIn(
+                "1.2.3.4",
+                fp.read()
+            )
 
-        self.assertIn(
-            "Unittest",
-            open(zmirror_file("ip_whitelist.log"), 'r', encoding='utf-8').read()
-        )
-        self.assertIn(
-            "!Password1",
-            open(zmirror_file("ip_whitelist.log"), 'r', encoding='utf-8').read()
-        )
+        with open(zmirror_file("ip_whitelist.log"), 'r', encoding='utf-8') as fp:
+            self.assertIn(
+                "Unittest",
+                fp.read()
+            )
+        with open(zmirror_file("ip_whitelist.log"), 'r', encoding='utf-8') as fp:
+            self.assertIn(
+                "!Password1",
+                fp.read()
+            )
 
         self.assertIn("zmirror_verify=", rv.headers.get("Set-Cookie"))
 
@@ -222,8 +225,6 @@ class TestVerification(ZmirrorTestBase):
             ),
             headers=headers(),
         )  # type: Response
-
-
 
     def test_add_whitelist_by_cookie(self):
         """当一个陌生IP访问时, 检查Cookie并放行"""
