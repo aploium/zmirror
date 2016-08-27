@@ -187,7 +187,6 @@ task_scheduler = sched.scheduler(time, sleep)
 # ########## Handle dependencies #############
 if not enable_static_resource_CDN:
     mime_based_static_resource_CDN = False
-    disable_legacy_file_recognize_method = True
 if not mime_based_static_resource_CDN:
     cdn_redirect_code_if_cannot_hard_rewrite = 0  # record incoming urls if we should use cdn on it
 
@@ -278,8 +277,6 @@ regex_adv_url_rewriter = re.compile(
     r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+(?P<port>:\d{1,5})?))?""" +
     # url路径, 含参数 可选
     r"""(?P<path>[^\s;+$?#'"\{}]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
-    # url中的扩展名, 仅在启用传统的根据扩展名匹配静态文件时打开
-    (r"""(\.(?P<ext>[-_a-z0-9]+?))?""" if not disable_legacy_file_recognize_method else '') +  # file ext
     # 查询字符串, 可选
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
     # 右引号(可以是右括弧), 必须
@@ -1245,8 +1242,7 @@ def regex_url_reassemble(match_obj):
         _this_url_mime_cdn = False
 
     # Apply CDN domain
-    if _this_url_mime_cdn \
-            or (not disable_legacy_file_recognize_method and get_group('ext', match_obj) in static_file_extensions_list):
+    if _this_url_mime_cdn:
         # pick an cdn domain due to the length of url path
         # an advantage of choose like this (not randomly), is this can make higher CDN cache hit rate.
 

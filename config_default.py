@@ -623,12 +623,6 @@ target_static_domains = {
     'static-cdn3.example.com',
 }
 
-# v0.14.0+ By disabling legacy extension based file recognize method, we could gain some performance advantage
-#     More, I'm no longer maintaining the codes of legacy cdn, it may have bugs
-# v0.14.0+ 由于有了基于MIME的CDN重写，可以关闭传统的后缀名重写，能提高一些性能
-#     并且我也不再维护传统CDN, 如果继续使用它, 可能会有潜在的bug
-disable_legacy_file_recognize_method = True
-
 # Only file's extension(from it's url suffix), in this list, will it be cached in CDN
 static_file_extensions_list = {
     'gif', 'jpeg', 'jpg', 'jpeg', 'png', 'ico', 'bmp', 'tif', 'webp',  # images

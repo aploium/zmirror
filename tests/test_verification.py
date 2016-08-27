@@ -252,15 +252,6 @@ class TestVerification(ZmirrorTestBase):
             headers=headers(),
         )  # type: Response
 
-        # 验证访问正常
-        try:
-            a = load_rv_json(rv2)['args']
-        except:
-            print(rv2.data.decode())
-            raise
-        self.assertEqual(self.query_string_dict['zhi'], a['zhi'], msg=attributes(rv2))
-        self.assertEqual(self.query_string_dict['zmirror'], a['zmirror'], msg=attributes(rv2))
-
 
 class TestVerificationSingleAnswer(TestVerification):
     """testing using https://httpbin.org/"""
