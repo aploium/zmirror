@@ -4,3 +4,4 @@ from .test_httpbin import TestHttpbin
 from .test_verification import TestVerification, TestVerificationSingleAnswer
 from .test_cache_system import TestCacheSystem
 from .test_cdn import TestCDN
+from .test_redirection import TestRedirection
