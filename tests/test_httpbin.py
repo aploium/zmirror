@@ -46,9 +46,8 @@ class TestHttpbin(ZmirrorTestBase):
             self.url("/user-agent"),
             environ_base=env(),
             headers=headers()
-        )
+        )  # type: Response
 
-        assert isinstance(rv, Response)
         self.assertEqual(load_rv_json(rv)['user-agent'], DEFAULT_USER_AGENT)
 
     def test_headers(self):

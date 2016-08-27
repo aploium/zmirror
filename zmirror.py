@@ -115,7 +115,6 @@ if my_host_port is not None:
     my_host_name_urlencoded = quote_plus(my_host_name)  # url编码后的
 else:
     my_host_name_urlencoded = my_host_name
-static_file_extensions_list = set(static_file_extensions_list)
 
 if external_domains is None:
     external_domains = []

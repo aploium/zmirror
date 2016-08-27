@@ -20,7 +20,7 @@ class TestCacheSystem(ZmirrorTestBase):
         external_domains = ('eu.httpbin.org',)
         force_https_domains = 'ALL'
         enable_automatic_domains_whitelist = False
-        verbose_level = 4
+        # verbose_level = 4
         possible_charsets = None
 
         # developer_do_not_verify_ssl = True
@@ -42,19 +42,27 @@ class TestCacheSystem(ZmirrorTestBase):
         super().tearDown()
 
     def test_img_cache(self):
+        # 第一次请求, 从服务器获取, 没有cache
+        rv = self.client.get(
+            self.url("/image/png"),
+            environ_base=env(),
+            headers=headers()
+        )  # type: Response
+        # 由于flaks的惰性, 需要先实际获取一次结果, 缓存才能实际被存储生效
+        self.assertEqual("image/png", rv.content_type)
+        self.assertIn(b'\x89PNG', rv.data)
+        self.assertEqual(8090, len(rv.data))
+
         with self.app.test_client() as c:
-            # 第一次请求, 从服务器获取, 没有cache
-            c.get(
+            rv2 = c.get(
                 self.url("/image/png"),
                 environ_base=env(),
                 headers=headers()
             )  # type: Response
 
-            rv = c.get(
-                self.url("/image/png"),
-                environ_base=env(),
-                headers=headers()
-            )  # type: Response
+            self.assertEqual("FileHit", rv2.headers.get("x-zmirror-cache"))
+            self.assertEqual("image/png", rv2.content_type)
+            self.assertEqual(rv.data, rv2.data)
 
     def test_io_and_many_files(self):
         import os

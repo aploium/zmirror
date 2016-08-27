@@ -626,13 +626,6 @@ target_static_domains = {
     'static-cdn3.example.com',
 }
 
-# Only file's extension(from it's url suffix), in this list, will it be cached in CDN
-static_file_extensions_list = {
-    'gif', 'jpeg', 'jpg', 'jpeg', 'png', 'ico', 'bmp', 'tif', 'webp',  # images
-    'woff', 'woff2',  # web font
-    'mp3', 'wmv', 'wav',  # sounds
-    'js', 'css',  # static
-}
 
 # Your CDN domains, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
 #     If your CDN storge your file permanently (like qiniu), you can disable local cache to save space,
