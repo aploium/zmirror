@@ -224,8 +224,23 @@ class TestVerification(ZmirrorTestBase):
         )  # type: Response
 
         a = load_rv_json(rv2)['args']
-        self.assertEqual(self.query_string_dict['zhi'], a['zhi'], msg=attributes(rv2))
-        self.assertEqual(self.query_string_dict['zmirror'], a['zmirror'], msg=attributes(rv2))
+        # 由于 httpbin 不稳定, 为了减少假阳性, 这边尝试两次
+        try:
+            assert self.query_string_dict['zhi'] == a['zhi']
+            assert self.query_string_dict['zmirror'] == a['zmirror']
+        except:
+            rv2 = self.client.get(
+                self.url("/get"),
+                query_string=self.query_string_dict,
+                environ_base=env(
+                    ip='1.2.3.4'
+                ),
+                headers=headers(),
+            )  # type: Response
+
+            a = load_rv_json(rv2)['args']
+            self.assertEqual(self.query_string_dict['zhi'], a['zhi'], msg=attributes(rv2))
+            self.assertEqual(self.query_string_dict['zmirror'], a['zmirror'], msg=attributes(rv2))
 
     def test_add_whitelist_by_cookie(self):
         """当一个陌生IP访问时, 检查Cookie并放行"""
