@@ -266,17 +266,17 @@ else:
 regex_adv_url_rewriter = re.compile(
     # 前缀, 必须有  'action='(表单) 'href='(链接) 'src=' 'url('(css) '@import'(css) '":'(js/json, "key":"value")
     # \s 表示空白字符,如空格tab
-    r"""(?P<prefix>\b((action|href|src)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
+    r"""(?P<prefix>\b(?:(?:action|href|src)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
     # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
-    r"""(?P<domain_and_scheme>(?P<scheme>(https?:)?\\?/\\?/)(?P<domain>([-a-z0-9]+\.)+[a-z]+(?P<port>:\d{1,5})?))?""" +
+    r"""(?P<domain_and_scheme>(?P<scheme>(?:https?:)?\\?/\\?/)(?P<domain>(?:[-a-z0-9]+\.)+[a-z]+(?P<port>:\d{1,5})?))?""" +
     # url路径, 含参数 可选
     r"""(?P<path>[^\s;+$?#'"\{}]*?""" +  # full path(with query string)  /foo/bar.js?love=luciaZ
     # 查询字符串, 可选
     r"""(?P<query_string>\?[^\s?#'"]*?)?)""" +  # query string  ?love=luciaZ
     # 右引号(可以是右括弧), 必须
-    r"""(?P<quote_right>["'\)])(?P<right_suffix>\W)""",  # right quote  "'
+    r"""(?P<quote_right>["')])(?P<right_suffix>\W)""",  # right quote  "'
     flags=re.IGNORECASE
 )
 
@@ -305,9 +305,9 @@ regex_request_rewriter_extdomains = re.compile(
             (  # [http(s):]
                 r"""https?(?P<colon>{REGEX_COLON})""".format(REGEX_COLON=REGEX_COLON)  # https?:
             ) +
-            r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH
+            r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
         ) +
-        r""")?""" +  # //
+        r""")?""" +
         REGEX_MY_HOST_NAME +  # www.mydomain.com[:port] 本部分的正则在上面单独组装
         r"""{REGEX_SLASH}""".format(REGEX_SLASH=REGEX_SLASH)  # # /
     ) +
