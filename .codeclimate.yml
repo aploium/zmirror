@@ -1,0 +1,5 @@
+Python: true
+
+exclude_paths:
+- "tests/"
+- "external_pkgs/"

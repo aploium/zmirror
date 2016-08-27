@@ -38,3 +38,7 @@ branches:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+
+addons:
+    code_climate:
+        repo_token: 064d9f71234284540b02b3be9093a97ebf58f1caa3571474f84acd1d4ebe0c1d
