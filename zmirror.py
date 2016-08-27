@@ -40,7 +40,7 @@ if os.path.dirname(__file__) != '':
     os.chdir(os.path.dirname(__file__))
 from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib logging
 
-if "ZMIRROR_UNITTEST" not in os.environ:
+if "ZMIRROR_UNITTEST" in os.environ:
     # 这边根据环境变量得到的unittest_mode信息会被config中的覆盖掉
     # 只是因为此时还没有加载 config, 所以先根据env里的临时定一下
     unittest_mode = True
