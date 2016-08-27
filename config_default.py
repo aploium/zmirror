@@ -189,8 +189,8 @@ spider_ua_white_list = ('qiniu', 'cdn')
 human_ip_verification_enabled = False
 
 # can be html
-human_ip_verification_description = r"""本站仅允许浙江大学师生访问.如果您也来自浙江大学, 请您回答以下问题
-This site ONLY allow people from Zhejiang University to access, please answer the following question(s).
+human_ip_verification_description = r"""本站仅允许内部人员访问, 如果您是内部人员, 请您回答以下问题
+This site ONLY allow limited people to access, please answer the following question(s).
 """
 
 human_ip_verification_default_whitelist_networks = (
