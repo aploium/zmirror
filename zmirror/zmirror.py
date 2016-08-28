@@ -202,6 +202,9 @@ if not url_custom_redirect_enable:
     shadow_url_redirect_regex = ()
     plain_replace_domain_alias = []
 
+if isinstance(plain_replace_domain_alias, tuple):
+    plain_replace_domain_alias = list(plain_replace_domain_alias)
+
 if not enable_stream_content_transfer:
     enable_stream_transfer_async_preload = False
 
