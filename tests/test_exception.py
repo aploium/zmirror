@@ -35,14 +35,17 @@ class TestException(ZmirrorTestBase):
 
     def test_import_error_custom_func(self):
         restore_config_file()
-        shutil.copy(zmirror_file('config_default.py'), zmirror_file('config.py'))
         try:
-            self.reload_zmirror({"custom_text_rewriter_enable": True,
-                                 "enable_custom_access_cookie_generate_and_verify": True,
-                                 "identity_verify_required": True,
-                                 })
+            shutil.copy(zmirror_file('config_default.py'), zmirror_file('config.py'))
+            try:
+                self.reload_zmirror({"custom_text_rewriter_enable": True,
+                                     "enable_custom_access_cookie_generate_and_verify": True,
+                                     "identity_verify_required": True,
+                                     })
+            except:
+                import traceback
+                traceback.print_exc()
+            os.remove(zmirror_file('config.py'))
         except:
-            import traceback
-            traceback.print_exc()
-        os.remove(zmirror_file('config.py'))
+            pass
         copy_default_config_file()
