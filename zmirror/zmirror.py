@@ -523,7 +523,6 @@ def add_temporary_domain_alias(source_domain, replaced_to_domain):
         parse.temporary_domain_alias = list(parse.temporary_domain_alias)
 
     parse.temporary_domain_alias.append((source_domain, replaced_to_domain))
-    parse.temporary_domain_alias = tuple(parse.temporary_domain_alias)
     dbgprint('A domain', source_domain, 'to', replaced_to_domain, 'added to temporary_domain_alias',
              parse.temporary_domain_alias)
 
