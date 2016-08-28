@@ -21,7 +21,7 @@ import urllib.parse
 import requests
 from flask import Flask, request, make_response, Response, redirect
 
-__VERSION__ = '0.26.5'
+__VERSION__ = '0.27.0'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -172,9 +172,6 @@ if enable_keep_alive_per_domain:
 # 在 cdn_redirect_encode_query_str_into_url 中用于标示编码进url的分隔串
 cdn_url_query_encode_salt = 'zm26'
 _url_salt = re.escape(cdn_url_query_encode_salt)
-if cdn_redirect_encode_query_str_into_url:
-    # 两个选项冲突. 当本选项开启时, 会清空掉 `target_static_domains`
-    target_static_domains = set()
 
 # ## thread local var ##
 # 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
@@ -194,8 +191,6 @@ url_to_use_cdn = {
          ]
 }
 
-if not isinstance(target_static_domains, set):
-    target_static_domains = set()
 if not enable_stream_content_transfer:
     steamed_mime_keywords = ()
 
@@ -1605,36 +1600,24 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
         domain_prefix = ''
         domain_prefix_https_esc = ''
 
-    # Static resources domains hard rewrite
-    if enable_static_resource_CDN and domain in target_static_domains:
-        # dbgprint(domain, 'is static domains')
-        cdn_id = domain_id if domain_id is not None else zlib.adler32(domain.encode())
-        _my_host_name = CDN_domains[cdn_id % cdn_domains_number]
-        _myurl_prefix = my_host_scheme + _my_host_name
-        _myurl_prefix_escaped = s_esc(_myurl_prefix)
-    else:
-        _my_host_name = my_host_name
-        _myurl_prefix = myurl_prefix
-        _myurl_prefix_escaped = myurl_prefix_escaped
-
     # load pre-generated replace prefix
     prefix = prefix_buff[domain]
 
     # Explicit HTTPS scheme must be kept
-    resp_text = resp_text.replace(prefix['https_triple_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\\/'))
-    resp_text = resp_text.replace(prefix['https_double_esc'], (_myurl_prefix + domain_prefix).replace('/', r'\\/'))
-    resp_text = resp_text.replace(prefix['https_esc'], _myurl_prefix_escaped + domain_prefix_https_esc)
-    resp_text = resp_text.replace(prefix['https'], _myurl_prefix + domain_prefix)
+    resp_text = resp_text.replace(prefix['https_triple_esc'], (myurl_prefix + domain_prefix).replace('/', r'\\\/'))
+    resp_text = resp_text.replace(prefix['https_double_esc'], (myurl_prefix + domain_prefix).replace('/', r'\\/'))
+    resp_text = resp_text.replace(prefix['https_esc'], myurl_prefix_escaped + domain_prefix_https_esc)
+    resp_text = resp_text.replace(prefix['https'], myurl_prefix + domain_prefix)
 
-    resp_text = resp_text.replace(prefix['https_esc_ue'], quote_plus(_myurl_prefix_escaped + domain_prefix_https_esc))
-    resp_text = resp_text.replace(prefix['https_ue'], quote_plus(_myurl_prefix + domain_prefix))
+    resp_text = resp_text.replace(prefix['https_esc_ue'], quote_plus(myurl_prefix_escaped + domain_prefix_https_esc))
+    resp_text = resp_text.replace(prefix['https_ue'], quote_plus(myurl_prefix + domain_prefix))
 
     # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
     # _buff: my-domain.com/extdomains/remote.com or my-domain.com
     if domain not in domains_alias_to_target_domain:
-        _buff = _my_host_name + domain_prefix
+        _buff = my_host_name + domain_prefix
     else:
-        _buff = _my_host_name
+        _buff = my_host_name
     _buff_esc = s_esc(_buff)
     _buff_double_esc = _buff.replace('/', r'\\/')
     _buff_triple_esc = _buff.replace('/', r'\\\/')
@@ -1653,8 +1636,8 @@ def response_text_basic_rewrite(resp_text, domain, domain_id=None):
     resp_text = resp_text.replace(prefix['slash_esc_ue'], quote_plus(r'\/\/' + _buff_esc))
     resp_text = resp_text.replace(prefix['slash_ue'], quote_plus('//' + _buff))
 
-    resp_text = resp_text.replace(prefix['hex_lower'], ('//' + _my_host_name).replace('/', r'\x2f'))
-    resp_text = resp_text.replace(prefix['hex_upper'], ('//' + _my_host_name).replace('/', r'\x2F'))
+    resp_text = resp_text.replace(prefix['hex_lower'], ('//' + my_host_name).replace('/', r'\x2f'))
+    resp_text = resp_text.replace(prefix['hex_upper'], ('//' + my_host_name).replace('/', r'\x2F'))
 
     # rewrite "foo.domain.tld" and 'foo.domain.tld'
     resp_text = resp_text.replace(prefix['double_quoted'], '"%s"' % _buff)

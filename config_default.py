@@ -567,8 +567,6 @@ cdn_soft_redirect_minimum_size = 10 * 1024  # 10KB
 #     mime_based_static_resource_CDN == True
 #     cdn_redirect_code_if_cannot_hard_rewrite != 0
 #
-# 冲突:
-#     当本选项被开启时, `target_static_domains` 选项中的所有内容都会被忽略
 #
 # eg: https://foo.com/a.php?q=something (assume it returns an css) (base64 only)
 #     ---> https://cdn.domain.com/a.php_ewm0_.cT1zb21ldGhpbmc=._ewm1_.css
@@ -601,31 +599,6 @@ mime_to_use_cdn = {
     # icon files MAY change frequently, you choose
     # 'image/vnd.microsoft.icon': 'ico', 'image/x-icon': 'ico',
 }
-
-# v0.17.0+
-# If explicitly given target's static resource domains,
-#   can significantly increase the hard CDN rewrite's hit rate. reduce soft redirect.
-# Static domains must ONLY serve static files.
-#   If you don't sure whether a domain is static domain or not, please don't add it.
-#   Missing some domains won't cause functional problems, but added the wrong ones will.
-# Side effect: the mime-based skip-first-access CDN won't affect these domains. may cause more CDN traffic
-# Only domains that contains in the former `external_domains` would have effect
-# See the sample in the bottom of this file for the example for google
-# 如果显示指定目标站的静态资源域名, 可以显著地增加硬CDN重写的覆盖率, 减少影响用户体验的软CDN重定向
-#   仅有能确保仅仅会提供静态资源的域名, 才可以被加入这个列表
-#   如果你不能确定一个域名是否是静态资源域名, 请不要将它加入到这一列表,
-#   漏掉一些静态资源域名不会出现功能上的问题, 但是把动态资源域名添加到这里, 很可能会出现功能性问题.
-# 只有在前面的 `external_domains` 选项中出现过的域名才会生效
-# 坏处: 被标记为静态资源的域名, 将[可能]无法享受 资源首次访问不CDN 带来的流量节省. 会带来更多的流量消耗
-#
-# 冲突:
-#   当 `cdn_redirect_encode_query_str_into_url` 被开启(默认开启)时, 本选项不会发挥任何作用
-target_static_domains = {
-    'static-cdn1.example.com',
-    'static-cdn2.example.com',
-    'static-cdn3.example.com',
-}
-
 
 # Your CDN domains, such as 'cdn.example.com', domain only, do not add slash(/), do not add scheme (http://)
 #     If your CDN storge your file permanently (like qiniu), you can disable local cache to save space,
