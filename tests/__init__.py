@@ -6,3 +6,4 @@ from .test_cache_system import TestCacheSystem
 from .test_cdn import TestCDN
 from .test_redirection import TestRedirection
 from .test_functions import TestFunctions
+from .test_custom_response_text_rewrite import TestCustomResponseRewriter

@@ -238,7 +238,6 @@ class TestHttpbin(ZmirrorTestBase):
             environ_base=env(),
             headers=headers(),
         )  # type: Response
-        print(self.dump())
 
         self.assertEqual(2, len(self.rv.headers.get_all("Set-Cookie")), msg=self.dump())
         for set_cookie_header in self.rv.headers.get_all("Set-Cookie"):
@@ -247,4 +246,23 @@ class TestHttpbin(ZmirrorTestBase):
                 raise ValueError("cookie set error" + self.dump())
         self.assertEqual(302, self.rv.status_code, msg=self.dump())
 
+    def test_relative_redirect_to(self):
+        """https://httpbin.org/redirect-to?url=http%3A%2F%2Fexample.com%2F"""
+        self.rv = self.client.get(
+            self.url("/redirect-to"),
+            query_string="url=http%3A%2F%2Fexample.com%2F",
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
 
+        self.assertIn("example.com", self.rv.location, msg=self.dump())
+
+    def test_relative_redirect_to_2(self):
+        """https://httpbin.org/redirect-to?url=http%3A%2F%2Fexample.com%2F"""
+        self.rv = self.client.get(
+            self.url("/redirect-to"),
+            query_string="url=http%3A%2F%2Feu.httpbin.org%2F",
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
+        self.assertEqual(self.url("/extdomains/eu.httpbin.org/"), self.rv.location, msg=self.dump())
