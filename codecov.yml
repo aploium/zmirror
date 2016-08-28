@@ -11,6 +11,7 @@ codecov:
 coverage:
   range: "0...100"
   ignore:
+  - zmirror/external_pkgs/.*
   - external_pkgs/.*
   - more_configs/.*
   - tests/.*
