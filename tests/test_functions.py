@@ -54,6 +54,12 @@ class TestFunctions(ZmirrorTestBase):
         self.assertEqual("/233.html", result["path"])
         self.assertEqual(True, result["is_https"])
 
+        result = self.zmirror.decode_mirror_url(self.url("/extdomains/https-eu.httpbin.org/233.html?x=3"))
+        self.assertEqual("eu.httpbin.org", result["domain"])
+        self.assertEqual("/233.html?x=3", result["path_query"])
+        self.assertEqual("/233.html", result["path"])
+        self.assertEqual(True, result["is_https"])
+
         result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org"))
         self.assertEqual("eu.httpbin.org", result["domain"])
         self.assertEqual("/", result["path_query"])
@@ -126,6 +132,10 @@ class TestFunctions(ZmirrorTestBase):
 
     def test__encode_mirror_url(self):
         self.assertEqual(
+            "/extdomains/eu.httpbin.org/foo?x=233",
+            self.zmirror.encode_mirror_url("/extdomains/eu.httpbin.org/foo?x=233")
+        )
+        self.assertEqual(
             "/foo?x=233",
             self.zmirror.encode_mirror_url("/foo?x=233")
         )
@@ -163,7 +173,9 @@ class TestFunctions(ZmirrorTestBase):
 
     def test__check_global_ua_pass(self):
         self.assertFalse(self.zmirror.check_global_ua_pass(None))
-        self.assertTrue(self.zmirror.global_ua_white_name)
+        self.assertTrue(self.zmirror.check_global_ua_pass(
+            self.zmirror.global_ua_white_name)
+        )
 
     def test__is_content_type_using_cdn(self):
         self.assertTrue(self.zmirror.is_content_type_using_cdn("image/jpg"))
@@ -194,9 +206,28 @@ class TestFunctions(ZmirrorTestBase):
             self.assertIsInstance(page, str)
             self.assertIn("None or not displayed", page)
 
+            self.assertIn(b"hello world", self.zmirror.generate_error_page(
+                errormsg=b"hello world"
+            ).data)
+
     def test__generate_304_response(self):
         self.assertEqual(304, self.zmirror.generate_304_response().status_code)
 
     def test__is_denied_because_of_spider(self):
         self.assertFalse(self.zmirror.is_denied_because_of_spider("spider-qiniu"))
         self.assertTrue(self.zmirror.is_denied_because_of_spider("baiduSpider"))
+
+    def test__embed_real_url_to_embedded_url(self):
+        """https://httpbin.org/get?a=233"""
+        self.assertEqual(
+            self.url("/get_zm26_.YT0yMzM=._zm26_.jpg"),
+            self.zmirror.embed_real_url_to_embedded_url(
+                self.url("/get?a=233"), "image/jpeg",
+            )
+        )
+        self.assertEqual(
+            slash_esc(self.url("/get_zm26_.YT0yMzM=._zm26_.jpg")),
+            self.zmirror.embed_real_url_to_embedded_url(
+                self.url("/get?a=233"), "image/jpeg", escape_slash=True,
+            )
+        )

@@ -35,8 +35,22 @@ class TestHttpbin(ZmirrorTestBase):
     def test_homepage(self):
         """https://httpbin.org/"""
 
-        self.rv = self.client.get(self.url("/"), environ_base=env())
-        assert isinstance(self.rv, Response)
+        self.rv = self.client.get(
+            self.url("/"),
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
+        self.assertIn(b'httpbin', self.rv.data, msg=self.dump())
+
+    def test__enable_keep_alive_per_domain(self):
+        """https://httpbin.org/"""
+        self.reload_zmirror({"enable_keep_alive_per_domain": True})
+
+        self.rv = self.client.get(
+            self.url("/"),
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
         self.assertIn(b'httpbin', self.rv.data, msg=self.dump())
 
     def test_main_domain_as_external(self):
