@@ -230,3 +230,21 @@ class TestHttpbin(ZmirrorTestBase):
                 self.assertEqual(quote_plus(answers[i]), r_json['url{}q'.format(i)], msg=self.dump())
                 # 先 slash_escape 再 quote_plus 后的 url
                 self.assertEqual(quote_plus(slash_esc(answers[i])), r_json['url{}eq'.format(i)], msg=self.dump())
+
+    def test_remote_set_cookie(self):
+        """https://httpbin.org/cookies/set?name=value"""
+        self.rv = self.client.get(
+            self.url("/cookies/set?k1=value1&k2=value2"),
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
+        print(self.dump())
+
+        self.assertEqual(2, len(self.rv.headers.get_all("Set-Cookie")), msg=self.dump())
+        for set_cookie_header in self.rv.headers.get_all("Set-Cookie"):
+            if not ("k1=value1" in set_cookie_header
+                    or "k2=value2" in set_cookie_header):
+                raise ValueError("cookie set error" + self.dump())
+        self.assertEqual(302, self.rv.status_code, msg=self.dump())
+
+
