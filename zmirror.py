@@ -17,6 +17,7 @@ from time import time, sleep
 from html import escape as html_escape
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
+import urllib.parse
 import requests
 from flask import Flask, request, make_response, Response, redirect
 
@@ -714,7 +715,7 @@ def decode_mirror_url(mirror_url=None):
     result = {}
 
     if mirror_url is None:
-        input_path_query = extract_url_path_and_query()
+        input_path_query = extract_url_path_and_query()  # type: str
     else:
         if r'\/' in mirror_url:  # 如果 \/ 在url中, 先反转义, 处理完后再转义回来
             _is_escaped_slash = True
@@ -724,16 +725,14 @@ def decode_mirror_url(mirror_url=None):
             _is_escaped_dot = True
             mirror_url = mirror_url.replace(r'\.', '.')
 
-        input_path_query = extract_url_path_and_query(mirror_url)
+        input_path_query = extract_url_path_and_query(mirror_url)  # type: str
 
     if input_path_query[:12] == '/extdomains/':
         # 12 == len('/extdomains/')
-        dbgprint(input_path_query)
-        domain_end_pos = input_path_query.find('/', 12)
-        if domain_end_pos == -1:
-            domain_end_pos = len(input_path_query)
-        real_domain = input_path_query[12:domain_end_pos]
-        real_path_query = input_path_query[domain_end_pos:]
+        split = urlsplit("//" + input_path_query[12:].lstrip("/"))  # type: urllib.parse.SplitResult
+
+        real_domain = split.netloc
+        real_path_query = split.path + "?" + split.query
 
         if real_domain[:6] == 'https-':
             # 如果显式指定了 /extdomains/https-域名 形式(为了兼容老版本)的, 那么使用https

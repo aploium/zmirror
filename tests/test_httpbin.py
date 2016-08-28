@@ -41,7 +41,7 @@ class TestHttpbin(ZmirrorTestBase):
 
     def test_main_domain_as_external(self):
         self.rv = self.client.get(
-            self.url("/extdomains/" + self.C.target_domain),
+            self.url("/extdomains//" + self.C.target_domain),
             environ_base=env(),
             headers=headers(),
         )  # type: Response
