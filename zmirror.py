@@ -728,7 +728,10 @@ def decode_mirror_url(mirror_url=None):
 
     if input_path_query[:12] == '/extdomains/':
         # 12 == len('/extdomains/')
+        dbgprint(input_path_query)
         domain_end_pos = input_path_query.find('/', 12)
+        if domain_end_pos == -1:
+            domain_end_pos = len(input_path_query)
         real_domain = input_path_query[12:domain_end_pos]
         real_path_query = input_path_query[domain_end_pos:]
 
@@ -2429,7 +2432,7 @@ def main_function(input_path='/'):
     parse.is_external_domain = parse.remote_domain not in domain_alias_to_target_set
     parse.remote_url = assemble_remote_url()  # type: str
     parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
-    dbgprint('after extract, url:', request.url, '   path:', request.path)
+    dbgprint('after extract, url:', parse.remote_url, '   path_query:', parse.remote_path_query)
 
     # 对用户请求进行检查和过滤
     # 不符合条件的请求(比如爬虫)将终止执行

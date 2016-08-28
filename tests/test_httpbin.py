@@ -20,7 +20,7 @@ class TestHttpbin(ZmirrorTestBase):
         external_domains = ('eu.httpbin.org',)
         force_https_domains = 'ALL'
         enable_automatic_domains_whitelist = False
-        # verbose_level = 2
+        # verbose_level = 4
         possible_charsets = None
 
         # developer_string_trace = r"http:\\/\\/httpbin.org\\/extdomains\\/httpbin.org\\/4xxx.png?a=238"
@@ -39,13 +39,29 @@ class TestHttpbin(ZmirrorTestBase):
         assert isinstance(self.rv, Response)
         self.assertIn(b'httpbin', self.rv.data, msg=self.dump())
 
+    def test_main_domain_as_external(self):
+        self.rv = self.client.get(
+            self.url("/extdomains/" + self.C.target_domain),
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
+        self.assertEqual(307, self.rv.status_code, self.dump())
+
+    def test_main_domain_as_external_with_end_slash(self):
+        self.rv = self.client.get(
+            self.url("/extdomains/" + self.C.target_domain + "/"),
+            environ_base=env(),
+            headers=headers(),
+        )  # type: Response
+        self.assertEqual(307, self.rv.status_code, self.dump())
+
     def test_user_agent(self):
         """https://httpbin.org/user-agent"""
 
         self.rv = self.client.get(
             self.url("/user-agent"),
             environ_base=env(),
-            headers=headers()
+            headers=headers(),
         )  # type: Response
 
         self.assertEqual(load_rv_json(self.rv)['user-agent'], DEFAULT_USER_AGENT, msg=self.dump())
