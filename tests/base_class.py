@@ -10,8 +10,6 @@ from flask.testing import FlaskClient
 
 from .utils import copy_default_config_file, restore_config_file, attributes
 
-import cache_system
-
 try:
     from typing import Union
 except:
@@ -53,9 +51,11 @@ class ZmirrorTestBase(unittest.TestCase):
             for config_name, config_value in configs_dict.items():
                 setattr(config, config_name, config_value)
 
+        import zmirror.cache_system as cache_system
+        import zmirror.zmirror as zmirror
         importlib.reload(cache_system)
-        import zmirror
         importlib.reload(zmirror)
+
         zmirror.app.config['TESTING'] = True
 
         # 处理有端口号的测试, 在 del_temp_var() 中回滚

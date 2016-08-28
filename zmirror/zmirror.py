@@ -12,6 +12,7 @@ import random
 import traceback
 import ipaddress
 import threading
+
 from fnmatch import fnmatch
 from time import time, sleep
 from html import escape as html_escape
@@ -20,8 +21,9 @@ from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import urllib.parse
 import requests
 from flask import Flask, request, make_response, Response, redirect
+from .utils import *
 
-__VERSION__ = '0.27.0'
+__VERSION__ = '0.27.1'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
@@ -39,7 +41,7 @@ else:
 
 if os.path.dirname(__file__) != '':
     os.chdir(os.path.dirname(__file__))
-from external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib logging
+from .external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib logging
 
 if "ZMIRROR_UNITTEST" in os.environ:
     # 这边根据环境变量得到的unittest_mode信息会被config中的覆盖掉
@@ -62,7 +64,7 @@ else:
     if not unittest_mode:
         infoprint('lru_cache loaded successfully from fastcache')
 
-from threadlocal import ZmirrorThreadLocal
+from .threadlocal import ZmirrorThreadLocal
 
 if not unittest_mode:  # 在unittest时不输出这几行
     infoprint('zmirror version: {version} author: {author}'.format(version=__VERSION__, author=__AUTHOR__))
@@ -93,7 +95,7 @@ else:
 
 if local_cache_enable:
     try:
-        from cache_system import FileCache, get_expire_from_mime
+        from .cache_system import FileCache, get_expire_from_mime
 
         cache = FileCache()
     except Exception as e:
@@ -587,7 +589,7 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
 
         # write log
         try:
-            with open('automatic_domains_whitelist.log', 'a', encoding='utf-8') as fp:
+            with open(zmirror_root('automatic_domains_whitelist.log'), 'a', encoding='utf-8') as fp:
                 fp.write(domain + '\n')
         except:
             traceback.print_exc()
@@ -1309,7 +1311,7 @@ def load_ip_whitelist_file():
     """从文件加载ip白名单"""
     set_buff = set()
     if os.path.exists(human_ip_verification_whitelist_file_path):
-        with open(human_ip_verification_whitelist_file_path, 'r', encoding='utf-8') as fp:
+        with open(zmirror_root(human_ip_verification_whitelist_file_path), 'r', encoding='utf-8') as fp:
             set_buff.add(fp.readline().strip())
     return set_buff
 
@@ -1317,7 +1319,7 @@ def load_ip_whitelist_file():
 def append_ip_whitelist_file(ip_to_allow):
     """写入ip白名单到文件"""
     try:
-        with open(human_ip_verification_whitelist_file_path, 'a', encoding='utf-8') as fp:
+        with open(zmirror_root(human_ip_verification_whitelist_file_path), 'a', encoding='utf-8') as fp:
             fp.write(ip_to_allow + '\n')
     except:
         errprint('Unable to write whitelist file')
@@ -1334,7 +1336,7 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
     append_ip_whitelist_file(ip_to_allow)
     # dbgprint(single_ip_allowed_set)
     try:
-        with open(human_ip_verification_whitelist_log, 'a', encoding='utf-8') as fp:
+        with open(zmirror_root(human_ip_verification_whitelist_log), 'a', encoding='utf-8') as fp:
             fp.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + ip_to_allow
                      + " " + str(request.user_agent)
                      + " " + repr(info_record_dict) + "\n")
@@ -1992,11 +1994,11 @@ def request_remote_site_and_parse():
     resp.headers.add('X-Powered-By', 'zmirror/%s' % __VERSION__)
 
     if developer_dump_all_traffics and not is_streamed:
-        if not os.path.exists('traffic'):
-            os.mkdir('traffic')
+        if not os.path.exists(zmirror_root('traffic')):
+            os.mkdir(zmirror_root('traffic'))
         _time_str = datetime.now().strftime('traffic_%Y-%m-%d_%H-%M-%S')
         try:
-            with open(os.path.join('traffic', _time_str + '.dump'), 'wb') as fp:
+            with open(os.path.join(zmirror_root('traffic'), _time_str + '.dump'), 'wb') as fp:
                 pickle.dump(
                     (_time_str,
                      (repr(request.url), repr(request.headers), repr(request.get_data())),

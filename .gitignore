@@ -339,3 +339,5 @@ custom_func_.py
 custom_func_t.py
 img/
 /tests/sample/
+/config.py._unittest_raw
+/custom_func.py._unittest_raw

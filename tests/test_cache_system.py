@@ -32,7 +32,7 @@ class TestCacheSystem(ZmirrorTestBase):
 
     def setUp(self):
         super().setUp()
-        import cache_system
+        import zmirror.cache_system as cache_system
         self.cache = cache_system.FileCache()
 
     def tearDown(self):

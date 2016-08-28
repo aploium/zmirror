@@ -6,7 +6,7 @@ please copy it to YOUR_EWM_FOLDER/custom_func.py
 Without this file, twitter mirror won't work normally
 """
 import re
-from zmirror import add_ssrf_allowed_domain, get_group, \
+from zmirror.zmirror import add_ssrf_allowed_domain, get_group, \
     force_https_domains, my_host_scheme, my_host_name, encode_mirror_url, \
     decode_mirror_url
 
