@@ -197,6 +197,29 @@ class TestCDN(ZmirrorTestBase):
         self.assertEqual(200, rv4.status_code, msg=self.dump())
         self.assertEqual(0x97ca823f, crc32(rv4.data), msg=self.dump())
 
+    def test_img_cdn_hard_rewrite(self):
+        """测试重写html中CDN的链接 https://httpbin.org/"""
+        # 第一次请求, 没有使用CDN
+        self.rv = self.client.get(
+            self.url("/image/jpeg"),
+            environ_base=env(),
+            headers=headers()
+        )  # type: Response
+
+        # 由于flaks的惰性, 需要先实际获取一次结果, 缓存才能实际被存储生效
+        self.assertEqual("image/jpeg", self.rv.content_type, msg=self.dump())
+        self.assertEqual(200, self.rv.status_code, msg=self.dump())
+        self.assertEqual(0x97ca823f, crc32(self.rv.data), msg=self.dump())
+
+        with self.app.test_client() as c:
+            # 请求包含 https://httpbin.org/image/jpeg 的页面, 其中这张图片的链接会被重写成CDN
+            self.rv2 = c.get(
+                self.url("/"),
+                environ_base=env(),
+                headers=headers()
+            )  # type: Response
+            self.assertIn(b"cdn2.zmirror-unittest.com/image/jpeg", self.rv2.data, msg=self.dump())
+
     def test_img_cdn_too_small(self):
         """测试一个由于体积过小, 而不进入CDN的图片
         测试使用 https://httpbin.org/image/png 这个图片只有8KB,
@@ -225,3 +248,26 @@ class TestCDN(ZmirrorTestBase):
             self.assertEqual(200, self.rv2.status_code, msg=self.dump())  # 应该返回200, 而不是重定向
             self.assertEqual("image/png", self.rv2.content_type, msg=self.dump())
             self.assertEqual(self.rv.data, self.rv2.data, msg=self.dump())
+
+    def test_small_img_cdn_hard_rewrite(self):
+        """测试上面那个由于体积过小, 而不进入软CDN的PNG图片, 而会被硬重写"""
+        # 第一次请求, 没有使用CDN
+        self.rv = self.client.get(
+            self.url("/image/png"),
+            environ_base=env(),
+            headers=headers()
+        )  # type: Response
+
+        # 由于flaks的惰性, 需要先实际获取一次结果, 缓存才能实际被存储生效
+        self.assertEqual("image/png", self.rv.content_type, msg=self.dump())
+        self.assertIn(b'\x89PNG', self.rv.data, msg=self.dump())
+        self.assertEqual(8090, len(self.rv.data), msg=self.dump())
+
+        with self.app.test_client() as c:
+            # 请求包含 https://httpbin.org/image/jpeg 的页面, 其中这张图片的链接会被重写成CDN
+            self.rv2 = c.get(
+                self.url("/"),
+                environ_base=env(),
+                headers=headers()
+            )  # type: Response
+            self.assertIn(b"cdn2.zmirror-unittest.com/image/png", self.rv2.data, msg=self.dump())

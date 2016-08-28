@@ -788,7 +788,9 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
     if domain not in allowed_domains_set:
         return raw_url_or_path
 
-    if is_scheme or ((sp.scheme or _raw_url_or_path[:2] == '//') and is_scheme is not False):
+    if _raw_url_or_path[:2] == '//':
+        our_prefix = '//' + my_host_name
+    elif is_scheme or (sp.scheme and is_scheme is not False):
         our_prefix = myurl_prefix
     else:
         our_prefix = ''

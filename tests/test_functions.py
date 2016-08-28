@@ -24,16 +24,16 @@ class TestFunctions(ZmirrorTestBase):
         verbose_level = 4
         possible_charsets = None
 
-    def test_cache_clean(self):
+    def test__cache_clean(self):
         self.reload_zmirror({"enable_keep_alive_per_domain": True})
         self.zmirror.cache_clean(is_force_flush=True)
 
-    def test_cron_task_container(self):
+    def test__cron_task_container(self):
         self.zmirror.cron_task_container(dict(
             target=print,
         ))
 
-    def test_try_match_and_add_domain_to_rewrite_white_list(self):
+    def test__try_match_and_add_domain_to_rewrite_white_list(self):
         self.assertFalse(self.zmirror.try_match_and_add_domain_to_rewrite_white_list("www2.httpbin.org"))
         self.assertTrue(self.zmirror.try_match_and_add_domain_to_rewrite_white_list("www2.httpbin.org", force_add=True))
         self.reload_zmirror({"enable_automatic_domains_whitelist": True,
@@ -41,13 +41,13 @@ class TestFunctions(ZmirrorTestBase):
                             )
         self.assertTrue(self.zmirror.try_match_and_add_domain_to_rewrite_white_list("www2.httpbin.org"))
 
-    def test_add_temporary_domain_alias(self):
+    def test__add_temporary_domain_alias(self):
         self.zmirror.add_temporary_domain_alias("non-exist1.httpbin.org", "non-exist2.httpbin.org")
 
-    def test_get_ext_domain_inurl_scheme_prefix(self):
+    def test__get_ext_domain_inurl_scheme_prefix(self):
         self.assertEqual("", self.zmirror.get_ext_domain_inurl_scheme_prefix("x"))
 
-    def test_decode_mirror_url(self):
+    def test__decode_mirror_url(self):
         result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org/233.html?x=3"))
         self.assertEqual("eu.httpbin.org", result["domain"])
         self.assertEqual("/233.html?x=3", result["path_query"])
@@ -114,3 +114,89 @@ class TestFunctions(ZmirrorTestBase):
         self.assertEqual("/?x=233", result["path_query"])
         self.assertEqual("/", result["path"])
         self.assertEqual(True, result["is_https"])
+
+    def test__is_ip_not_in_allow_range(self):
+        self.reload_zmirror({"human_ip_verification_enabled": True})
+        with self.app.test_client() as c:
+            c.get("/about_zmirror")
+            self.zmirror.ip_whitelist_add("8.7.6.5")
+            self.assertFalse(self.zmirror.is_ip_not_in_allow_range("8.7.6.5"))
+            self.assertTrue(self.zmirror.is_ip_not_in_allow_range("8.7.6.6"))
+            self.assertFalse(self.zmirror.is_ip_not_in_allow_range("127.0.0.1"))
+
+    def test__encode_mirror_url(self):
+        self.assertEqual(
+            "/foo?x=233",
+            self.zmirror.encode_mirror_url("/foo?x=233")
+        )
+        self.assertEqual(
+            "/extdomains/eu.httpbin.org/foo?x=233",
+            self.zmirror.encode_mirror_url("/foo?x=233", remote_domain="eu.httpbin.org")
+        )
+        self.assertEqual(
+            "//" + self.C.my_host_name + "/extdomains/eu.httpbin.org/foo?x=233",
+            self.zmirror.encode_mirror_url("//eu.httpbin.org/foo?x=233")
+        )
+        self.assertEqual(
+            self.C.my_host_scheme + self.C.my_host_name + "/extdomains/eu.httpbin.org/foo?x=233",
+            self.zmirror.encode_mirror_url("http://eu.httpbin.org/foo?x=233")
+        )
+        self.assertEqual(
+            "/extdomains/eu.httpbin.org/foo?x=233",
+            self.zmirror.encode_mirror_url("http://eu.httpbin.org/foo?x=233", is_scheme=False)
+        )
+        self.assertEqual(
+            slash_esc(self.C.my_host_scheme + self.C.my_host_name + "/extdomains/eu.httpbin.org/foo?x=233"),
+            self.zmirror.encode_mirror_url("http://eu.httpbin.org/foo?x=233", is_escape=True)
+        )
+
+    def test__is_target_domain_use_https(self):
+        self.assertTrue(self.zmirror.is_target_domain_use_https("httpbin.org"))
+
+        self.reload_zmirror({"force_https_domains": {"httpbin.org", "eu.httpbin.org"}})
+        self.assertTrue(self.zmirror.is_target_domain_use_https("eu.httpbin.org"))
+        self.assertFalse(self.zmirror.is_target_domain_use_https("ex.httpbin.org"))
+
+    def test__add_ssrf_allowed_domain(self):
+        self.zmirror.add_ssrf_allowed_domain("www.example.com")
+        self.assertIn("www.example.com", self.zmirror.allowed_domains_set)
+
+    def test__check_global_ua_pass(self):
+        self.assertFalse(self.zmirror.check_global_ua_pass(None))
+        self.assertTrue(self.zmirror.global_ua_white_name)
+
+    def test__is_content_type_using_cdn(self):
+        self.assertTrue(self.zmirror.is_content_type_using_cdn("image/jpg"))
+        self.assertFalse(self.zmirror.is_content_type_using_cdn("text/html"))
+        self.assertFalse(self.zmirror.is_content_type_using_cdn("text/html; encoding=utf-8"))
+
+    def test__generate_error_page(self):
+        with self.app.test_client() as c:
+            c.get("/about_zmirror")
+            try:
+                raise SystemError("dummy error")
+            except:
+                page = self.zmirror.generate_error_page(is_traceback=True)
+            self.assertIsInstance(page, Response)
+            self.assertIn(b"dummy error", page.data)
+
+            try:
+                raise SystemError("dummy error")
+            except:
+                page = self.zmirror.generate_error_page(is_traceback=True, content_only=True)
+            self.assertIsInstance(page, str)
+            self.assertIn("dummy error", page)
+
+            try:
+                raise SystemError("dummy error")
+            except:
+                page = self.zmirror.generate_error_page(content_only=True)
+            self.assertIsInstance(page, str)
+            self.assertIn("None or not displayed", page)
+
+    def test__generate_304_response(self):
+        self.assertEqual(304, self.zmirror.generate_304_response().status_code)
+
+    def test__is_denied_because_of_spider(self):
+        self.assertFalse(self.zmirror.is_denied_because_of_spider("spider-qiniu"))
+        self.assertTrue(self.zmirror.is_denied_because_of_spider("baiduSpider"))
