@@ -1070,28 +1070,37 @@ def put_response_to_local_cache(url, _our_resp, without_content=False):
     :param without_content: for stream mode use
     :param url: client request url
     :param _our_resp: our response(flask response object) to client, would be storge
+    :type url: str
+    :type _our_resp: Response
+    :type without_content: bool
     """
     # Only cache GET method, and only when remote returns 200(OK) status
-    if local_cache_enable and request.method == 'GET' and parse.remote_response.status_code == 200:
-        if without_content:
-            our_resp = copy.copy(_our_resp)
-            our_resp.response = None  # delete iterator
-        else:
-            our_resp = _our_resp
-        # the header's character cases are different in flask/apache(win)/apache(linux)
-        last_modified = parse.remote_response.headers.get('last-modified', None) \
-                        or parse.remote_response.headers.get('Last-Modified', None)
-        dbgprint('PuttingCache:', url)
-        cache.put_obj(
-            url,
-            our_resp,
-            expires=get_expire_from_mime(parse.mime),
-            obj_size=0 if without_content else len(parse.remote_response.content),
-            last_modified=last_modified,
-            info_dict={'without_content': without_content,
-                       'last_modified': last_modified,
-                       },
-        )
+    if request.method != 'GET' or parse.remote_response.status_code != 200:
+        return
+
+    dbgprint('PuttingCache:', url, "without_content:", without_content)
+
+    if without_content:
+        our_resp = copy.copy(_our_resp)
+        our_resp.response = None  # delete iterator
+        obj_size = 0
+    else:
+        our_resp = _our_resp
+        obj_size = len(parse.remote_response.content)
+
+    # requests' header are CaseInsensitive
+    last_modified = parse.remote_response.headers.get('Last-Modified', None)
+
+    cache.put_obj(
+        url,
+        our_resp,
+        expires=get_expire_from_mime(parse.mime),
+        obj_size=obj_size,
+        last_modified=last_modified,
+        info_dict={'without_content': without_content,
+                   'last_modified': last_modified,
+                   },
+    )
 
 
 def try_get_cached_response(url, client_header=None):
