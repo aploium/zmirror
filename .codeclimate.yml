@@ -14,3 +14,4 @@ ratings:
 exclude_paths:
 - "tests/"
 - "external_pkgs/"
+- "more_configs/"
