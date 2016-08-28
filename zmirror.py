@@ -732,7 +732,7 @@ def decode_mirror_url(mirror_url=None):
         split = urlsplit("//" + input_path_query[12:].lstrip("/"))  # type: urllib.parse.SplitResult
 
         real_domain = split.netloc
-        real_path_query = split.path + "?" + split.query
+        real_path_query = (split.path or "/") + (("?" + split.query) if split.query else "")
 
         if real_domain[:6] == 'https-':
             # 如果显式指定了 /extdomains/https-域名 形式(为了兼容老版本)的, 那么使用https
@@ -1874,7 +1874,7 @@ def extract_url_path_and_query(full_url=None, no_query=False):
     if full_url is None:
         full_url = request.url
     split = urlsplit(full_url)
-    result = split.path
+    result = split.path or "/"
     if not no_query and split.query:
         result += '?' + split.query
     return result

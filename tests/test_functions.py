@@ -44,11 +44,38 @@ class TestFunctions(ZmirrorTestBase):
     def test_add_temporary_domain_alias(self):
         self.zmirror.add_temporary_domain_alias("non-exist1.httpbin.org", "non-exist2.httpbin.org")
 
+    def test_get_ext_domain_inurl_scheme_prefix(self):
+        self.assertEqual("", self.zmirror.get_ext_domain_inurl_scheme_prefix("x"))
+
     def test_decode_mirror_url(self):
         result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org/233.html?x=3"))
         self.assertEqual("eu.httpbin.org", result["domain"])
         self.assertEqual("/233.html?x=3", result["path_query"])
         self.assertEqual("/233.html", result["path"])
+        self.assertEqual(True, result["is_https"])
+
+        result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org"))
+        self.assertEqual("eu.httpbin.org", result["domain"])
+        self.assertEqual("/", result["path_query"])
+        self.assertEqual("/", result["path"])
+        self.assertEqual(True, result["is_https"])
+
+        result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org/"))
+        self.assertEqual("eu.httpbin.org", result["domain"])
+        self.assertEqual("/", result["path_query"])
+        self.assertEqual("/", result["path"])
+        self.assertEqual(True, result["is_https"])
+
+        result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org/?x=233&d=a"))
+        self.assertEqual("eu.httpbin.org", result["domain"])
+        self.assertEqual("/?x=233&d=a", result["path_query"])
+        self.assertEqual("/", result["path"])
+        self.assertEqual(True, result["is_https"])
+
+        result = self.zmirror.decode_mirror_url(self.url("/extdomains/eu.httpbin.org?x=233&d=a"))
+        self.assertEqual("eu.httpbin.org", result["domain"])
+        self.assertEqual("/?x=233&d=a", result["path_query"])
+        self.assertEqual("/", result["path"])
         self.assertEqual(True, result["is_https"])
 
         result = self.zmirror.decode_mirror_url(
@@ -60,7 +87,30 @@ class TestFunctions(ZmirrorTestBase):
         self.assertEqual(r'\/233\.html?x=3', result["path_query"])
         self.assertEqual(r"\/233\.html", result["path"])
 
-    def test_get_ext_domain_inurl_scheme_prefix(self):
-        self.assertEqual("", self.zmirror.get_ext_domain_inurl_scheme_prefix("x"))
+        result = self.zmirror.decode_mirror_url(
+            self.url("/eu.httpbin.org?x=233&d=a"))
+        self.assertEqual(self.C.target_domain, result["domain"])
+        self.assertEqual("/eu.httpbin.org?x=233&d=a", result["path_query"])
+        self.assertEqual("/eu.httpbin.org", result["path"])
+        self.assertEqual(True, result["is_https"])
 
+        result = self.zmirror.decode_mirror_url(
+            self.url("/?x=233&d=a"))
+        self.assertEqual(self.C.target_domain, result["domain"])
+        self.assertEqual("/?x=233&d=a", result["path_query"])
+        self.assertEqual("/", result["path"])
+        self.assertEqual(True, result["is_https"])
 
+        result = self.zmirror.decode_mirror_url(
+            self.url("//"))
+        self.assertEqual(self.C.target_domain, result["domain"])
+        self.assertEqual("/", result["path_query"])
+        self.assertEqual("/", result["path"])
+        self.assertEqual(True, result["is_https"])
+
+        result = self.zmirror.decode_mirror_url(
+            self.url("//?x=233"))
+        self.assertEqual(self.C.target_domain, result["domain"])
+        self.assertEqual("/?x=233", result["path_query"])
+        self.assertEqual("/", result["path"])
+        self.assertEqual(True, result["is_https"])
