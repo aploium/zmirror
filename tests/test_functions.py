@@ -43,6 +43,8 @@ class TestFunctions(ZmirrorTestBase):
 
     def test__add_temporary_domain_alias(self):
         self.zmirror.add_temporary_domain_alias("non-exist1.httpbin.org", "non-exist2.httpbin.org")
+        self.zmirror.temporary_domain_alias = None
+        self.zmirror.add_temporary_domain_alias("non-exist1.httpbin.org", "non-exist2.httpbin.org")
 
     def test__get_ext_domain_inurl_scheme_prefix(self):
         self.assertEqual("", self.zmirror.get_ext_domain_inurl_scheme_prefix("x"))
@@ -231,3 +233,21 @@ class TestFunctions(ZmirrorTestBase):
                 self.url("/get?a=233"), "image/jpeg", escape_slash=True,
             )
         )
+
+    def test__encoding_detect(self):
+        self.zmirror.force_decode_remote_using_encode = "utf-8"
+        self.assertEqual(
+            "utf-8",
+            self.zmirror.encoding_detect("测试中文".encode(encoding="gbk"))
+        )
+
+        self.zmirror.force_decode_remote_using_encode = None
+        self.zmirror.possible_charsets = ["gbk", "utf-8"]
+        self.assertEqual(
+            "utf-8",
+            self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8"))
+        )
+
+        self.zmirror.possible_charsets = None
+        self.zmirror.cchardet_available = False
+        self.assertIsNone(self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8")))

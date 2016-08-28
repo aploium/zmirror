@@ -71,3 +71,8 @@ class TestDefaultMirror(ZmirrorTestBase):
     def test_about_zmirror(self):
         self.rv = self.client.get('/about_zmirror', headers=headers(), environ_base=env())
         self.assertIn(b"Love Luciaz Forever", self.rv.data, msg=self.dump())
+
+    def test__domains_alias_to_target_domain(self):
+        self.reload_zmirror({"domains_alias_to_target_domain": ["example.com"]})
+        self.rv = self.client.get("http://example.com/")
+        self.assertIn(b"The Linux Kernel Archives", self.rv.data, msg=self.dump())

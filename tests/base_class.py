@@ -58,6 +58,18 @@ class ZmirrorTestBase(unittest.TestCase):
         importlib.reload(zmirror)
         zmirror.app.config['TESTING'] = True
 
+        # 处理有端口号的测试, 在 del_temp_var() 中回滚
+        if hasattr(self.C, "my_host_port"):
+            port = getattr(self.C, "my_host_port", None)
+            my_host_name = getattr(self.C, "my_host_name", "127.0.0.1")
+            if port is not None:
+                self.C.my_host_name_no_port = my_host_name
+                self.C.my_host_name = self.C.my_host_name_no_port + ":" + str(port)
+            else:
+                self.C.my_host_name_no_port = my_host_name
+        elif hasattr(self.C, "my_host_name"):
+            self.C.my_host_name_no_port = self.C.my_host_name
+
         self.client = zmirror.app.test_client()  # type: FlaskClient
         self.app = zmirror.app  # type: Flask
         self.zmirror = zmirror
@@ -93,6 +105,10 @@ class ZmirrorTestBase(unittest.TestCase):
             del self.rv3
         except:
             pass
+
+        if hasattr(self.C, "my_host_name_no_port"):
+            self.C.my_host_name = getattr(self.C, "my_host_name_no_port")
+            delattr(self.C, "my_host_name_no_port")
 
     def tearDown(self):
         self.del_temp_var()

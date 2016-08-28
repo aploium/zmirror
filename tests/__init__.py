@@ -8,3 +8,4 @@ from .test_redirection import TestRedirection
 from .test_functions import TestFunctions
 from .test_custom_response_text_rewrite import TestCustomResponseRewriter
 from .test_developer_functions import TestDeveloperFunctions
+from .test_non_standard_port import TestNonStandardPort
