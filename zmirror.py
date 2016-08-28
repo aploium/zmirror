@@ -71,7 +71,6 @@ if not unittest_mode:  # 在unittest时不输出这几行
 try:  # 加载默认设置
     from config_default import *
 except:
-    traceback.print_exc()
     errprint('the config_default.py is missing, this program may not works normally\n'
              'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
     raise  # v0.23.1+ 当 config_default.py 不存在时, 程序会终止运行
@@ -79,7 +78,6 @@ except:
 try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
     from config import *
 except:
-    traceback.print_exc()
     errprint(
         'the config_default.py is missing, fallback to default configs(if we can), '
         'please COPY the config_default.py to config.py, and change it\'s content, '
@@ -381,12 +379,8 @@ def cache_clean(is_force_flush=False):
     if enable_keep_alive_per_domain:
         connection_pool_per_domain.clear()
 
-    try:
-        if local_cache_enable:
-            cache.check_all_expire(force_flush_all=is_force_flush)
-    except:
-        errprint('ErrorWhenCleaningLocalCache, is_force_flush=', is_force_flush)
-        traceback.print_exc()
+    if local_cache_enable:
+        cache.check_all_expire(force_flush_all=is_force_flush)
 
     if is_force_flush:
         try:
@@ -645,15 +639,12 @@ def extract_real_url_from_embedded_url(embedded_url):
     # real_request_url_no_query ---> 'https://cdn.domain.com/a.php'
     real_request_url_no_query = embedded_url[:m.span()[0]]
 
-    try:
-        query_string_byte = base64.urlsafe_b64decode(b64)
-        is_gzipped = get_group('gzip', m)
-        if is_gzipped:
-            query_string_byte = zlib.decompress(query_string_byte)
-        query_string = query_string_byte.decode(encoding='utf-8')
-    except:
-        traceback.print_exc()
-        raise
+    query_string_byte = base64.urlsafe_b64decode(b64)
+    is_gzipped = get_group('gzip', m)
+    if is_gzipped:
+        query_string_byte = zlib.decompress(query_string_byte)
+    query_string = query_string_byte.decode(encoding='utf-8')
+
     result = urljoin(real_request_url_no_query, '?' + query_string)
     # dbgprint('extract:', embedded_url, 'to', result)
     return result
@@ -676,28 +667,25 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
     url_sp = urlsplit(real_url)
     if not url_sp.query:  # no query, needn't rewrite
         return real_url_raw
-    try:
-        byte_query = url_sp.query.encode()
-        if len(byte_query) > 128:  # 当查询参数太长时, 进行gzip压缩
-            gzip_label = 'z'  # 进行压缩后的参数, 会在标识区中添加一个z
-            byte_query = zlib.compress(byte_query)
-        else:
-            gzip_label = ''
 
-        b64_query = base64.urlsafe_b64encode(byte_query).decode()
-        # dbgprint(url_mime)
-        mixed_path = url_sp.path + '_' + _url_salt + gzip_label + '_.' \
-                     + b64_query \
-                     + '._' + _url_salt + '_.' + mime_to_use_cdn[url_mime]
-        result = urlunsplit((url_sp.scheme, url_sp.netloc, mixed_path, '', ''))
-    except:
-        traceback.print_exc()
-        raise
+    byte_query = url_sp.query.encode()
+    if len(byte_query) > 128:  # 当查询参数太长时, 进行gzip压缩
+        gzip_label = 'z'  # 进行压缩后的参数, 会在标识区中添加一个z
+        byte_query = zlib.compress(byte_query)
     else:
-        if escape_slash:
-            result = s_esc(result)
+        gzip_label = ''
+
+    b64_query = base64.urlsafe_b64encode(byte_query).decode()
+    # dbgprint(url_mime)
+    mixed_path = url_sp.path + '_' + _url_salt + gzip_label + '_.' \
+                 + b64_query \
+                 + '._' + _url_salt + '_.' + mime_to_use_cdn[url_mime]
+    result = urlunsplit((url_sp.scheme, url_sp.netloc, mixed_path, '', ''))
+
+    if escape_slash:
+        result = s_esc(result)
         # dbgprint('embed:', real_url_raw, 'to:', result)
-        return result
+    return result
 
 
 def decode_mirror_url(mirror_url=None):
@@ -916,6 +904,10 @@ def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=F
     :type is_traceback: bool
     :rtype: Union[Response, str]
     """
+    if is_traceback:
+        traceback.print_exc()
+        errprint(errormsg)
+
     if isinstance(errormsg, bytes):
         errormsg = errormsg.decode()
 
@@ -1374,7 +1366,6 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
             buffer_queue.put(particle_content, timeout=10)
         except queue.Full:
             traceback.print_exc()
-            buffer_queue = None  # 这样把它free掉, 会不会减少内存泄露? 我也不知道 (Ap)
             exit()
         if verbose_level >= 3: dbgprint('BufferSize', buffer_queue.qsize())
     buffer_queue.put(None, timeout=10)
@@ -1462,9 +1453,7 @@ def copy_response(content=None, is_streamed=False):
                         _loc_rewrite = custom_response_text_rewriter(_location, 'mwm/headers-location', parse.remote_url)
                         if isinstance(_loc_rewrite, str):
                             _location = _loc_rewrite
-                except Exception as _e:  # just print err and fallback to normal rewrite
-                    errprint('(LOCATION) Custom Rewrite Function ERROR', _e)
-                    traceback.print_exc()
+                except:  # just print err and fallback to normal rewrite
                     return generate_error_page("(LOCATION) Custom Rewrite Function ERROR", is_traceback=True), 0
                 resp.headers[header_key] = encode_mirror_url(_location)
 
@@ -1491,12 +1480,7 @@ def copy_response(content=None, is_streamed=False):
         #   and then change the cookie domain to our domain
         if header_key_lower == 'set-cookie':
             for cookie_string in response_cookies_deep_copy():
-                try:
-                    resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
-                except:
-                    traceback.print_exc()
-                    return generate_error_page(
-                        "Error occurs when copying remote 'set-cookie' headers:" + str(cookie_string), is_traceback=True), 0
+                resp.headers.add('Set-Cookie', response_cookie_rewrite(cookie_string))
 
     dbgprint('OurRespHeaders:\n', resp.headers)
 
@@ -1582,9 +1566,7 @@ def response_content_rewrite():
                     if is_skip_builtin_rewrite:
                         infoprint('Skip_builtin_rewrite', request.url)
                         return resp_text.encode(encoding='utf-8')
-        except Exception as _e:  # just print err and fallback to normal rewrite
-            errprint('Custom Rewrite Function "custom_response_text_rewriter(text)" in custom_func.py ERROR', _e)
-            traceback.print_exc()
+        except:  # just print err and fallback to normal rewrite
             return generate_error_page(
                 'Error in custom response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
         else:
@@ -1595,7 +1577,6 @@ def response_content_rewrite():
         try:
             resp_text = response_text_rewrite(resp_text)
         except:
-            traceback.print_exc()
             return generate_error_page(
                 'Error in builtin response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
         else:
@@ -1958,9 +1939,7 @@ def request_remote_site_and_parse():
         if parse.remote_response.url != parse.remote_url:
             warnprint('requests\'s remote url', parse.remote_response.url
                       , 'does no equals our rewrited url', parse.remote_url)
-    except Exception as _e:
-        errprint(_e)  # ERROR :( so sad
-        traceback.print_exc()
+    except:
         return generate_error_page(errormsg="Error occurs when requesting remote server", is_traceback=True)
 
     # extract response's mime to thread local var
@@ -2033,7 +2012,6 @@ def request_remote_site_and_parse():
                      ),
                     fp)
         except:
-            traceback.print_exc()
             return generate_error_page(errormsg="Unable to dump traffic", is_traceback=True)
 
     return resp
@@ -2183,17 +2161,12 @@ def rewrite_client_request():
 
     # ------------- 请求重写代码开始 ----------------
     if cdn_redirect_encode_query_str_into_url:
-        try:
-            real_url = extract_real_url_from_embedded_url(request.url)
-        except:
-            traceback.print_exc()
-            raise
-        else:
-            if real_url is not None:
-                dbgprint("BeforeEmbeddedExtract:", request.url, " After:", real_url)
-                request.url = real_url
-                request.path = urlsplit(real_url).path
-                has_been_rewrited = True
+        real_url = extract_real_url_from_embedded_url(request.url)
+        if real_url is not None:
+            dbgprint("BeforeEmbeddedExtract:", request.url, " After:", real_url)
+            request.url = real_url
+            request.path = urlsplit(real_url).path
+            has_been_rewrited = True
 
     if url_custom_redirect_enable and shadow_url_redirect_regex:
         _path_query = extract_url_path_and_query()
@@ -2359,26 +2332,22 @@ def ip_ban_verify_page():
             record_dict['__zmirror_verify'] = _hash
 
         elif enable_custom_access_cookie_generate_and_verify:
-            try:
-                _hash = custom_generate_access_cookie(record_dict, request)
+            _hash = custom_generate_access_cookie(record_dict, request)
 
-                dbgprint('SelfGeneratedCookie:', _hash)
+            dbgprint('SelfGeneratedCookie:', _hash)
 
-                if _hash is None:
-                    return generate_simple_resp_page(b'Verification Failed, please check', 200)
+            if _hash is None:
+                return generate_simple_resp_page(b'Verification Failed, please check', 200)
 
-                resp.set_cookie(
-                    'zmirror_verify',
-                    _hash,
-                    expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
-                    max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
-                    # httponly=True,
-                    # domain=my_host_name
-                )
-                record_dict['__zmirror_verify'] = _hash
-            except:
-                traceback.print_exc()
-                return generate_error_page(errormsg='Server error when generating verification cookie', is_traceback=True)
+            resp.set_cookie(
+                'zmirror_verify',
+                _hash,
+                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
+                max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
+                # httponly=True,
+                # domain=my_host_name
+            )
+            record_dict['__zmirror_verify'] = _hash
 
         ip_whitelist_add(request.remote_addr, info_record_dict=record_dict)
         return resp
@@ -2391,7 +2360,6 @@ def zmirror_enter(input_path='/'):
     try:
         resp = main_function(input_path=input_path)
     except:
-        traceback.print_exc()
         return generate_error_page(is_traceback=True)
     else:
         return resp
@@ -2453,10 +2421,8 @@ def main_function(input_path='/'):
     # 隐式重写只对 zmirror 内部生效, 对浏览器透明
     # 重写可能会修改 flask 的内置 request 变量
     # 可能会修改 parse
-    try:
-        has_been_rewrited = rewrite_client_request()
-    except:
-        return generate_error_page(errormsg="Error occurs when rewriting client request", is_traceback=True)
+
+    has_been_rewrited = rewrite_client_request()
 
     if ssrf_check_layer_1():
         return generate_simple_resp_page(
@@ -2470,11 +2436,7 @@ def main_function(input_path='/'):
     if r is not None:
         return r
 
-    try:
-        resp = request_remote_site_and_parse()
-    except:
-        traceback.print_exc()
-        return generate_error_page(is_traceback=True)
+    resp = request_remote_site_and_parse()
 
     dbgprint('-----EndRequest-----')
     return resp
@@ -2539,7 +2501,6 @@ if custom_text_rewriter_enable:
     except:
         warnprint('Cannot import custom_response_text_rewriter custom_func.py,'
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
-        traceback.print_exc()
         raise
 
 if identity_verify_required:
@@ -2549,7 +2510,6 @@ if identity_verify_required:
         identity_verify_required = False
         warnprint('Cannot import custom_identity_verify from custom_func.py,'
                   ' `identity_verify` is now disabled (if it was enabled)')
-        traceback.print_exc()
         raise
 
 if enable_custom_access_cookie_generate_and_verify:
@@ -2559,7 +2519,6 @@ if enable_custom_access_cookie_generate_and_verify:
         enable_custom_access_cookie_generate_and_verify = False
         errprint('Cannot import custom_generate_access_cookie and custom_generate_access_cookie from custom_func.py,'
                  ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')
-        traceback.print_exc()
         raise
 
 if enable_cron_tasks:
@@ -2569,7 +2528,6 @@ if enable_cron_tasks:
             cron_task_container(_task_dict, add_task_only=True)
         except Exception as e:
             errprint('UnableToInitCronTask', e)
-            traceback.print_exc()
             raise
 
     th = threading.Thread(target=cron_task_host, daemon=True)
