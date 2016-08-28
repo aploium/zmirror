@@ -21,7 +21,7 @@ import urllib.parse
 import requests
 from flask import Flask, request, make_response, Response, redirect
 
-__VERSION__ = '0.26.4'
+__VERSION__ = '0.26.5'
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
 
