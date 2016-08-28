@@ -43,7 +43,7 @@ class TestFunctions(ZmirrorTestBase):
 
     def test__add_temporary_domain_alias(self):
         self.zmirror.add_temporary_domain_alias("non-exist1.httpbin.org", "non-exist2.httpbin.org")
-        self.zmirror.temporary_domain_alias = None
+        self.zmirror.parse.temporary_domain_alias = None
         self.zmirror.add_temporary_domain_alias("non-exist1.httpbin.org", "non-exist2.httpbin.org")
 
     def test__get_ext_domain_inurl_scheme_prefix(self):
