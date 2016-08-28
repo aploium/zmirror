@@ -118,6 +118,14 @@ However, due to my limited time, zmirror was only fully tested in:
  - (for users of git) `cd YOUR_ZMIRROR_FOLDER` and `git pull`
  - (for users of plain zip download) re-download, unzip, and override all files
 
+    > **警告**  
+    > 由于 v0.27 有很大的结构改动, 所以 v0.27 以内的 custom_func.py 如果有 `from zmirror import ` 语句  
+    > 将无法在 v0.27 以后的版本工作  
+    > 解决办法是将 custom_func.py 中的 `from zmirror import ` 修改为  
+    > `from zmirror.zmirror import ` 其他不需要改变  
+    > 若使用自带配置文件, 则只有Youtube和Twitter受影响  
+
+
 ## Feature
  1. Completely mirror, provide some (almost) out-of-box configs  
   创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站  
