@@ -8,8 +8,8 @@ Without this file, twitter mirror won't work normally
 import re
 from random import randint
 import traceback
+from urllib.parse import urlsplit
 from zmirror.zmirror import *
-
 
 # 如果你想视频服务器和网页服务器分开, 通过多个视频服务器来进行负载均衡,
 #   请设置在主网页服务器上设置 is_master = True ,在视频服务器上部署后设置 is_master = False
@@ -22,8 +22,8 @@ is_master = False
 # 注: 如果使用了非标准端口, 请在下面所有需要填写域名的地方后面加上端口号, 如 'videocdn1.mycdn.com:20822'
 videocdn_this_site_name = my_host_name
 # 如果你想视频服务器和网页服务器分开, 请注释掉上面一行, 去掉下面一行的注释, 并把域名改成这一台视频服务器的域名
-#videocdn_this_site_name = 'videocdn1.mycdn.com'  # 使用标准端口
-#videocdn_this_site_name = 'videocdn1.mycdn.com:20822'  # 使用非标准端口
+# videocdn_this_site_name = 'videocdn1.mycdn.com'  # 使用标准端口
+# videocdn_this_site_name = 'videocdn1.mycdn.com:20822'  # 使用非标准端口
 
 
 videocdn_domain_list = [
@@ -45,6 +45,7 @@ try:
         temp0 = videocdn_this_site_name
 except:
     temp0 = videocdn_this_site_name
+temp0 = urlsplit("//" + temp0).hostname  # 为了支持带有端口号的域名
 temp = temp0.split('.')
 if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
     videocdn_video_root_domain = temp0
