@@ -16,6 +16,17 @@ except:
     pass
 
 
+class LazyDump:
+    def __init__(self, dumper):
+        self._dumper = dumper
+
+    def __str__(self):
+        return self._dumper()
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class ZmirrorTestBase(unittest.TestCase):
     class C:
         verbose_level = 2
@@ -118,7 +129,7 @@ class ZmirrorTestBase(unittest.TestCase):
         scheme = getattr(self.C, "my_host_scheme", "http://")
         return urljoin(scheme + domain, path)
 
-    def dump(self, select='all'):
+    def _dump(self, select='all'):
         """
         :type select: Union[int, str]
         :rtype: str
@@ -158,3 +169,7 @@ class ZmirrorTestBase(unittest.TestCase):
         dump += "\n------------- end dump -------------\n"
 
         return dump
+
+    def dump(self):
+        return LazyDump(self._dump)
+        # return self._dump()
