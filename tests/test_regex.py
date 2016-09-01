@@ -160,7 +160,6 @@ class TestRegex(ZmirrorTestBase):
         # 下面这一堆嵌套的 for, 好吧我也无能为力
         # 因为需要穷举所有的可能(几千种), 来测试这个正则
         for domain in list(self.C.external_domains) + [self.C.target_domain]:
-            assert re.fullmatch(self.zmirror.regex_all_remote_domains, domain) is not None, domain
             for slash in self.REGEX_POSSIBLE_SLASH:
                 for suffix_slash in [True, False]:
                     for explicit_scheme in ["http://", "https://", "//", ""]:
