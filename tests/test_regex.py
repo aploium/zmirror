@@ -147,3 +147,62 @@ class TestRegex(ZmirrorTestBase):
         print("test__regex_request_rewriter_extdomains Total Count:", count, "Time:", time() - _start)
         # 最后再总的测试一下
         self.assertEqual(count, len(reg.findall(all_cases)))
+
+    def test__regex_basic_mirrorlization(self):
+        """
+        测试正则 regex_basic_mirrorlization
+
+        因为是草稿里直接复制过来的, 代码很乱
+        """
+        from zmirror.external_pkgs.ColorfulPyPrint import errprint
+
+        reg = self.zmirror.regex_basic_mirrorlization
+        # 下面这一堆嵌套的 for, 好吧我也无能为力
+        # 因为需要穷举所有的可能(几千种), 来测试这个正则
+        for domain in list(self.C.external_domains) + [self.C.target_domain]:
+            assert re.fullmatch(self.zmirror.regex_all_remote_domains, domain) is not None, domain
+            for slash in self.REGEX_POSSIBLE_SLASH:
+                for suffix_slash in [True, False]:
+                    for explicit_scheme in ["http://", "https://", "//", ""]:
+                        if explicit_scheme == "":
+                            for quote in self.REGEX_POSSIBLE_QUOTE:
+                                buff = quote + domain + (slash if suffix_slash else "") + quote  # type: str
+                                try:
+                                    m = reg.fullmatch(buff)
+                                    assert m.group("quote") == quote
+                                    assert m.group("domain") == domain
+                                    assert m.groupdict()["suffix_slash"] == (slash if suffix_slash else None)
+                                except:
+                                    errprint("slash", slash, "suffix_slash", suffix_slash,
+                                             "quote", quote, "buff", buff)
+                                    raise
+
+                        elif ":" in explicit_scheme:
+                            for colon in self.REGEX_POSSIBLE_COLON:
+                                _explicit_scheme = explicit_scheme.replace("/", slash).replace(":", colon)
+                                buff = _explicit_scheme + domain + (slash if suffix_slash else "")  # type: str
+                                try:
+                                    m = reg.fullmatch(buff)
+                                    assert m.group("scheme_slash") == slash
+                                    assert m.group("domain") == domain
+                                    assert m.group("colon") == colon
+                                    assert m.groupdict()["suffix_slash"] == (slash if suffix_slash else None)
+                                except:
+                                    errprint("slash", slash, "suffix_slash", suffix_slash,
+                                             "explicit_scheme", explicit_scheme,
+                                             "colon", colon, "buff", buff)
+                                    raise
+                        else:
+                            _explicit_scheme = explicit_scheme.replace("/", slash)
+                            buff = _explicit_scheme + domain + (slash if suffix_slash else "")  # type: str
+                            try:
+                                m = reg.fullmatch(buff)
+                                # print(buff)
+
+                                assert m.group("scheme_slash") == slash
+                                assert m.group("domain") == domain
+                                assert m.groupdict()["suffix_slash"] == (slash if suffix_slash else None)
+                            except:
+                                errprint("slash", slash, "suffix_slash", suffix_slash, "explicit_scheme", explicit_scheme,
+                                         "buff", buff)
+                                raise

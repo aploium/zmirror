@@ -238,6 +238,13 @@ REGEX_COLON = r"""(?::|%(?:25)?3[Aa])"""
 # 斜线(slash /)可能的值为(包括大小写):
 #    / \/ \\/ \\\(N个反斜线)/ %2F %5C%2F %5C%5C(N个5C)%2F %255C%252F %255C%255C%252F \x2F
 REGEX_SLASH = r"""(?:\\*/|(?:%(?:25)?5[Cc])*%(?:25)?2[Ff]|(?:\\|%5[Cc])x2[Ff])"""
+# 引号
+# " ' \\(可能有N个反斜线)' \\(可能有N个反斜线)"
+# %22 %27 %5C(可能N个5C)%22 %5C(可能N个5C)%27
+# %2522 %2527 %255C%2522 %255C%2527
+# &quot;
+REGEX_QUOTE = r"""(?:\\*["']|%(?:(?:25)?5[Cc]%)*2(?:52)?[27]|&quot;)"""
+
 # 代表本镜像域名的正则
 if my_host_port is not None:
     REGEX_MY_HOST_NAME = r'(?:' + re.escape(my_host_name_no_port) + REGEX_COLON + re.escape(str(my_host_port)) \
@@ -280,6 +287,8 @@ regex_cookie_path_rewriter = re.compile(r'(?P<prefix>[pP]ath)=(?P<path>[\w\._/-]
 # 下面那个正则, 在组装以后的样子大概是这样的(已大幅简化):
 # 假设b.test.com是本机域名
 #   ((https?:/{2})?b\.test\.com/)?extdomains/(https-)?((?:[\w-]+\.)+\w+)\b
+#
+# 对应的 unittest 见 TestRegex.test__regex_request_rewriter_extdomains()
 regex_request_rewriter_extdomains = re.compile(
     r"""(?P<domain_prefix>""" +
     (  # [[[http(s):]//]www.mydomain.com/]
@@ -303,6 +312,36 @@ regex_request_rewriter_extdomains = re.compile(
 )
 regex_request_rewriter_main_domain = re.compile(REGEX_MY_HOST_NAME)
 
+# 以下正则为*实验性*的 response_text_basic_rewrite() 的替代品
+# 用于函数 response_text_basic_mirrorlization()
+# 理论上, 在大量域名的情况下, 会比现有的暴力字符串替换要快, 并且未来可以更强大的域名通配符
+regex_all_remote_domains = assemble_domains_regex(list(external_domains) + [target_domain])
+regex_basic_mirrorlization = re.compile(
+    r"""(?P<prefix>""" +
+    (  # [[http(s):]//] or [\?["']] or %27 %22 or &quot;
+        r"""(?P<scheme>""" +
+        (  # [[http(s):]//]
+            (  # [http(s):]
+                r"""(?:https?(?P<colon>{REGEX_COLON}))?""".format(REGEX_COLON=REGEX_COLON)  # https?:
+            ) +
+            r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
+        ) +
+        r""")""" +
+        r"""|""" +
+        # [\?["']] or %27 %22 or &quot
+        r"""(?P<quote>{REGEX_QUOTE})""".format(REGEX_QUOTE=REGEX_QUOTE)
+    ) +
+    r""")""" +
+    # End prefix.
+    # Begin domain
+    r"""(?P<domain>{DOMAINS})""".format(DOMAINS=regex_all_remote_domains) +
+    # Optional suffix slash
+    r"""(?P<suffix_slash>(?(scheme_slash)(?P=scheme_slash)|{SLASH}))?""".format(SLASH=REGEX_SLASH) +
+
+    # right quote (if we have left quote)
+    r"""(?(quote)(?P=quote))"""
+)
+
 # ########## Flask app ###########
 
 app = Flask(  # type: Flask
@@ -312,6 +351,53 @@ app = Flask(  # type: Flask
 
 
 # ########## Begin Utils #############
+def response_text_basic_mirrorlization(text):
+    """
+    response_text_basic_rewrite() 的实验性升级版本, 使用正则而不是暴力字符串替换
+    默认不启用, 如果需要启用, 请将设置中的
+      `developer_enable_experimental_feature` 选项设置为 True
+
+    :param text: 远程响应文本
+    :type text: str
+    :return: 重写后的响应文本
+    :rtype: str
+    """
+
+    def regex_reassemble(m):
+        suffix_slash = get_group("suffix_slash", m)
+        slash = get_group("scheme_slash", m) or suffix_slash or "/"
+
+        colon = get_group("colon", m)
+        if not colon:  # 如果没有匹配到冒号, 就需要根据后文 slash 进行猜测
+            if "%" not in slash:
+                colon = ":"  # slash没有转义, 直接原文
+            else:
+                colon = "%253A" if "%25" in slash else "%3A"
+
+        _my_host_name = my_host_name.replace(":", colon) if my_host_port else my_host_name
+
+        remote_domain = get_group("domain", m)
+
+        if remote_domain not in domain_alias_to_target_set:
+            # 外部域名
+            core = _my_host_name + slash + "extdomains" + slash + remote_domain + suffix_slash
+        else:
+            # 主域名
+            core = _my_host_name + suffix_slash
+
+        quote = get_group("quote", m)
+        if quote:  # "target.domain"
+            return quote + core + quote
+        else:  # http(s)://target.domain  //target.domain
+
+            if get_group("colon", m):  # http(s)://target.domain
+                return my_host_scheme.replace(":", colon).replace("/", slash) + core
+            else:  # //target.domain
+                return slash * 2 + core
+
+    return regex_basic_mirrorlization.sub(regex_reassemble, text)
+
+
 def encoding_detect(byte_content):
     """
     试图解析并返回二进制串的编码, 如果失败, 则返回 None
@@ -1381,21 +1467,27 @@ def response_text_rewrite(resp_text):
     if developer_string_trace is not None and developer_string_trace in resp_text:
         infoprint('StringTrace: appears after advanced rewrite, code line no. ', current_line_number())
 
-    # basic url rewrite, rewrite the main site's url
-    # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-    for _target_domain in domains_alias_to_target_domain:
-        resp_text = response_text_basic_rewrite(resp_text, _target_domain)
+    # ############### v0.28.0 实验性功能 ##################
+    if developer_enable_experimental_feature:
+        resp_text = response_text_basic_mirrorlization(resp_text)
 
-    if developer_string_trace is not None and developer_string_trace in resp_text:
-        infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
+    else:  # ################### 传统版本 ##########################
+        # basic url rewrite, rewrite the main site's url
+        # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
+        for _target_domain in domains_alias_to_target_domain:
+            resp_text = response_text_basic_rewrite(resp_text, _target_domain)
 
-    # External Domains Rewrite
-    # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
-    # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
-    for domain_id, domain in enumerate(external_domains):
-        resp_text = response_text_basic_rewrite(resp_text, domain, domain_id)
         if developer_string_trace is not None and developer_string_trace in resp_text:
-            infoprint('StringTrace: appears after basic ext domain rewrite:', domain, ', code line no. ', current_line_number())
+            infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
+
+        # External Domains Rewrite
+        # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
+        # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
+        for domain_id, domain in enumerate(external_domains):
+            resp_text = response_text_basic_rewrite(resp_text, domain, domain_id)
+            if developer_string_trace is not None and developer_string_trace in resp_text:
+                infoprint('StringTrace: appears after basic ext domain rewrite:',
+                          domain, ', code line no. ', current_line_number())
 
     # for cookies set string (in js) replace
     # eg: ".twitter.com" --> "foo.com"

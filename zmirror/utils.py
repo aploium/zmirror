@@ -106,6 +106,37 @@ def calc_domain_replace_prefix(_domain):
     )
 
 
+def assemble_domains_regex(domain_list):
+    root_domains = []
+    _buff = {}
+    for _domain in domain_list:
+        root, sub = extract_root_domain(_domain)
+        if not sub:
+            root_domains.append(re.escape(_domain))
+        else:
+            if root not in _buff:
+                _buff[root] = []
+
+            _buff[root].append(sub)
+
+    buff2 = []
+    for root, subs in sorted(_buff.items(), key=lambda x: len(x[0]), reverse=True):
+        if subs:
+            if len(subs) > 1:
+                buff3 = "(?:" + "|".join(re.escape(x) for x in subs) + ")"
+            else:
+                buff3 = re.escape(subs[0])
+
+            buff3 += r"\." + re.escape(root)
+        else:
+            # 对应 subs 为空的情况
+            buff3 = re.escape(root)
+
+        buff2.append(buff3)
+
+    return "(?:" + "|".join(buff2 + root_domains) + ")"
+
+
 def current_line_number():
     """Returns the current line number in our program.
     :return: current line number

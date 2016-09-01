@@ -669,8 +669,16 @@ developer_dump_all_traffics = False
 developer_temporary_disable_ssrf_prevention = False
 
 # v0.25.0+
+# 本选项在 unittest 中会自动开启, 不需要人工开启
 unittest_mode = False
 
 # v0.25.0+
 # 强制内部requests在请求远程服务器时不验证SSL证书
+# 在使用如 Fiddler 之类的抓包代理的时候很有用
 developer_do_not_verify_ssl = False
+
+# v0.28.0+
+# 实验性特性开关
+# 一般来说, 每个版本, 至多会有一项实验性功能(可能没有)
+# 当前版本(v0.28.0)为 response_text_basic_mirrorlization()
+developer_enable_experimental_feature = False
