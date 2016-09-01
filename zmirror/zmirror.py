@@ -312,35 +312,45 @@ regex_request_rewriter_extdomains = re.compile(
 )
 regex_request_rewriter_main_domain = re.compile(REGEX_MY_HOST_NAME)
 
+
 # 以下正则为*实验性*的 response_text_basic_rewrite() 的替代品
 # 用于函数 response_text_basic_mirrorlization()
 # 理论上, 在大量域名的情况下, 会比现有的暴力字符串替换要快, 并且未来可以更强大的域名通配符
-regex_all_remote_domains = assemble_domains_regex(list(external_domains) + [target_domain])
-regex_basic_mirrorlization = re.compile(
-    r"""(?P<prefix>""" +
-    (  # [[http(s):]//] or [\?["']] or %27 %22 or &quot;
-        r"""(?P<scheme>""" +
-        (  # [[http(s):]//]
-            (  # [http(s):]
-                r"""(?:https?(?P<colon>{REGEX_COLON}))?""".format(REGEX_COLON=REGEX_COLON)  # https?:
+def _regex_generate__basic_mirrorlization():
+    """产生 regex_basic_mirrorlization
+    用一个函数包裹起来是因为在 try_match_and_add_domain_to_rewrite_white_list()
+    中需要动态修改 external_domains, 修改以后可能需要随之生成新的正则, 包裹一下比较容易调用
+    """
+    regex_all_remote_tld = list(set(re.escape(x.split(".")[-1]) for x in allowed_domains_set))
+    regex_all_remote_tld = "(?:" + "|".join(regex_all_remote_tld) + ")"
+    return re.compile(
+        r"""(?P<prefix>""" +
+        (  # [[http(s):]//] or [\?["']] or %27 %22 or &quot;
+            r"""(?P<scheme>""" +
+            (  # [[http(s):]//]
+                (  # [http(s):]
+                    r"""(?:https?(?P<colon>{REGEX_COLON}))?""".format(REGEX_COLON=REGEX_COLON)  # https?:
+                ) +
+                r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
             ) +
-            r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
+            r""")""" +
+            r"""|""" +
+            # [\?["']] or %27 %22 or &quot
+            r"""(?P<quote>{REGEX_QUOTE})""".format(REGEX_QUOTE=REGEX_QUOTE)
         ) +
         r""")""" +
-        r"""|""" +
-        # [\?["']] or %27 %22 or &quot
-        r"""(?P<quote>{REGEX_QUOTE})""".format(REGEX_QUOTE=REGEX_QUOTE)
-    ) +
-    r""")""" +
-    # End prefix.
-    # Begin domain
-    r"""(?P<domain>{DOMAINS})""".format(DOMAINS=regex_all_remote_domains) +
-    # Optional suffix slash
-    r"""(?P<suffix_slash>(?(scheme_slash)(?P=scheme_slash)|{SLASH}))?""".format(SLASH=REGEX_SLASH) +
+        # End prefix.
+        # Begin domain
+        r"""(?P<domain>([a-zA-Z0-9-]+\.){1,3}%s)\b""" % regex_all_remote_tld +
+        # Optional suffix slash
+        r"""(?P<suffix_slash>(?(scheme_slash)(?P=scheme_slash)|{SLASH}))?""".format(SLASH=REGEX_SLASH) +
 
-    # right quote (if we have left quote)
-    r"""(?(quote)(?P=quote))"""
-)
+        # right quote (if we have left quote)
+        r"""(?(quote)(?P=quote))"""
+    )
+
+
+regex_basic_mirrorlization = _regex_generate__basic_mirrorlization()
 
 # ########## Flask app ###########
 
@@ -357,6 +367,10 @@ def response_text_basic_mirrorlization(text):
     默认不启用, 如果需要启用, 请将设置中的
       `developer_enable_experimental_feature` 选项设置为 True
 
+    *v0.28.1.dev*
+        之前版本是在正则中匹配所有允许的域名, 现在改为匹配所有可能允许的TLD,
+        可以带来一些性能的提升, 并且容易进行动态域名添加和通配符支持
+
     :param text: 远程响应文本
     :type text: str
     :return: 重写后的响应文本
@@ -364,19 +378,16 @@ def response_text_basic_mirrorlization(text):
     """
 
     def regex_reassemble(m):
+        remote_domain = get_group("domain", m)
+        if remote_domain not in allowed_domains_set:
+            return m.group()
+
         suffix_slash = get_group("suffix_slash", m)
         slash = get_group("scheme_slash", m) or suffix_slash or "/"
 
-        colon = get_group("colon", m)
-        if not colon:  # 如果没有匹配到冒号, 就需要根据后文 slash 进行猜测
-            if "%" not in slash:
-                colon = ":"  # slash没有转义, 直接原文
-            else:
-                colon = "%253A" if "%25" in slash else "%3A"
+        colon = get_group("colon", m) or guess_colon_from_slash(slash)
 
         _my_host_name = my_host_name.replace(":", colon) if my_host_port else my_host_name
-
-        remote_domain = get_group("domain", m)
 
         if remote_domain not in domain_alias_to_target_set:
             # 外部域名
@@ -561,6 +572,7 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     :rtype: bool
     """
     global external_domains, external_domains_set, allowed_domains_set, prefix_buff
+    global regex_basic_mirrorlization
 
     if domain is None or not domain:
         return False
@@ -568,25 +580,28 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
         return True
     if not force_add and not is_domain_match_glob_whitelist(domain):
         return False
-    else:
-        infoprint('A domain:', domain, 'was added to external_domains list')
 
-        _buff = list(external_domains)  # external_domains是tuple类型, 添加前需要先转换
-        _buff.append(domain)
-        external_domains = tuple(_buff)  # 转换回tuple, tuple有一些性能优势
-        external_domains_set.add(domain)
-        allowed_domains_set.add(domain)
+    infoprint('A domain:', domain, 'was added to external_domains list')
 
-        prefix_buff[domain] = calc_domain_replace_prefix(domain)
+    _buff = list(external_domains)  # external_domains是tuple类型, 添加前需要先转换
+    _buff.append(domain)
+    external_domains = tuple(_buff)  # 转换回tuple, tuple有一些性能优势
+    external_domains_set.add(domain)
+    allowed_domains_set.add(domain)
 
-        # write log
-        try:
-            with open(zmirror_root('automatic_domains_whitelist.log'), 'a', encoding='utf-8') as fp:
-                fp.write(domain + '\n')
-        except:
-            traceback.print_exc()
+    prefix_buff[domain] = calc_domain_replace_prefix(domain)
 
-        return True
+    # 重新生成匹配正则
+    regex_basic_mirrorlization = _regex_generate__basic_mirrorlization()
+
+    # write log
+    try:
+        with open(zmirror_root('automatic_domains_whitelist.log'), 'a', encoding='utf-8') as fp:
+            fp.write(domain + '\n')
+    except:
+        traceback.print_exc()
+
+    return True
 
 
 def decode_mirror_url(mirror_url=None):

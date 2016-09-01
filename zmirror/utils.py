@@ -377,3 +377,22 @@ def embed_real_url_to_embedded_url(real_url_raw, url_mime, escape_slash=False):
         result = s_esc(result)
         # dbgprint('embed:', real_url_raw, 'to:', result)
     return result
+
+
+@lru_cache(maxsize=64)
+def guess_colon_from_slash(slash):
+    """根据 slash(/) 的格式, 猜测最有可能与之搭配的 colon(:) 格式"""
+    if "%" not in slash:
+        return ":"  # slash没有转义, 直接原文
+    elif "%25" in slash:
+        # %252F %252f
+        if "F" in slash:
+            return "%253A"
+        else:
+            return "%253a"
+    else:
+        # %2F %2f
+        if "F" in slash:
+            return "%3A"
+        else:
+            return "%3a"

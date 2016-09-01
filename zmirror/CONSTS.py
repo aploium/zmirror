@@ -1,7 +1,7 @@
 # coding=utf-8
 import os
 
-__VERSION_TUPLE__ = (0, 28, 0, "dev")
+__VERSION_TUPLE__ = (0, 28, 1, "dev")
 __VERSION__ = ".".join(str(x) for x in __VERSION_TUPLE__).rstrip(".")
 __AUTHOR__ = 'Aploium <i@z.codes>'
 __GITHUB_URL__ = 'https://github.com/aploium/zmirror'
