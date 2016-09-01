@@ -153,19 +153,8 @@ allowed_remote_response_headers = {
 }
 allowed_remote_response_headers.update(custom_allowed_remote_headers)
 # ## Get Target Domain and MyHostName's Root Domain ##
-# 解析目标域名和本机域名的根域名, 如 www.foobar.com 的根域名为 foobar.com
-# 但是 www.aaa.foobar.com 的根域名会被认为是 aaa.foobar.com
-# 支持二级顶级域名, 如 www.white.ac.cn
-temp = target_domain.split('.')
-if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
-    target_domain_root = target_domain
-else:
-    target_domain_root = '.'.join(temp[1:])
-temp = my_host_name.split('.')
-if len(temp) <= 2 or len(temp) == 3 and temp[1] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac'):
-    my_host_name_root = target_domain
-else:
-    my_host_name_root = '.'.join(temp[1:])
+target_domain_root = extract_root_domain(target_domain)[0]  # type: str
+my_host_name_root = extract_root_domain(target_domain)[0]  # type: str
 
 # keep-alive的连接池, 每个域名保持一个keep-alive连接
 # 借用requests在同一session中, 自动保持keep-alive的特性
@@ -307,7 +296,8 @@ regex_request_rewriter_extdomains = re.compile(
     ) +
     r""")?""" +
 
-    r"""extdomains(?(slash2)(?P=slash2)|{REGEX_SLASH})(?P<is_https>https-)?""".format(REGEX_SLASH=REGEX_SLASH) +  # extdomains/(https-)
+    r"""extdomains(?(slash2)(?P=slash2)|{REGEX_SLASH})(?P<is_https>https-)?""".format(
+        REGEX_SLASH=REGEX_SLASH) +  # extdomains/(https-)
     r"""(?P<real_domain>(?:[\w-]+\.)+\w+)\b""",  # target.com
     flags=re.IGNORECASE,
 )

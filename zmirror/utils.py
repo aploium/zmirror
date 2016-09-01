@@ -8,6 +8,11 @@ from html import escape as html_escape
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 from flask import make_response, Response
 
+try:
+    from typing import Union, Tuple  # for python 3.5+ type hint
+except:
+    pass
+
 try:  # lru_cache的c语言实现, 比Python内置lru_cache更快
     from fastcache import lru_cache  # lru_cache用于缓存函数的执行结果
 except:
@@ -31,6 +36,31 @@ def s_esc(s):
     :rtype: str
     """
     return s.replace("/", r"\/")
+
+
+def extract_root_domain(domain):
+    """
+    提取出一个域名的根域名
+    支持二级顶级域名, 允许包含端口(端口会被舍去)
+
+    :param domain: eg: dwn.cdn.google.co.jp[:233]
+    :type domain: str
+    :return: root_domain, sub_domain
+    :rtype: Tuple[str, str]
+    """
+    domain = domain.rstrip("0123456789").rstrip(":").strip(".")
+    temp = domain.split('.')
+
+    # 粗略判断是否是二级顶级域名
+    is_level2_tld = len(temp[-1]) <= 3 and temp[-2] in ('com', 'net', 'org', 'co', 'edu', 'mil', 'gov', 'ac')
+
+    if len(temp) <= 2 or len(temp) == 3 and is_level2_tld:
+        # 它本身就是一个根域名
+        return target_domain, ""
+    elif is_level2_tld:
+        return ".".join(temp[-3:]), ".".join(temp[:-3])
+    else:
+        return '.'.join(temp[-2:]), ".".join(temp[:-2])
 
 
 # noinspection PyShadowingNames
