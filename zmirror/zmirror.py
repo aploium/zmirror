@@ -1708,9 +1708,13 @@ def request_remote_site_and_parse():
         encoding = encoding_detect(data)
         # 如果是文本内容, 则解码并进行重写, 如果是二进制内容, 则跳过
         if encoding is not None:
-            data = data.decode(encoding=encoding)  # type: str
-            data = client_requests_text_rewrite(data)  # type: str
-            data = data.encode(encoding=encoding)  # type: bytes
+            try:
+                _data = data.decode(encoding=encoding)  # type: str
+            except:
+                pass
+            else:
+                data = client_requests_text_rewrite(_data)  # type: str
+                data = data.encode(encoding=encoding)  # type: bytes
 
         if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
             infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
