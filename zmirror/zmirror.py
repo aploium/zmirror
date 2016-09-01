@@ -297,17 +297,17 @@ regex_request_rewriter_extdomains = re.compile(
         r"""(?P<scheme>""" +
         (  # [[http(s):]//]
             (  # [http(s):]
-                r"""https?(?P<colon>{REGEX_COLON})""".format(REGEX_COLON=REGEX_COLON)  # https?:
+                r"""(?:https?(?P<colon>{REGEX_COLON}))?""".format(REGEX_COLON=REGEX_COLON)  # https?:
             ) +
             r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
         ) +
         r""")?""" +
         REGEX_MY_HOST_NAME +  # www.mydomain.com[:port] 本部分的正则在上面单独组装
-        r"""{REGEX_SLASH}""".format(REGEX_SLASH=REGEX_SLASH)  # # /
+        r"""(?P<slash2>(?(scheme_slash)(?P=scheme_slash)|{REGEX_SLASH}))""".format(REGEX_SLASH=REGEX_SLASH)  # # /
     ) +
     r""")?""" +
 
-    r"""extdomains{REGEX_SLASH}(?P<is_https>https-)?""".format(REGEX_SLASH=REGEX_SLASH) +  # extdomains/(https-)
+    r"""extdomains(?(slash2)(?P=slash2)|{REGEX_SLASH})(?P<is_https>https-)?""".format(REGEX_SLASH=REGEX_SLASH) +  # extdomains/(https-)
     r"""(?P<real_domain>(?:[\w-]+\.)+\w+)\b""",  # target.com
     flags=re.IGNORECASE,
 )
