@@ -608,7 +608,7 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
     if is_escape:
         result = s_esc(result)
 
-    return response_text_rewrite(result)
+    return result
 
 
 # 函数别名, 为了兼容早期版本的配置文件
