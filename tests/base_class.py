@@ -32,6 +32,7 @@ class ZmirrorTestBase(unittest.TestCase):
         verbose_level = 2
         unittest_mode = True
         enable_cron_tasks = False
+        # developer_enable_experimental_feature = True
 
     class CaseCfg:
         pass

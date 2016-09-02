@@ -14,6 +14,7 @@ from time import time
 
 class TestRegex(ZmirrorTestBase):
     REGEX_POSSIBLE_SLASH = [
+        # 斜线(/) 所有可能的值
         "/",
         r"\/", r"\\/", r"\\\/", r"\\\\/",
         "%2f", "%2F",
@@ -26,15 +27,20 @@ class TestRegex(ZmirrorTestBase):
         "%255C%255C%252F", "%255c%255c%252f",
         "%255C%255C%255C%252F", "%255c%255c%255c%252f",
         r"\x2F", r"\x2f",
+        r"\\x2F", r"\\x2f",
+        r"\\\x2F", r"\\\x2f",
+        r"\\\\x2F", r"\\\\x2f",
     ]
 
     REGEX_POSSIBLE_COLON = [
+        # 冒号(:) 所有可能的值
         ":",
         "%3A", "%3a",
         "%253A", "%253a",
     ]
 
     REGEX_POSSIBLE_QUOTE = [
+        # 引号('") 所有可能的值
         "'", '"',
         r"\'", '\"',
         r"\\'", '\\"',
@@ -205,3 +211,21 @@ class TestRegex(ZmirrorTestBase):
                                 errprint("slash", slash, "suffix_slash", suffix_slash, "explicit_scheme", explicit_scheme,
                                          "buff", buff)
                                 raise
+
+    def performance_test__regex_basic_mirrorlization(self):
+        """对 regex_basic_mirrorlization 进行性能测试"""
+        from more_configs.config_google_and_zhwikipedia import target_domain, external_domains
+        self.reload_zmirror(configs_dict=dict(
+            target_domain=target_domain,
+            external_domains=external_domains,
+        ))
+        from time import process_time
+        reg_func = self.zmirror.response_text_basic_mirrorlization
+
+        with open(zmirror_file("tests/sample/google_home.html"), "r", encoding="utf-8") as fp:
+            text = fp.read()
+
+        start_time = process_time()
+        for _ in range(1000):
+            reg_func(text)
+        print("100x google_home.html", process_time() - start_time)

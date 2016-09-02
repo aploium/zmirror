@@ -233,12 +233,13 @@ url_rewrite_cache_miss_count = 0
 # ########### PreCompile Regex ###############
 
 # 冒号(colon :)可能的值为:
-#    : %3A %253A
+#    : %3A %253A  完整列表见 tests.TestRegex.REGEX_POSSIBLE_COLON
 REGEX_COLON = r"""(?::|%(?:25)?3[Aa])"""
 # 斜线(slash /)可能的值为(包括大小写):
+# 完整列表见 tests.TestRegex.REGEX_POSSIBLE_COLON
 #    / \/ \\/ \\\(N个反斜线)/ %2F %5C%2F %5C%5C(N个5C)%2F %255C%252F %255C%255C%252F \x2F
-REGEX_SLASH = r"""(?:\\*/|(?:%(?:25)?5[Cc])*%(?:25)?2[Ff]|(?:\\|%5[Cc])x2[Ff])"""
-# 引号
+REGEX_SLASH = r"""(?:\\*(?:/|x2[Ff])|%(?:(?:25)?5[Cc]%)*(?:25)?2[Ff])"""
+# 引号 可能值的完整列表见 tests.TestRegex.REGEX_POSSIBLE_QUOTE
 # " ' \\(可能有N个反斜线)' \\(可能有N个反斜线)"
 # %22 %27 %5C(可能N个5C)%22 %5C(可能N个5C)%27
 # %2522 %2527 %255C%2522 %255C%2527
@@ -259,7 +260,7 @@ else:
 regex_adv_url_rewriter = re.compile(
     # 前缀, 必须有  'action='(表单) 'href='(链接) 'src=' 'url('(css) '@import'(css) '":'(js/json, "key":"value")
     # \s 表示空白字符,如空格tab
-    r"""(?P<prefix>\b(?:(?:action|href|src)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
+    r"""(?P<prefix>\b(?:(?:src|href|action)\s*=|url\s*\(|@import\s*|"\s*:)\s*)""" +  # prefix, eg: src=
     # 左边引号, 可选 (因为url()允许没有引号). 如果是url以外的, 必须有引号且左右相等(在重写函数中判断, 写在正则里可读性太差)
     r"""(?P<quote_left>["'])?""" +  # quote  "'
     # 域名和协议头, 可选. http:// https:// // http:\/\/ (json) https:\/\/ (json) \/\/ (json)
@@ -321,10 +322,15 @@ def _regex_generate__basic_mirrorlization():
     用一个函数包裹起来是因为在 try_match_and_add_domain_to_rewrite_white_list()
     中需要动态修改 external_domains, 修改以后可能需要随之生成新的正则, 包裹一下比较容易调用
     """
-    regex_all_remote_tld = list(set(re.escape(x.split(".")[-1]) for x in allowed_domains_set))
+    from collections import Counter
+
+    # 统计各个后缀出现的频率, 并且按照出现频率降序排列, 有助于提升正则效率
+    c = Counter(re.escape(x.split(".")[-1]) for x in allowed_domains_set)
+    regex_all_remote_tld = sorted(list(c.keys()), key=lambda x: c[x], reverse=True)
+
     regex_all_remote_tld = "(?:" + "|".join(regex_all_remote_tld) + ")"
     return re.compile(
-        r"""(?P<prefix>""" +
+        r"""(?:""" +
         (  # [[http(s):]//] or [\?["']] or %27 %22 or &quot;
             r"""(?P<scheme>""" +
             (  # [[http(s):]//]
@@ -341,7 +347,7 @@ def _regex_generate__basic_mirrorlization():
         r""")""" +
         # End prefix.
         # Begin domain
-        r"""(?P<domain>([a-zA-Z0-9-]+\.){1,3}%s)\b""" % regex_all_remote_tld +
+        r"""(?P<domain>([a-zA-Z0-9-]+\.){1,5}%s)\b""" % regex_all_remote_tld +
         # Optional suffix slash
         r"""(?P<suffix_slash>(?(scheme_slash)(?P=scheme_slash)|{SLASH}))?""".format(SLASH=REGEX_SLASH) +
 
