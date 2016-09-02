@@ -317,6 +317,7 @@ regex_request_rewriter_main_domain = re.compile(REGEX_MY_HOST_NAME)
 # 以下正则为*实验性*的 response_text_basic_rewrite() 的替代品
 # 用于函数 response_text_basic_mirrorlization()
 # 理论上, 在大量域名的情况下, 会比现有的暴力字符串替换要快, 并且未来可以更强大的域名通配符
+# v0.28.0加入, v0.28.3后默认启用
 def _regex_generate__basic_mirrorlization():
     """产生 regex_basic_mirrorlization
     用一个函数包裹起来是因为在 try_match_and_add_domain_to_rewrite_white_list()
@@ -369,13 +370,18 @@ app = Flask(  # type: Flask
 # ########## Begin Utils #############
 def response_text_basic_mirrorlization(text):
     """
-    response_text_basic_rewrite() 的实验性升级版本, 使用正则而不是暴力字符串替换
-    默认不启用, 如果需要启用, 请将设置中的
-      `developer_enable_experimental_feature` 选项设置为 True
+    response_text_basic_rewrite() 的实验性升级版本, 默认启用
 
     *v0.28.1.dev*
         之前版本是在正则中匹配所有允许的域名, 现在改为匹配所有可能允许的TLD,
         可以带来一些性能的提升, 并且容易进行动态域名添加和通配符支持
+
+    *v0.28.2*
+        进一步优化正则, 性能提升 47% 左右 (速度约为传统暴力替换的4.4倍)
+
+    *v0.28.3*
+        目前来看该功能工作得相当好, 由实验性特性改为正式使用
+        移除旧版 response_text_basic_rewrite(), 只保留一个为了向下兼容的 alias
 
     :param text: 远程响应文本
     :type text: str
@@ -1229,7 +1235,8 @@ def iter_streamed_response_async():
 
         if verbose_level >= 4:
             total_size += len(particle_content)
-            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (process_time() - _start_time + 0.000001))
+            dbgprint('total_size:', total_size, 'total_speed(KB/s):',
+                     total_size / 1024 / (process_time() - _start_time + 0.000001))
 
 
 def copy_response(content=None, is_streamed=False):
@@ -1403,71 +1410,13 @@ def response_content_rewrite():
         return _content, req_time_body
 
 
-def response_text_basic_rewrite(resp_text, domain, domain_id=None):
+def response_text_basic_rewrite(*args, **kwargs):
+    """本函数在v0.28.3被移除, 对本函数的调用会被映射出去
+    如果需要查看本函数代码, 请查看git历史到 v0.28.3 以前
     """
-
-    :type resp_text: str
-    :type domain: str
-    :type domain_id: int
-    :rtype: str
-    """
-    if domain not in domains_alias_to_target_domain:
-        domain_prefix = '/extdomains/' + domain
-        domain_prefix_https_esc = r'\/extdomains\/' + domain
-    else:
-        domain_prefix = ''
-        domain_prefix_https_esc = ''
-
-    # load pre-generated replace prefix
-    prefix = prefix_buff[domain]
-
-    # Explicit HTTPS scheme must be kept
-    resp_text = resp_text.replace(prefix['https_triple_esc'], (myurl_prefix + domain_prefix).replace('/', r'\\\/'))
-    resp_text = resp_text.replace(prefix['https_double_esc'], (myurl_prefix + domain_prefix).replace('/', r'\\/'))
-    resp_text = resp_text.replace(prefix['https_esc'], myurl_prefix_escaped + domain_prefix_https_esc)
-    resp_text = resp_text.replace(prefix['https'], myurl_prefix + domain_prefix)
-
-    resp_text = resp_text.replace(prefix['https_esc_ue'], quote_plus(myurl_prefix_escaped + domain_prefix_https_esc))
-    resp_text = resp_text.replace(prefix['https_ue'], quote_plus(myurl_prefix + domain_prefix))
-
-    # Implicit schemes replace, will be replaced to the same as `my_host_scheme`, unless forced
-    # _buff: my-domain.com/extdomains/remote.com or my-domain.com
-    if domain not in domains_alias_to_target_domain:
-        _buff = my_host_name + domain_prefix
-    else:
-        _buff = my_host_name
-    _buff_esc = s_esc(_buff)
-    _buff_double_esc = _buff.replace('/', r'\\/')
-    _buff_triple_esc = _buff.replace('/', r'\\\/')
-
-    resp_text = resp_text.replace(prefix['http_double_esc'], (my_host_scheme + _buff).replace("/", r"\\/"))
-    resp_text = resp_text.replace(prefix['http_esc'], my_host_scheme_escaped + _buff_esc)
-    resp_text = resp_text.replace(prefix['http'], my_host_scheme + _buff)
-
-    resp_text = resp_text.replace(prefix['slash_triple_esc'], r'\\\/\\\/' + _buff_triple_esc)
-    resp_text = resp_text.replace(prefix['slash_double_esc'], r'\\\/\\\/' + _buff_double_esc)
-    resp_text = resp_text.replace(prefix['slash_esc'], r'\/\/' + _buff_esc)
-    resp_text = resp_text.replace(prefix['slash'], '//' + _buff)
-
-    resp_text = resp_text.replace(prefix['http_esc_ue'], quote_plus(my_host_scheme_escaped + _buff_esc))
-    resp_text = resp_text.replace(prefix['http_ue'], quote_plus(my_host_scheme + _buff))
-    resp_text = resp_text.replace(prefix['slash_esc_ue'], quote_plus(r'\/\/' + _buff_esc))
-    resp_text = resp_text.replace(prefix['slash_ue'], quote_plus('//' + _buff))
-
-    resp_text = resp_text.replace(prefix['hex_lower'], ('//' + my_host_name).replace('/', r'\x2f'))
-    resp_text = resp_text.replace(prefix['hex_upper'], ('//' + my_host_name).replace('/', r'\x2F'))
-
-    # rewrite "foo.domain.tld" and 'foo.domain.tld'
-    resp_text = resp_text.replace(prefix['double_quoted'], '"%s"' % _buff)
-    resp_text = resp_text.replace(prefix['single_quoted'], "'%s'" % _buff)
-    resp_text = resp_text.replace(prefix['double_quoted_esc'], r'\"%s\"' % _buff)
-    resp_text = resp_text.replace(prefix['single_quoted_esc'], r"\'%s\'" % _buff)
-    resp_text = resp_text.replace(prefix['double_quoted_ue'], quote_plus('"%s"' % _buff))
-    resp_text = resp_text.replace(prefix['single_quoted_ue'], quote_plus("'%s'" % _buff))
-
-    resp_text = resp_text.replace('&quot;' + domain + '&quot;', '&quot;' + _buff_esc + '&quot;')
-
-    return resp_text
+    from warnings import warn
+    warn("This function is deprecated since v0.28.3, use response_text_basic_mirrorlization() instead", DeprecationWarning)
+    return response_text_basic_mirrorlization(*args, **kwargs)
 
 
 def response_text_rewrite(resp_text):
@@ -1488,27 +1437,11 @@ def response_text_rewrite(resp_text):
     if developer_string_trace is not None and developer_string_trace in resp_text:
         infoprint('StringTrace: appears after advanced rewrite, code line no. ', current_line_number())
 
-    # ############### v0.28.0 实验性功能 ##################
-    if developer_enable_experimental_feature:
-        resp_text = response_text_basic_mirrorlization(resp_text)
+    # v0.28.0 实验性功能, 在v0.28.3后默认启用
+    resp_text = response_text_basic_mirrorlization(resp_text)
 
-    else:  # ################### 传统版本 ##########################
-        # basic url rewrite, rewrite the main site's url
-        # http(s)://target.com/foo/bar --> http(s)://your-domain.com/foo/bar
-        for _target_domain in domains_alias_to_target_domain:
-            resp_text = response_text_basic_rewrite(resp_text, _target_domain)
-
-        if developer_string_trace is not None and developer_string_trace in resp_text:
-            infoprint('StringTrace: appears after basic rewrite(main site), code line no. ', current_line_number())
-
-        # External Domains Rewrite
-        # http://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
-        # https://external.com/foo1/bar2 --> http(s)://your-domain.com/extdomains/external.com/foo1/bar2
-        for domain_id, domain in enumerate(external_domains):
-            resp_text = response_text_basic_rewrite(resp_text, domain, domain_id)
-            if developer_string_trace is not None and developer_string_trace in resp_text:
-                infoprint('StringTrace: appears after basic ext domain rewrite:',
-                          domain, ', code line no. ', current_line_number())
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        infoprint('StringTrace: appears after basic mirrorlization, code line no. ', current_line_number())
 
     # for cookies set string (in js) replace
     # eg: ".twitter.com" --> "foo.com"
