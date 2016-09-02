@@ -14,7 +14,7 @@ import ipaddress
 import threading
 
 from fnmatch import fnmatch
-from time import time, sleep
+from time import time, sleep, process_time
 from html import escape as html_escape
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
@@ -1188,7 +1188,7 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
 def iter_streamed_response_async():
     """异步, 一边读取远程响应, 一边发送给用户"""
     total_size = 0
-    _start_time = time()
+    _start_time = process_time()
 
     _content_buffer = b''
     _disable_cache_temporary = False
@@ -1229,7 +1229,7 @@ def iter_streamed_response_async():
 
         if verbose_level >= 4:
             total_size += len(particle_content)
-            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (time() - _start_time + 0.000001))
+            dbgprint('total_size:', total_size, 'total_speed(KB/s):', total_size / 1024 / (process_time() - _start_time + 0.000001))
 
 
 def copy_response(content=None, is_streamed=False):
@@ -1348,9 +1348,9 @@ def response_content_rewrite():
     :return: List[bytes, float]
     """
 
-    _start_time = time()
+    _start_time = process_time()
     _content = parse.remote_response.content
-    req_time_body = time() - _start_time
+    req_time_body = process_time() - _start_time
 
     if parse.mime and is_mime_represents_text(parse.mime):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
@@ -1696,7 +1696,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         _requester = requests
 
     # Send real requests
-    req_start_time = time()
+    req_start_time = process_time()
     r = _requester.request(
         method, url,
         params=param_get, headers=headers, data=data,
@@ -1706,7 +1706,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         verify=not developer_do_not_verify_ssl,
     )
     # remote request time
-    req_time = time() - req_start_time
+    req_time = process_time() - req_start_time
     dbgprint('RequestTime:', req_time, v=4)
 
     # Some debug output
@@ -1806,7 +1806,7 @@ def request_remote_site_and_parse():
         # remote request time should be excluded when calculating total time
         resp.headers.add('X-Header-Req-Time', "%.4f" % req_time_headers)
         resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
-        resp.headers.add('X-Compute-Time', "%.4f" % (time() - parse.start_time - req_time_headers - req_time_body))
+        resp.headers.add('X-Compute-Time', "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
 
     resp.headers.add('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
 
@@ -1956,7 +1956,7 @@ def posterior_request_redirect():
         if resp is not None:
             dbgprint('CacheHit,Return')
             if parse.start_time is not None:
-                resp.headers.set('X-Compute-Time', "%.4f" % (time() - parse.start_time))
+                resp.headers.set('X-Compute-Time', "%.4f" % (process_time() - parse.start_time))
             return resp
 
 
@@ -2201,7 +2201,7 @@ def main_function(input_path='/'):
     #      .remote_response     远程服务器的响应, requests.Response
     #      .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
-    parse.start_time = time()  # to display compute time
+    parse.start_time = process_time()  # to display compute time
 
     # 将用户请求的URL解析为对应的目标服务器URL
     _temp = decode_mirror_url()
