@@ -221,6 +221,7 @@ class TestRegex(ZmirrorTestBase):
         ))
         from time import process_time
         reg_func = self.zmirror.response_text_basic_mirrorlization
+        print(self.zmirror.regex_basic_mirrorlization.pattern)
 
         with open(zmirror_file("tests/sample/google_home.html"), "r", encoding="utf-8") as fp:
             text = fp.read()

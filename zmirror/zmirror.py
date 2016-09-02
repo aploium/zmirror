@@ -298,7 +298,7 @@ regex_request_rewriter_extdomains = re.compile(
             (  # [http(s):]
                 r"""(?:https?(?P<colon>{REGEX_COLON}))?""".format(REGEX_COLON=REGEX_COLON)  # https?:
             ) +
-            r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
+            r"""(?P<scheme_slash>%s)(?P=scheme_slash)""" % REGEX_SLASH  # //
         ) +
         r""")?""" +
         REGEX_MY_HOST_NAME +  # www.mydomain.com[:port] 本部分的正则在上面单独组装
@@ -337,7 +337,7 @@ def _regex_generate__basic_mirrorlization():
                 (  # [http(s):]
                     r"""(?:https?(?P<colon>{REGEX_COLON}))?""".format(REGEX_COLON=REGEX_COLON)  # https?:
                 ) +
-                r"""(?P<scheme_slash>%s){2}""" % REGEX_SLASH  # //
+                r"""(?P<scheme_slash>%s)(?P=scheme_slash)""" % REGEX_SLASH  # //
             ) +
             r""")""" +
             r"""|""" +
