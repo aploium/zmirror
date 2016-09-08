@@ -80,8 +80,8 @@ def custom_identity_verify(identity_dict):
 
     :type identity_dict: dict
     """
-    True_or_False = True
-    return True_or_False
+    true_or_false = True
+    return true_or_false
 
 
 def custom_generate_access_cookie(input_dict, flask_request):
@@ -100,7 +100,9 @@ def custom_verify_access_cookie(zmirror_verify_cookie, flask_request):
     """
     verify user's access cookie. return True for access granted, False for denied
     See option `enable_custom_access_cookie_generate_and_verify`
+    :param zmirror_verify_cookie: cookie string
     :param flask_request: the flask request object
+    :type zmirror_verify_cookie: str
     :return: bool
     """
     # example, calling the builtin cookie verify function
@@ -166,15 +168,15 @@ def demo__google_result_open_in_new_tab(raw_text, content_mime):
     """
 
     def hexlify_to_json(ascii_str):
-        buff = ''
+        _buff = ''
         for char in ascii_str:
             if char in '\'\"<>&=':
-                buff += r'\x' + hex(ord(char))[2:]
+                _buff += r'\x' + hex(ord(char))[2:]
             else:
-                buff += char
-        buff = buff.replace('\\', '\\\\')
-        buff = buff.replace('/', r'\/')
-        return buff
+                _buff += char
+        _buff = _buff.replace('\\', '\\\\')
+        _buff = _buff.replace('/', r'\/')
+        return _buff
 
     if content_mime == 'application/json':
         raw_text = raw_text.replace(
