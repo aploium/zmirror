@@ -6,13 +6,13 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 if os.path.dirname(__file__) != '':
     os.chdir(os.path.dirname(__file__))
-from zmirror import app as application
+from zmirror.zmirror import app as application
 
 __author__ = 'Aploium <i@z.codes>'
 
 
 def main():
-    from zmirror import my_host_port, built_in_server_host, \
+    from zmirror.zmirror import my_host_port, built_in_server_host, \
         built_in_server_debug, built_in_server_extra_params, warnprint, \
         errprint
 
