@@ -37,7 +37,7 @@ def custom_response_text_rewriter(raw_text, content_mime, remote_url):
     raw_text = raw_text.replace('https://t.co/', my_host_scheme + my_host_name + '/extdomains/https-t.co/')
 
     # For twitter video
-    if decode_mirror_url()[0] == 'video.twimg.com':
+    if decode_mirror_url()["domain"] == 'video.twimg.com':
         raw_text = raw_text.replace('/ext_tw_video/',
                                     encode_mirror_url('/ext_tw_video/', remote_domain='video.twimg.com', is_scheme=False))
 
