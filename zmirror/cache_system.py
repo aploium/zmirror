@@ -6,7 +6,7 @@ import pickle
 from datetime import datetime
 
 try:
-    from typing import Union
+    from typing import Union, Any
 except:
     pass
 
@@ -104,14 +104,16 @@ class FileCache:
 
     def put_obj(self, key, obj, expires=DEFAULT_EXPIRE, obj_size=0, last_modified=None, info_dict=None):
         """
-
+        将一个对象存入缓存
+        :param key: key
         :param last_modified: str  format: "Mon, 18 Nov 2013 09:02:42 GMT"
         :param obj_size: too big object should not be cached
         :param expires: seconds to expire
         :param info_dict: custom dict contains information, stored in memory, so can access quickly
+        :type key: str
         :type last_modified: str
         :type info_dict: dict or None
-        :type obj: object
+        :type obj: Any
         """
         if expires <= 0 or obj_size > self.max_size_byte:
             return False

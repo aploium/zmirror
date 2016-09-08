@@ -57,7 +57,7 @@ class TestRedirection(ZmirrorTestBase):
         self.assertIn("/get?answer=42", self.rv.location, msg=self.dump())
 
     def test_shadow_regex_redirect(self):
-        "/shadow_redirect/furry-dog --> /get?dog=furry-dog"
+        """/shadow_redirect/furry-dog --> /get?dog=furry-dog"""
         self.rv = self.client.get(
             self.url("/shadow_redirect/furry-dog"),
             environ_base=env(),

@@ -727,13 +727,13 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
 convert_to_mirror_url = encode_mirror_url
 
 
-def is_target_domain_use_https(target_domain):
+def is_target_domain_use_https(domain):
     """请求目标域名时是否使用https"""
     if force_https_domains == 'NONE':
         return False
     if force_https_domains == 'ALL':
         return True
-    if target_domain in force_https_domains:
+    if domain in force_https_domains:
         return True
     else:
         return False
@@ -791,6 +791,7 @@ def dump_zmirror_snapshot(folder="error_dump", msg=None, our_response=None):
 def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=False, content_only=False):
     """
 
+    :type content_only: bool
     :type errormsg: Union(str, bytes)
     :type error_code: int
     :type is_traceback: bool
