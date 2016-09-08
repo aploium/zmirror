@@ -80,9 +80,7 @@ local.properties
 
 # Code Recommenders
 .recommenders/
-### NotepadPP template
-# Notepad++ backups #
-*.bak
+
 ### Archives template
 # It's better to unpack these files and commit the raw source because
 # git has its own built in compression methods.
@@ -131,16 +129,10 @@ $RECYCLE.BIN/
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
 # User-specific stuff:
-.idea/workspace.xml
 .idea/tasks.xml
-.idea/dictionaries
-.idea/vcs.xml
 .idea/jsLibraryMappings.xml
 
 # Sensitive or high-churn files:
-.idea/dataSources.ids
-.idea/dataSources.xml
-.idea/dataSources.local.xml
 .idea/sqlDataSources.xml
 .idea/dynamic.xml
 .idea/uiDesigner.xml
@@ -176,7 +168,6 @@ fabric.properties
 
 # IntelliJ project files
 .idea
-*.iml
 out
 gen### IPythonNotebook template
 # Temporary data
@@ -341,3 +332,5 @@ img/
 /tests/sample/
 /config.py._unittest_raw
 /custom_func.py._unittest_raw
+/error_dump/
+/traffic/
