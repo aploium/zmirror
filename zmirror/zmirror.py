@@ -6,7 +6,6 @@ import copy
 import zlib
 import sched
 import queue
-import pickle
 import base64
 import random
 import traceback
@@ -161,7 +160,7 @@ my_host_name_root = extract_root_domain(target_domain)[0]  # type: str
 connection_pool_per_domain = {}
 if enable_keep_alive_per_domain:
     for _domain in allowed_domains_set:
-        connection_pool_per_domain[_domain] = {'session': requests.Session(),}
+        connection_pool_per_domain[_domain] = {'session': requests.Session(), }
 
 # ## thread local var ##
 # 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
@@ -748,6 +747,47 @@ def add_ssrf_allowed_domain(domain):
     allowed_domains_set.add(domain)
 
 
+def dump_zmirror_snapshot(folder="error_dump", msg=None, our_response=None):
+    """
+    dump当前状态到文件
+    :param folder: 文件夹名
+    :type folder: str
+    :param our_response: Flask返回对象, 可选
+    :type our_response: Response
+    :param msg: 额外的信息
+    :type msg: str
+    :return: dump下来的文件绝对路径
+    :rtype: Union[str, None]
+    """
+    import pickle
+    try:
+        if not os.path.exists(zmirror_root(folder)):
+            os.mkdir(zmirror_root(folder))
+        _time_str = datetime.now().strftime('snapshot_%Y-%m-%d_%H-%M-%S')
+
+        import config
+
+        snapshot = {
+            "time": datetime.now(),
+            "parse": parse.dump(),
+            "msg": msg,
+            "traceback": traceback.format_exc(),
+            "config": attributes(config, to_dict=True),
+            "FlaskRequest": attributes(request, to_dict=True),
+        }
+        if our_response is not None:
+            our_response.freeze()
+        snapshot["OurResponse"] = our_response
+
+        dump_file_path = os.path.abspath(os.path.join(zmirror_root(folder), _time_str + '.dump'))
+
+        with open(dump_file_path, 'wb') as fp:
+            pickle.dump(snapshot, fp, pickle.HIGHEST_PROTOCOL)
+        return dump_file_path
+    except:
+        return None
+
+
 def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=False, content_only=False):
     """
 
@@ -763,8 +803,10 @@ def generate_error_page(errormsg='Unknown Error', error_code=500, is_traceback=F
     if isinstance(errormsg, bytes):
         errormsg = errormsg.decode()
 
+    dump_file_path = dump_zmirror_snapshot(msg=errormsg)
+
     request_detail = ""
-    for attrib in filter(lambda x: x[:2] != '__' and x[-2:] != '__', dir(parse)):
+    for attrib in filter(lambda x: x[0] != '_' and x[-2:] != '__', dir(parse)):
         request_detail += "<tr><td>{attrib}</td><td>{value}</td></tr>" \
             .format(attrib=attrib, value=html_escape(str(parse.__getattribute__(attrib))))
 
@@ -794,21 +836,27 @@ If you can't solve it by your self, here are some ways may help:<br>
     <li>seeking for help in zmirror's <a href="https://gitter.im/zmirror/zmirror" target="_blank">online chat room</a></li>
     <li>open an <a href="https://github.com/aploium/zmirror/issues" target="_blank">issue</a> (as an bug report) in github</li>
 </ul>
+<h3>Snapshot Dump</h3>
+An snapshot has been dumped to <code>{dump_file_path}</code> <br>
+You can load it using (Python3 code) <code>pickle.load(open(r"{dump_file_path}","rb"))</code><br>
+The snapshot contains information which may be helpful for debug
 <h3>Detail</h3>
 <table border="1"><tr><th>Attrib</th><th>Value</th></tr>
 {request_detail}
 </table>
-<h3>Additional information</h3>
+<h3>Additional Information</h3>
 <pre>{errormsg}</pre>
 <h3>Traceback</h3>
 <pre>{traceback_str}</pre>
 <hr>
 <div style="font-size: smaller">Powered by <em>zmirror {version}</em><br>
 <a href="{official_site}" target="_blank">{official_site}</a></div>
-</body></html>""".format(errormsg=errormsg, request_detail=request_detail,
-                         traceback_str=html_escape(traceback.format_exc()) if is_traceback else 'None or not displayed',
-                         version=CONSTS.__VERSION__, official_site=CONSTS.__GITHUB_URL__
-                         )
+</body></html>""".format(
+        errormsg=errormsg, request_detail=request_detail,
+        traceback_str=html_escape(traceback.format_exc()) if is_traceback else 'None or not displayed',
+        dump_file_path=dump_file_path,
+        version=CONSTS.__VERSION__, official_site=CONSTS.__GITHUB_URL__
+    )
 
     if not content_only:
         return make_response(error_page.encode(), error_code)
@@ -1744,19 +1792,7 @@ def request_remote_site_and_parse():
     resp.headers.add('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
 
     if developer_dump_all_traffics and not is_streamed:
-        if not os.path.exists(zmirror_root('traffic')):
-            os.mkdir(zmirror_root('traffic'))
-        _time_str = datetime.now().strftime('traffic_%Y-%m-%d_%H-%M-%S')
-        try:
-            with open(os.path.join(zmirror_root('traffic'), _time_str + '.dump'), 'wb') as fp:
-                pickle.dump(
-                    (_time_str,
-                     (repr(request.url), repr(request.headers), repr(request.get_data())),
-                     parse.remote_response, resp
-                     ),
-                    fp)
-        except:
-            return generate_error_page(errormsg="Unable to dump traffic", is_traceback=True)
+        dump_zmirror_snapshot("traffic")
 
     return resp
 

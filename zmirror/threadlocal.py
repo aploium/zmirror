@@ -28,8 +28,6 @@ class ZmirrorThreadLocal(threading.local):
     """
 
     def __init__(self, **kw):
-        self.__dict__.update(kw)
-
         # 初始化成空白值
         self.start_time = None
         self.remote_domain = None
@@ -45,6 +43,29 @@ class ZmirrorThreadLocal(threading.local):
         self.cache_control = None
         self.remote_response = None
         self.temporary_domain_alias = []
+
+        self.__dict__.update(kw)
+
+    def dump(self):
+        return {
+            "start_time": self.start_time,
+            "remote_domain": self.remote_domain,
+            "is_external_domain": self.is_external_domain,
+            "is_https": self.is_https,
+            "remote_url": self.remote_url,
+            "url_no_scheme": self.url_no_scheme,
+            "remote_path_query": self.remote_path_query,
+            "client_header": self.client_header,
+            "content_type": self.content_type,
+            "remote_path": self.remote_path,
+            "mime": self.mime,
+            "cache_control": self.cache_control,
+            "temporary_domain_alias": self.temporary_domain_alias,
+            "remote_response": self.remote_response,
+        }
+
+    def __str__(self):
+        return str(self.dump())
 
     @property
     def start_time(self):

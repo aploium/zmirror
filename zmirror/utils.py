@@ -396,3 +396,21 @@ def guess_colon_from_slash(slash):
             return "%3A"
         else:
             return "%3a"
+
+
+def attributes(var, to_dict=False, max_len=1024):
+    output = {} if to_dict else ""
+    for name in dir(var):
+        if name[0] != '_' and name[-2:] != '__':
+            value = str(getattr(var, name))
+
+            if max_len:
+                length = len(value)
+                if length > max_len:
+                    value = value[:max_len] + "....(total:{})".format(length)
+
+            if to_dict:
+                output[name] = value
+            else:
+                output += strx(name, ":", value, "\n")
+    return output

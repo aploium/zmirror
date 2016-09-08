@@ -225,6 +225,8 @@ class TestHttpbin(ZmirrorTestBase):
             self.assertEqual(self.C.my_host_name + '/extdomains/' + self.C.external_domains[0], r_json['domain2'],
                              msg=self.dump())
 
+            self.zmirror.dump_zmirror_snapshot()
+
             # 未加处理的url, 标准答案
             answers = [
                 None,
