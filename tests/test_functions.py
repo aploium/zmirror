@@ -37,7 +37,7 @@ class TestFunctions(ZmirrorTestBase):
         self.assertFalse(self.zmirror.try_match_and_add_domain_to_rewrite_white_list("www2.httpbin.org"))
         self.assertTrue(self.zmirror.try_match_and_add_domain_to_rewrite_white_list("www2.httpbin.org", force_add=True))
         self.reload_zmirror({"enable_automatic_domains_whitelist": True,
-                             "domains_whitelist_auto_add_glob_list": ('*.httpbin.org')}
+                             "domains_whitelist_auto_add_glob_list": ('*.httpbin.org',)}
                             )
         self.assertTrue(self.zmirror.try_match_and_add_domain_to_rewrite_white_list("www2.httpbin.org"))
 
