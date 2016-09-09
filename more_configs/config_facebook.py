@@ -213,6 +213,10 @@ external_domains = (
     "ja-jp.facebook.com",
     "de-de.facebook.com",
     "l.facebook.com",
+    "static.xx.fbcdn.net",
+    "scontent-lax3-1.xx.fbcdn.net",
+    "external-lax3-1.xx.fbcdn.net",
+    "video-lax3-1.xx.fbcdn.net",
 
 )
 
