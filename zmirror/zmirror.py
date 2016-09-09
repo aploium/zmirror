@@ -358,6 +358,11 @@ def _regex_generate__basic_mirrorlization():
 
 regex_basic_mirrorlization = _regex_generate__basic_mirrorlization()
 
+# 用于移除掉cookie中类似于 zmirror_verify=75bf23086a541e1f; 的部分
+regex_remove__zmirror_verify__header = re.compile(
+    r"""zmirror_verify=[a-zA-Z0-9]+\b;? ?"""
+)
+
 # ########## Flask app ###########
 
 app = Flask(  # type: Flask
@@ -1557,9 +1562,10 @@ def extract_client_header():
     :return: dict client request headers
     """
     outgoing_head = {}
-    if verbose_level >= 3: dbgprint('ClientRequestHeaders:', request.headers)
+    dbgprint('ClientRequestHeaders:', request.headers)
     for head_name, head_value in request.headers:
         head_name_l = head_name.lower()
+        # 剔除掉请求头中的 host content-length 和空白的 content-type
         if (head_name_l not in ('host', 'content-length', 'content-type')) \
                 or (head_name_l == 'content-type' and head_value != ''):
             # For Firefox, they may send 'Accept-Encoding: gzip, deflate, br'
@@ -1576,7 +1582,13 @@ def extract_client_header():
             else:
                 outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
 
-    if verbose_level >= 3: dbgprint('FilteredRequestHeaders:', outgoing_head)
+                # 移除掉 cookie 中的 zmirror_verify
+                if head_name_l == "cookie":
+                    outgoing_head[head_name_l] = regex_remove__zmirror_verify__header.sub(
+                        "", outgoing_head[head_name_l]
+                    )
+
+    dbgprint('FilteredRequestHeaders:', outgoing_head)
     return outgoing_head
 
 
