@@ -30,6 +30,10 @@ an http reverse proxy designed to automatically and completely mirror a website 
     * *Mobile Only*  https://t-mobile.zmirrordemo.com
 * **Instagram**
     * *PC & Mobile*  https://in.zmirrordemo.com  
+* **Facebook**
+    * *PC Only*  https://fb.zmirrordemo.com  
+        功能不完整, 不支持手机.  最大的问题是当地址栏链接改变时不会自动刷新, 需要手动刷新  
+        未来会写一个脚本, 当url改变后刷新页面  
 
 ## Screenshot
 Screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror/wiki/Screenshots)  
