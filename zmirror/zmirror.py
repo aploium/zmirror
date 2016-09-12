@@ -1035,63 +1035,74 @@ def regex_url_reassemble(match_obj):
     scheme = get_group('scheme', match_obj)
 
     whole_match_string = match_obj.group()
+
     # dbgprint('prefix', prefix, 'quote_left', quote_left, 'quote_right', quote_right,
-    #          'path', path, 'match_domain', match_domain, 'scheme', scheme, 'whole', whole_match_string)
+    #          'path', path, 'match_domain', match_domain, 'scheme', scheme, 'whole', whole_match_string, v=5)
+
     if r"\/" in path or r"\/" in scheme:
         require_slash_escape = True
         path = path.replace(r"\/", "/")
         # domain_and_scheme = domain_and_scheme.replace(r"\/", "/")
     else:
         require_slash_escape = False
+
     # path must be not blank
     if (not path  # path is blank
+
         # only url(something) and @import are allowed to be unquoted
         or ('url' not in prefix and 'import' not in prefix) and (not quote_left or quote_right == ')')
+
         # for "key":"value" type replace, we must have at least one '/' in url path (for the value to be regard as url)
         or (':' in prefix and '/' not in path)
+
         # if we have quote_left, it must equals to the right
         or (quote_left and quote_left != quote_right)
+
         # in javascript, those 'path' contains one or only two slash, should not be rewrited (for potential error)
         # or (parse.mime == 'application/javascript' and path.count('/') < 2)
         # in javascript, we only rewrite those with explicit scheme ones.
         # v0.21.10+ in "key":"value" format, we should ignore those path without scheme
         or (not scheme and ('javascript' in parse.mime or '"' in prefix))
         ):
-        # dbgprint('returned_un_touch', whole_match_string)
+        dbgprint('returned_un_touch', whole_match_string, v=5)
         return whole_match_string
 
     # v0.19.0+ Automatic Domains Whitelist (Experimental)
     if enable_automatic_domains_whitelist:
         try_match_and_add_domain_to_rewrite_white_list(match_domain)
 
-    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
     # dbgprint(match_obj.groups(), v=5)
-    # dbgprint('remote_path:', remote_path, 'remote_domain:', remote_domain, 'match_domain', match_domain, v=5)
 
     domain = match_domain or parse.remote_domain
     # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
+
     # skip if the domain are not in our proxy list
     if domain not in allowed_domains_set:
-        # dbgprint('return untouched because domain not match', domain, whole_match_string)
+        # dbgprint('return untouched because domain not match', domain, whole_match_string, v=5)
         return match_obj.group()  # return raw, do not change
 
     # this resource's absolute url path to the domain root.
-    # dbgprint('match path', path, v=5)
-    path = urljoin(parse.remote_path, path)
+    # dbgprint('match path', path, "remote path", parse.remote_path, v=5)
+    path = urljoin(parse.remote_path, path)  # type: str
+
+    if not path.startswith("/"):
+        # 当整合后的path不以 / 开头时, 如果当前是主域名, 则不处理, 如果是外部域名则加上 / 前缀
+        path = "/" + path
+
     # dbgprint('middle path', path, v=5)
     if ':' not in parse.remote_domain:  # the python's builtin urljoin has a bug, cannot join domain with port correctly
         url_no_scheme = urljoin(domain + '/', path.lstrip('/'))
     else:
         url_no_scheme = domain + '/' + path.lstrip('/')
 
-    # dbgprint('url_no_scheme', url_no_scheme)
+    # dbgprint('url_no_scheme', url_no_scheme, v=5)
     # add extdomains prefix in path if need
     if domain in external_domains_set:
         path = '/extdomains/' + url_no_scheme
 
     # dbgprint('final_path', path, v=5)
     if enable_static_resource_CDN and url_no_scheme in url_to_use_cdn:
-        # dbgprint('We Know:', url_no_scheme,v=5)
+        # dbgprint('We Know:', url_no_scheme, v=5)
         _we_knew_this_url = True
         _this_url_mime_cdn = url_to_use_cdn[url_no_scheme][0]
     else:
