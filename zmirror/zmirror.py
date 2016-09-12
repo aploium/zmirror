@@ -16,7 +16,7 @@ import threading
 from fnmatch import fnmatch
 from time import time, sleep, process_time
 from html import escape as html_escape
-from datetime import datetime, timedelta, sys
+from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import urllib.parse
 import requests
