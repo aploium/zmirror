@@ -17,14 +17,15 @@ except:
 
 
 class LazyDump:
-    def __init__(self, dumper):
+    def __init__(self, dumper, msg=None):
         self._dumper = dumper
+        self._msg = msg
 
     def __str__(self):
-        return self._dumper()
+        return self._dumper() + (("\n------extra msg------\n" + self._msg) if self._msg else "")
 
     def __repr__(self):
-        return self.__str__()
+        return str(self)
 
 
 class ZmirrorTestBase(unittest.TestCase):
@@ -33,6 +34,10 @@ class ZmirrorTestBase(unittest.TestCase):
         unittest_mode = True
         enable_cron_tasks = False
         # developer_enable_experimental_feature = True
+        requests_proxies = dict(
+            http='http://127.0.0.1:8123',
+            https='https://127.0.0.1:8123',
+        )
 
     class CaseCfg:
         pass
@@ -171,6 +176,10 @@ class ZmirrorTestBase(unittest.TestCase):
 
         return dump
 
-    def dump(self):
-        return LazyDump(self._dump)
+    def dump(self, msg=None):
+        """
+        :type msg: str
+        :rtype: LazyDump
+        """
+        return LazyDump(self._dump, msg=msg)
         # return self._dump()
