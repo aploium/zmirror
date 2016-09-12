@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 import os
+import sys
 import re
 import copy
 import zlib
@@ -15,7 +16,7 @@ import threading
 from fnmatch import fnmatch
 from time import time, sleep, process_time
 from html import escape as html_escape
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, sys
 from urllib.parse import urljoin, urlsplit, urlunsplit, quote_plus
 import urllib.parse
 import requests
@@ -1084,6 +1085,10 @@ def regex_url_reassemble(match_obj):
     # this resource's absolute url path to the domain root.
     # dbgprint('match path', path, "remote path", parse.remote_path, v=5)
     path = urljoin(parse.remote_path, path)  # type: str
+
+    # 在 Python3.5 以前, urljoin无法正确处理如 urljoin("/","../233") 的情况, 需要手动处理一下
+    if sys.version_info < (3, 5) and "/../" in path:
+        path = path.replace("/../", "/")
 
     if not path.startswith("/"):
         # 当整合后的path不以 / 开头时, 如果当前是主域名, 则不处理, 如果是外部域名则加上 / 前缀
