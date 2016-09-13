@@ -17,6 +17,9 @@ class TestDefaultMirror(ZmirrorTestBase):
         self.assertIn(b'The Linux Kernel Archives', self.rv.data, msg=self.dump())  # title
         self.assertIn(b'/extdomains/www.wiki.kernel.org/', self.rv.data, msg=self.dump())  # some rewrite
 
+        # 下面这句话没有任何作用, 只是为了cover到一行没什么用的代码
+        str(self.zmirror)
+
     def test_kernel_pages_compressed(self):
         """
         default config is a mirror of https://www.kernel.org/
