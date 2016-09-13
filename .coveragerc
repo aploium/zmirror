@@ -1,0 +1,21 @@
+# This file is the config for coverage (unittest)
+[run]
+omit =
+    tests/*
+    more_configs/*
+    zmirror/external_pkgs/*
+    test.py
+    wsgi.py
+    config.py
+    custom_func.py
+    custom_func.sample.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    errprint
+    traceback.print_exc\(\)
+    if __name__ == .__main__.:
+    if .ZMIRROR_UNITTEST. in os.environ
+    if not unittest_mode
+    return generate_error_page
