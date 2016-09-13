@@ -292,8 +292,6 @@ def extract_real_url_from_embedded_url(embedded_url):
         return None
     m = regex_extract_base64_from_embedded_url.search(embedded_url)
     b64 = get_group('b64', m)
-    if not b64:
-        return None
 
     # 'https://cdn.domain.com/a.php_zm24_.cT1zb21ldGhpbmc=._zm24_.css'
     # real_request_url_no_query ---> 'https://cdn.domain.com/a.php'
