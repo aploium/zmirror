@@ -680,5 +680,5 @@ developer_do_not_verify_ssl = False
 # v0.28.0+
 # 实验性特性开关
 # 一般来说, 每个版本, 至多会有一项实验性功能(可能没有)
-# 当前版本没有实验性功能, 即使设置为 True 也没有任何作用
+# 当前版本的实验性功能为 enable_keep_alive_per_domain
 developer_enable_experimental_feature = False

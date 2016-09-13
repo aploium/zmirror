@@ -112,6 +112,11 @@ if local_cache_enable:
 # ########## Basic Init #############
 # 开始从配置文件加载配置, 在读代码时可以先跳过这部分, 从 main_function() 开始看
 ColorfulPyPrint_set_verbose_level(verbose_level)
+
+if developer_enable_experimental_feature:  # pragma: no cover
+    # 先处理实验性功能开关
+    enable_keep_alive_per_domain = True
+
 my_host_name_no_port = my_host_name  # 不带有端口号的本机域名
 
 if my_host_port is not None:
