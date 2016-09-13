@@ -5,8 +5,6 @@ import json
 import random
 from flask import Response
 
-from zmirror.utils import attributes
-
 basedir = os.path.dirname(os.path.abspath(__file__))
 zmirror_dir = os.path.abspath(os.path.join(basedir, '..'))
 
@@ -108,6 +106,29 @@ def load_rv_json(rv):
     :rtype: dict
     """
     return json.loads(rv.data.decode(encoding='utf-8'))
+
+
+def attributes(var):
+    def _strx(*_args):
+        """
+        :return: str
+        """
+        _output = ''
+        for _arg in _args:
+            _output += str(_arg) + ' '
+        _output.rstrip(' ')
+        return _output
+
+    output = ""
+    for name in dir(var):
+        if name[0] != '_' and name[-2:] != '__':
+            value = str(getattr(var, name))
+            length = len(value)
+
+            if length > 1024:
+                value = value[:1024] + "....(total:{})".format(length)
+            output += _strx(name, ":", value, "\n")
+    return output
 
 
 def slash_esc(string):
