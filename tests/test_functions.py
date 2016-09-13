@@ -263,3 +263,10 @@ class TestFunctions(ZmirrorTestBase):
         self.assertEqual("", self.zmirror.get_group("non_exist", m))
         self.assertEqual("", self.zmirror.get_group("cat", m))
         self.assertEqual("", self.zmirror.get_group("dog", m))
+
+    def test__guess_colon_from_slash(self):
+        self.assertEqual(":", self.zmirror.guess_colon_from_slash("/"))
+        self.assertEqual("%253A", self.zmirror.guess_colon_from_slash("%252F"))
+        self.assertEqual("%253a", self.zmirror.guess_colon_from_slash("%252f"))
+        self.assertEqual("%3A", self.zmirror.guess_colon_from_slash("%2F"))
+        self.assertEqual("%3a", self.zmirror.guess_colon_from_slash("%2f"))
