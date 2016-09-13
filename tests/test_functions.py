@@ -251,3 +251,15 @@ class TestFunctions(ZmirrorTestBase):
         self.zmirror.possible_charsets = None
         self.zmirror.cchardet_available = False
         self.assertIsNone(self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8")))
+
+    def test__get_group(self):
+        import re
+        m = re.match(r"""(?P<non_exist>\d+)?(?P<dog>dog)""", "dog")
+        self.assertEqual("", self.zmirror.get_group("non_exist", m))
+        self.assertEqual("", self.zmirror.get_group("cat", m))
+        self.assertEqual("dog", self.zmirror.get_group("dog", m))
+
+        m = re.match(r"""(?P<non_exist>\d+)?(?P<dog>dog)""", "cat")
+        self.assertEqual("", self.zmirror.get_group("non_exist", m))
+        self.assertEqual("", self.zmirror.get_group("cat", m))
+        self.assertEqual("", self.zmirror.get_group("dog", m))
