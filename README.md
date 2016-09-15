@@ -226,3 +226,4 @@ Well, zmirror is (currently) better than them.
 @restran [web-proxy](https://github.com/restran/web-proxy)  
 @isayme [isayme/google](https://github.com/isayme/google)  
 @zjuyxy [google200](https://github.com/zjuyxy/google200)  
+@cuber [ngx_http_google_filter_module](https://github.com/cuber/ngx_http_google_filter_module)  
