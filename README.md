@@ -217,3 +217,12 @@ All detects and rewrites are completely AUTOMATICALLY
 Or, if you are family with flask, you can see flask's official deploy tutorial:  
     [http://flask.pocoo.org/docs/0.11/deploying/](http://flask.pocoo.org/docs/0.11/deploying/)  
 
+## Similar Projects
+
+Well, zmirror is (currently) better than them.  
+
+@zxq2233 [youtube-php-mirroring](https://github.com/zxq2233/youtube-php-mirroring)  
+@greatfire [website-mirror-by-proxy](https://github.com/greatfire/website-mirror-by-proxy)  
+@restran [web-proxy](https://github.com/restran/web-proxy)  
+@isayme [isayme/google](https://github.com/isayme/google)  
+@zjuyxy [google200](https://github.com/zjuyxy/google200)  
