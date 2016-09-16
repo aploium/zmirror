@@ -2,6 +2,11 @@
 import threading
 import requests
 
+try:
+    from typing import Dict
+except:  # pragma: no cover
+    pass
+
 
 class ZmirrorThreadLocal(threading.local):
     """
@@ -24,6 +29,7 @@ class ZmirrorThreadLocal(threading.local):
          .cache_control       远程服务器响应的cache_control内容
          .remote_response     远程服务器的响应, requests.Response
          .cacheable           是否可以对这一响应应用缓存 (CDN也算是缓存的一种, 依赖于此选项)
+         .extra_resp_headers  发送给浏览器的额外响应头 (比如一些调试信息什么的)
          .streamed_our_response  是否以 stream 模式向浏览器传送这个响应
          .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
@@ -46,6 +52,7 @@ class ZmirrorThreadLocal(threading.local):
         self.remote_response = None
         self.streamed_our_response = False
         self.cacheable = False
+        self.extra_resp_headers = {}
         self.temporary_domain_alias = []
 
         self.__dict__.update(kw)
@@ -68,10 +75,20 @@ class ZmirrorThreadLocal(threading.local):
             "remote_response": self.remote_response,
             "streamed_our_response": self.streamed_our_response,
             "cacheable": self.cacheable,
+            "extra_resp_headers": self.extra_resp_headers,
         }
 
     def __str__(self):
         return str(self.dump())
+
+    def set_extra_resp_header(self, name, value):
+        """
+        :type name: str
+        :type value: str
+        """
+        h = self.extra_resp_headers
+        h[name] = value
+        self.extra_resp_headers = h
 
     @property
     def start_time(self):
@@ -268,7 +285,7 @@ class ZmirrorThreadLocal(threading.local):
 
     @property
     def cacheable(self):
-        """是否把我们的响应放入本地缓存
+        """响应能否被缓存
         :rtype: bool"""
         return self.__getattribute__("_cacheable")
 
@@ -276,3 +293,14 @@ class ZmirrorThreadLocal(threading.local):
     def cacheable(self, value):
         """:type value: bool"""
         self.__setattr__("_cacheable", value)
+
+    @property
+    def extra_resp_headers(self):
+        """额外的响应头
+        :rtype: Dict[str, str]"""
+        return self.__getattribute__("_extra_resp_headers")
+
+    @extra_resp_headers.setter
+    def extra_resp_headers(self, value):
+        """:type value: Dict[str, str]"""
+        self.__setattr__("_extra_resp_headers", value)
