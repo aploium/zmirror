@@ -1715,36 +1715,34 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
 
 def request_remote_site_and_parse():
-    try:  # send request to remote server
-        data = request.get_data()  # type: bytes
+    # send request to remote server
+    data = request.get_data()  # type: bytes
 
-        # 尝试解析浏览器传入的是否是文本内容
-        encoding = encoding_detect(data)
-        # 如果是文本内容, 则解码并进行重写, 如果是二进制内容, 则跳过
-        if encoding is not None:
-            try:
-                _data = data.decode(encoding=encoding)  # type: str
-            except:
-                pass
-            else:
-                data = client_requests_text_rewrite(_data)  # type: str
-                data = data.encode(encoding=encoding)  # type: bytes
+    # 尝试解析浏览器传入的是否是文本内容
+    encoding = encoding_detect(data)
+    # 如果是文本内容, 则解码并进行重写, 如果是二进制内容, 则跳过
+    if encoding is not None:
+        try:
+            _data = data.decode(encoding=encoding)  # type: str
+        except:
+            pass
+        else:
+            data = client_requests_text_rewrite(_data)  # type: str
+            data = data.encode(encoding=encoding)  # type: bytes
 
-        if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
-            infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
+    if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
+        infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
 
-        # server's request won't follow 301 or 302 redirection
-        parse.remote_response, req_time_headers = send_request(
-            parse.remote_url,
-            method=request.method,
-            headers=parse.client_header,
-            data=data,  # client_requests_bin_rewrite(request.get_data()),
-        )
-        if parse.remote_response.url != parse.remote_url:
-            warnprint('requests\'s remote url', parse.remote_response.url
-                      , 'does no equals our rewrited url', parse.remote_url)
-    except:  # pragma: no cover
-        return generate_error_page(errormsg="Error occurs when requesting remote server", is_traceback=True)
+    # server's request won't follow 301 or 302 redirection
+    parse.remote_response, req_time_headers = send_request(
+        parse.remote_url,
+        method=request.method,
+        headers=parse.client_header,
+        data=data,  # client_requests_bin_rewrite(request.get_data()),
+    )
+    if parse.remote_response.url != parse.remote_url:
+        warnprint('requests\'s remote url', parse.remote_response.url
+                  , 'does no equals our rewrited url', parse.remote_url)
 
     # extract response's mime to thread local var
     parse.content_type = parse.remote_response.headers.get('Content-Type', '') \
