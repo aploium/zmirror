@@ -2180,7 +2180,7 @@ def zmirror_enter(input_path='/'):
         resp = main_function(input_path=input_path)
 
         # 加入额外的响应头
-        for name, value in parse.extra_resp_headers:
+        for name, value in parse.extra_resp_headers.items():
             resp.headers.set(name, value)
 
     except:  # pragma: no cover
