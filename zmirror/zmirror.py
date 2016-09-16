@@ -1846,7 +1846,7 @@ def guess_correct_domain(data, depth=7):
     current_domain = parse.remote_domain
     sp = list(urlsplit(parse.remote_url))
 
-    for domain in recent_domains.values()[:depth]:
+    for domain in recent_domains.keys()[:depth]:
         if domain == current_domain:
             continue
 
