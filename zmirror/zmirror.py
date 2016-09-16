@@ -1863,7 +1863,7 @@ def guess_correct_domain(data, depth=7):
         except:  # pragma: no cover
             continue
 
-        if resp.status_code in (404, 500):
+        if resp.status_code in (400, 404, 500):
             # 失败
             dbgprint("Domain guess failed:", domain, v=4)
             continue
@@ -1911,7 +1911,7 @@ def request_remote_site_and_parse():
         warnprint('requests\'s remote url', parse.remote_response.url,
                   'does no equals our rewrited url', parse.remote_url)
 
-    if parse.remote_response.status_code in (404, 500):
+    if parse.remote_response.status_code in (400, 404, 500):
         # 猜测url所对应的正确域名
         dbgprint("Domain guessing for", request.url)
         result = guess_correct_domain(data)
