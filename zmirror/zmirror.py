@@ -1009,7 +1009,7 @@ def try_get_cached_response(url, client_header=None):
             # dbgprint('FileCacheHit-200')
             resp = cache.get_obj(url)
             assert isinstance(resp, Response)
-            resp.headers.set('x-zmirror-cache', 'FileHit')
+            parse.set_extra_resp_header('x-zmirror-cache', 'FileHit')
             return resp
     else:
         return None
@@ -1759,11 +1759,11 @@ def generate_our_response(req_time_headers=0):
 
     if parse.start_time is not None and not parse.streamed_our_response:
         # remote request time should be excluded when calculating total time
-        resp.headers.add('X-Header-Req-Time', "%.4f" % req_time_headers)
-        resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
-        resp.headers.add('X-Compute-Time', "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
+        parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % req_time_headers)
+        parse.set_extra_resp_header('X-Body-Req-Time', "%.4f" % req_time_body)
+        parse.set_extra_resp_header('X-Compute-Time', "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
 
-    resp.headers.add('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
+    parse.set_extra_resp_header('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
 
     if developer_dump_all_traffics and not parse.streamed_our_response:
         dump_zmirror_snapshot("traffic")
@@ -1964,7 +1964,7 @@ def posterior_request_redirect():
         if resp is not None:
             dbgprint('CacheHit,Return')
             if parse.start_time is not None:
-                resp.headers.set('X-Compute-Time', "%.4f" % (process_time() - parse.start_time))
+                parse.set_extra_resp_header('X-Compute-Time', "%.4f" % (process_time() - parse.start_time))
             return resp
 
 
@@ -2178,6 +2178,11 @@ def zmirror_enter(input_path='/'):
     """入口函数的壳, 只是包了一层异常处理, 实际是 main_function() """
     try:
         resp = main_function(input_path=input_path)
+
+        # 加入额外的响应头
+        for name, value in parse.extra_resp_headers:
+            resp.headers.set(name, value)
+
     except:  # pragma: no cover
         return generate_error_page(is_traceback=True)
     else:
