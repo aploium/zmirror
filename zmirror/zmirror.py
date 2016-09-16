@@ -95,6 +95,7 @@ if unittest_mode:
 
     importlib.reload(importlib.import_module("zmirror.utils"))
 from .utils import *
+from .lru_dict import LRUDict
 
 if local_cache_enable:
     try:
@@ -177,14 +178,13 @@ task_scheduler = sched.scheduler(time, sleep)
 # ########## Handle dependencies #############
 
 # 记录一个URL的一些信息, 以及是否应该使用CDN
+url_to_use_cdn = LRUDict(40960)
 # 结构例子见下
-url_to_use_cdn = {
-    "www.fake-domain.com/folder/foo/bar.png":
-        [True,  # Should this url use CDN
-         "image/png",  # MIME
-         17031,  # size, if size too small, will not redirect to cdn
-         ]
-}
+url_to_use_cdn["www.fake-domain.com/folder/foo/bar.png"] = [
+    True,  # Should this url use CDN
+    "image/png",  # MIME
+    17031,  # size, if size too small, will not redirect to cdn
+]
 
 if not enable_stream_content_transfer:
     steamed_mime_keywords = ()
@@ -230,10 +230,6 @@ else:
     must_verify_cookies = False
 if not human_ip_verification_whitelist_from_cookies and not enable_custom_access_cookie_generate_and_verify:
     must_verify_cookies = False
-
-url_rewrite_cache = {}  # an VERY Stupid and VERY Experimental Cache
-url_rewrite_cache_hit_count = 0
-url_rewrite_cache_miss_count = 0
 
 # ########### PreCompile Regex ###############
 
@@ -464,12 +460,6 @@ def cache_clean(is_force_flush=False):
     :param is_force_flush: 是否无视有效期, 清理所有缓存
     :type is_force_flush: bool
     """
-    global url_rewrite_cache, cache, url_to_use_cdn, connection_pool_per_domain
-    if len(url_rewrite_cache) > 16384:
-        url_rewrite_cache.clear()
-    if len(url_to_use_cdn) > 40960:
-        url_to_use_cdn.clear()
-
     if enable_keep_alive_per_domain:
         connection_pool_per_domain.clear()
 
@@ -478,6 +468,7 @@ def cache_clean(is_force_flush=False):
 
     if is_force_flush:
         try:
+            url_to_use_cdn.clear()
             is_domain_match_glob_whitelist.cache_clear()
             is_content_type_streamed.cache_clear()
             extract_real_url_from_embedded_url.cache_clear()
@@ -1026,13 +1017,6 @@ def regex_url_reassemble(match_obj):
     :rtype: str
     """
 
-    if match_obj.group() in url_rewrite_cache:  # Read Cache
-        global url_rewrite_cache_hit_count
-        url_rewrite_cache_hit_count += 1
-        return url_rewrite_cache[match_obj.group()]
-    else:
-        global url_rewrite_cache_miss_count
-
     prefix = get_group('prefix', match_obj)
     quote_left = get_group('quote_left', match_obj)
     quote_right = get_group('quote_right', match_obj)
@@ -1113,11 +1097,9 @@ def regex_url_reassemble(match_obj):
     # dbgprint('final_path', path, v=5)
     if enable_static_resource_CDN and url_no_scheme in url_to_use_cdn:
         # dbgprint('We Know:', url_no_scheme, v=5)
-        _we_knew_this_url = True
         _this_url_mime_cdn = url_to_use_cdn[url_no_scheme][0]
     else:
         # dbgprint('We Don\'t know:', url_no_scheme,v=5)
-        _we_knew_this_url = False
         _this_url_mime_cdn = False
 
     # Apply CDN domain
@@ -1157,10 +1139,6 @@ def regex_url_reassemble(match_obj):
     # path: /extdomains/target.com/foo/bar.js?love=luciaZ
     reassembled = prefix + quote_left + reassembled_url + quote_right + get_group('right_suffix', match_obj)
 
-    # write the adv rewrite cache only if we disable CDN or we known whether this url is CDN-able
-    if not enable_static_resource_CDN or _we_knew_this_url:
-        url_rewrite_cache[match_obj.group()] = reassembled  # write cache
-        url_rewrite_cache_miss_count += 1
     # dbgprint('---------------------', v=5)
     return reassembled
 
@@ -2037,8 +2015,6 @@ def zmirror_status():
     output += strx('\n\ncurrent_threads_number', threading.active_count())
     # output += strx('\nclient_requests_text_rewrite', client_requests_text_rewrite.cache_info())
     # output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
-    output += strx('\n\nurl_rewriter_cache len: ', len(url_rewrite_cache),
-                   'Hits:', url_rewrite_cache_hit_count, 'Misses:', url_rewrite_cache_miss_count)
 
     output += strx('\n----------------\n')
     output += strx('\ndomain_alias_to_target_set', domain_alias_to_target_set)
