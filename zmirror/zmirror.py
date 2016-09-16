@@ -237,6 +237,12 @@ if enable_keep_alive_per_domain:
 recent_domains = LRUDict(100)
 recent_domains[target_domain] = True
 
+# domain_guess 中已知的记录
+# 对于已知的记录, 会使用307重定向
+domain_guess_cache = LRUDict(1000)
+# 格式如下:
+domain_guess_cache[("example.com", "/path/no/query/string")] = "target.domain.com"
+
 # ########### PreCompile Regex ###############
 
 # 冒号(colon :)可能的值为:
@@ -1825,7 +1831,7 @@ def parse_remote_response():
                 dbgprint('CDN disabled for:', parse.url_no_scheme)
 
 
-def guess_correct_domain(data, depth=7):  # TODO: 记录下每次正确的尝试, 并在以后遇到相同的请求时直接取出对应的域名
+def guess_correct_domain(data, depth=7):
     """
     猜测url所对应的正确域名
     当响应码为 404 或 500 时, 很有可能是把请求发送到了错误的域名
@@ -1876,6 +1882,10 @@ def guess_correct_domain(data, depth=7):  # TODO: 记录下每次正确的尝试
             )
             dbgprint("Shadow rewriting, from", request.url, "to", rewrited_url)
             request.url = rewrited_url
+
+            # 写入缓存
+            domain_guess_cache[(current_domain, request.path)] = domain
+
             request.path = urlsplit(rewrited_url).path
 
             # 重新生成 parse 变量
@@ -2043,6 +2053,17 @@ def posterior_request_redirect():
             if parse.start_time is not None:
                 parse.set_extra_resp_header('X-Compute-Time', "%.4f" % (process_time() - parse.start_time))
             return resp
+
+    # 基于 domain_guess 的重定向
+    if (parse.remote_domain, request.path) in domain_guess_cache:
+        domain = domain_guess_cache[(parse.remote_domain, request.path)]
+        rewrited_url = encode_mirror_url(  # 重写后的url
+            parse.remote_path_query,
+            remote_domain=domain,
+            is_scheme=True,
+        )
+        dbgprint("Redirect via domain_guess_cache, from", request.url, "to", rewrited_url)
+        return redirect(rewrited_url, code=307)
 
 
 def assemble_parse():
