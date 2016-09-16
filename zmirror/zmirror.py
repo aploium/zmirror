@@ -232,7 +232,7 @@ if enable_keep_alive_per_domain:
     for _domain in allowed_domains_set:
         connection_pool_per_domain[_domain] = {'session': requests.Session(), }
 
-# 记录最近请求的100个域名, 用于 black_hole_detect
+# 记录最近请求的100个域名, 用于 domain_guess
 # 虽然是个 dict, 但是只有key有用, value是无用的, 暂时全部赋值为 True
 recent_domains = LRUDict(100)
 recent_domains[target_domain] = True
@@ -578,6 +578,11 @@ def add_temporary_domain_alias(source_domain, replaced_to_domain):
              parse.temporary_domain_alias)
 
 
+def is_external_domain(domain):
+    """是否是外部域名"""
+    return domain not in domains_alias_to_target_domain
+
+
 # noinspection PyGlobalUndefined
 def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     """
@@ -711,14 +716,17 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
     if domain not in allowed_domains_set:
         return raw_url_or_path
 
-    if _raw_url_or_path[:2] == '//':
-        our_prefix = '//' + my_host_name
-    elif is_scheme or (sp.scheme and is_scheme is not False):
-        our_prefix = myurl_prefix
+    if is_scheme is not False:
+        if _raw_url_or_path[:2] == '//':
+            our_prefix = '//' + my_host_name
+        elif is_scheme or sp.scheme:
+            our_prefix = myurl_prefix
+        else:
+            our_prefix = ''
     else:
         our_prefix = ''
 
-    if domain not in domain_alias_to_target_set:
+    if is_external_domain(domain):
         middle_part = '/extdomains/' + domain
     else:
         middle_part = ''
@@ -1761,7 +1769,8 @@ def generate_our_response(req_time_headers=0):
         # remote request time should be excluded when calculating total time
         parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % req_time_headers)
         parse.set_extra_resp_header('X-Body-Req-Time', "%.4f" % req_time_body)
-        parse.set_extra_resp_header('X-Compute-Time', "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
+        parse.set_extra_resp_header('X-Compute-Time',
+                                    "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
 
     parse.set_extra_resp_header('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
 
@@ -1816,6 +1825,68 @@ def parse_remote_response():
                 dbgprint('CDN disabled for:', parse.url_no_scheme)
 
 
+def guess_correct_domain(data, depth=7):  # TODO: 记录下每次正确的尝试, 并在以后遇到相同的请求时直接取出对应的域名
+    """
+    猜测url所对应的正确域名
+    当响应码为 404 或 500 时, 很有可能是把请求发送到了错误的域名
+    而应该被发送到的正确域名, 很有可能在最近几次请求的域名中
+    本函数会尝试最近使用的域名, 如果其中有出现响应码为 200 的, 那么就认为这条url对应这个域名
+    相当于发生了一次隐式url重写
+
+    * 本函数很可能会改写 parse 与 request
+
+    :rtype: Union[Tuple[Response, float], None]
+    """
+
+    current_domain = parse.remote_domain
+    sp = list(urlsplit(parse.remote_url))
+
+    for domain in recent_domains.values()[:depth]:
+        if domain == current_domain:
+            continue
+
+        sp[1] = domain  # 设置域名
+
+        try:
+            # 尝试发送请求, 允许请求失败
+            resp, req_time_headers = send_request(
+                urlunsplit(sp),
+                method=request.method,
+                headers=parse.client_header,
+                data=data,
+            )
+        except:  # pragma: no cover
+            continue
+
+        if resp.status_code in (404, 500):
+            # 失败
+            dbgprint("Domain guess failed:", domain, v=4)
+            continue
+        else:
+            # 成功找到
+            dbgprint("domain guess successful, from", current_domain, "to", domain)
+
+            parse.set_extra_resp_header("X-Domain-Guess", domain)
+
+            # 隐式重写域名
+            rewrited_url = encode_mirror_url(  # 重写后的url
+                parse.remote_path_query,
+                remote_domain=domain,
+                is_scheme=True,
+            )
+            dbgprint("Shadow rewriting, from", request.url, "to", rewrited_url)
+            request.url = rewrited_url
+            request.path = urlsplit(rewrited_url).path
+
+            # 重新生成 parse 变量
+            assemble_parse()
+
+            return resp, req_time_headers
+
+    else:  # 全部尝试失败 # pragma: no cover
+        return None
+
+
 def request_remote_site_and_parse():
     data = prepare_client_request_data()
 
@@ -1830,6 +1901,12 @@ def request_remote_site_and_parse():
     if parse.remote_response.url != parse.remote_url:
         warnprint('requests\'s remote url', parse.remote_response.url,
                   'does no equals our rewrited url', parse.remote_url)
+
+    if parse.remote_response.status_code in (404, 500):
+        # 猜测url所对应的正确域名
+        result = guess_correct_domain(data)
+        if result is not None:
+            parse.remote_response, req_time_headers = result
 
     parse_remote_response()
 
@@ -1968,6 +2045,22 @@ def posterior_request_redirect():
             return resp
 
 
+def assemble_parse():
+    """将用户请求的URL解析为对应的目标服务器URL"""
+    _temp = decode_mirror_url()
+    parse.remote_domain = _temp['domain']  # type: str
+    parse.is_https = _temp['is_https']  # type: bool
+    parse.remote_path = _temp['path']  # type: str
+    parse.remote_path_query = _temp['path_query']  # type: str
+    parse.is_external_domain = is_external_domain(parse.remote_domain)
+    parse.remote_url = assemble_remote_url()  # type: str
+    parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
+
+    recent_domains[parse.remote_domain] = True  # 写入最近使用的域名
+
+    dbgprint('after assemble_parse, url:', parse.remote_url, '   path_query:', parse.remote_path_query)
+
+
 def rewrite_client_request():
     """
     在这里的所有重写都只作用程序内部, 对请求者不可见
@@ -2005,16 +2098,7 @@ def rewrite_client_request():
     # 在 rewrite_client_request() 函数内部会更改 request.url
     # 所以此时需要重新解析一遍
     if has_been_rewrited:
-        _temp = decode_mirror_url()
-        parse.remote_domain = _temp['domain']  # type: str
-        parse.is_https = _temp['is_https']  # type: bool
-        parse.remote_path = _temp['path']  # type: str
-        parse.remote_path_query = _temp['path_query']  # type: str
-        parse.is_external_domain = parse.remote_domain not in domain_alias_to_target_set
-        parse.remote_url = assemble_remote_url()  # type: str
-        parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
-
-        recent_domains[parse.remote_domain] = True  # 写入最近使用的域名
+        assemble_parse()
 
     return has_been_rewrited
 
@@ -2217,17 +2301,7 @@ def main_function(input_path='/'):
     parse.start_time = process_time()  # to display compute time
 
     # 将用户请求的URL解析为对应的目标服务器URL
-    _temp = decode_mirror_url()
-    parse.remote_domain = _temp['domain']  # type: str
-    parse.is_https = _temp['is_https']  # type: bool
-    parse.remote_path = _temp['path']  # type: str
-    parse.remote_path_query = _temp['path_query']  # type: str
-    parse.is_external_domain = parse.remote_domain not in domain_alias_to_target_set
-    parse.remote_url = assemble_remote_url()  # type: str
-    parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
-    dbgprint('after extract, url:', parse.remote_url, '   path_query:', parse.remote_path_query)
-
-    recent_domains[parse.remote_domain] = True  # 写入最近使用的域名
+    assemble_parse()
 
     # 对用户请求进行检查和过滤
     # 不符合条件的请求(比如爬虫)将终止执行
