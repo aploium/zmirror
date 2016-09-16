@@ -1501,7 +1501,6 @@ def response_text_rewrite(resp_text):
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
     if url_custom_redirect_enable:
         for before_replace, after_replace in (plain_replace_domain_alias + parse.temporary_domain_alias):
-            dbgprint('plain_replace_domain_alias', before_replace, after_replace, v=4)
             resp_text = resp_text.replace(before_replace, after_replace)
 
     # v0.9.2+: advanced url rewrite engine
