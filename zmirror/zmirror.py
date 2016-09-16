@@ -162,29 +162,7 @@ allowed_remote_response_headers.update(custom_allowed_remote_headers)
 target_domain_root = extract_root_domain(target_domain)[0]  # type: str
 my_host_name_root = extract_root_domain(target_domain)[0]  # type: str
 
-# keep-alive的连接池, 每个域名保持一个keep-alive连接
-# 借用requests在同一session中, 自动保持keep-alive的特性
-connection_pool_per_domain = {}
-if enable_keep_alive_per_domain:
-    for _domain in allowed_domains_set:
-        connection_pool_per_domain[_domain] = {'session': requests.Session(), }
-
-# ## thread local var ##
-# 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
-parse = ZmirrorThreadLocal()
-
-# task_scheduler
-task_scheduler = sched.scheduler(time, sleep)
 # ########## Handle dependencies #############
-
-# 记录一个URL的一些信息, 以及是否应该使用CDN
-url_to_use_cdn = LRUDict(40960)
-# 结构例子见下
-url_to_use_cdn["www.fake-domain.com/folder/foo/bar.png"] = [
-    True,  # Should this url use CDN
-    "image/png",  # MIME
-    17031,  # size, if size too small, will not redirect to cdn
-]
 
 if not enable_stream_content_transfer:
     steamed_mime_keywords = ()
@@ -230,6 +208,34 @@ else:
     must_verify_cookies = False
 if not human_ip_verification_whitelist_from_cookies and not enable_custom_access_cookie_generate_and_verify:
     must_verify_cookies = False
+
+# ########### Global Variables ###############
+# 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
+parse = ZmirrorThreadLocal()
+
+# task_scheduler
+task_scheduler = sched.scheduler(time, sleep)
+
+# 记录一个URL的一些信息, 以及是否应该使用CDN
+url_to_use_cdn = LRUDict(40960)
+# 结构例子见下
+url_to_use_cdn["www.fake-domain.com/folder/foo/bar.png"] = [
+    True,  # Should this url use CDN
+    "image/png",  # MIME
+    17031,  # size, if size too small, will not redirect to cdn
+]
+
+# keep-alive的连接池, 每个域名保持一个keep-alive连接
+# 借用requests在同一session中, 自动保持keep-alive的特性
+connection_pool_per_domain = {}
+if enable_keep_alive_per_domain:
+    for _domain in allowed_domains_set:
+        connection_pool_per_domain[_domain] = {'session': requests.Session(), }
+
+# 记录最近请求的100个域名, 用于 black_hole_detect
+# 虽然是个 dict, 但是只有key有用, value是无用的, 暂时全部赋值为 True
+recent_domains = LRUDict(100)
+recent_domains[target_domain] = True
 
 # ########### PreCompile Regex ###############
 
@@ -1811,7 +1817,6 @@ def parse_remote_response():
 
 
 def request_remote_site_and_parse():
-
     data = prepare_client_request_data()
 
     # server's request won't follow 301 or 302 redirection
@@ -2008,6 +2013,8 @@ def rewrite_client_request():
         parse.is_external_domain = parse.remote_domain not in domain_alias_to_target_set
         parse.remote_url = assemble_remote_url()  # type: str
         parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
+
+        recent_domains[parse.remote_domain] = True  # 写入最近使用的域名
 
     return has_been_rewrited
 
@@ -2215,6 +2222,8 @@ def main_function(input_path='/'):
     parse.url_no_scheme = parse.remote_url[parse.remote_url.find('//') + 2:]  # type: str
     dbgprint('after extract, url:', parse.remote_url, '   path_query:', parse.remote_path_query)
 
+    recent_domains[parse.remote_domain] = True  # 写入最近使用的域名
+
     # 对用户请求进行检查和过滤
     # 不符合条件的请求(比如爬虫)将终止执行
     # 函数不会修改 parse
@@ -2233,7 +2242,6 @@ def main_function(input_path='/'):
     # 隐式重写只对 zmirror 内部生效, 对浏览器透明
     # 重写可能会修改 flask 的内置 request 变量
     # 可能会修改 parse
-
     has_been_rewrited = rewrite_client_request()
 
     if ssrf_check_layer_1():
