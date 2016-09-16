@@ -1914,6 +1914,7 @@ def request_remote_site_and_parse():
 
     if parse.remote_response.status_code in (404, 500):
         # 猜测url所对应的正确域名
+        dbgprint("Domain guessing for", request.url)
         result = guess_correct_domain(data)
         if result is not None:
             parse.remote_response, req_time_headers = result
