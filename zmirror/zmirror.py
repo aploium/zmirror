@@ -1714,8 +1714,11 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     return r, req_time
 
 
-def request_remote_site_and_parse():
-    # send request to remote server
+def prepare_client_request_data():
+    """
+    解析出浏览者发送过来的data, 如果是文本, 则进行重写
+    :rtype: byte
+    """
     data = request.get_data()  # type: bytes
 
     # 尝试解析浏览器传入的是否是文本内容
@@ -1733,17 +1736,39 @@ def request_remote_site_and_parse():
     if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
         infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
 
-    # server's request won't follow 301 or 302 redirection
-    parse.remote_response, req_time_headers = send_request(
-        parse.remote_url,
-        method=request.method,
-        headers=parse.client_header,
-        data=data,  # client_requests_bin_rewrite(request.get_data()),
-    )
-    if parse.remote_response.url != parse.remote_url:
-        warnprint('requests\'s remote url', parse.remote_response.url
-                  , 'does no equals our rewrited url', parse.remote_url)
+    return data
 
+
+def generate_our_response(req_time_headers=0):
+    """
+    生成我们的响应
+    :rtype: Response
+    """
+    # copy and parse remote response
+    resp, req_time_body = copy_response(is_streamed=parse.streamed_our_response)
+
+    # storge entire our server's response (headers included)
+    if local_cache_enable and parse.cacheable:
+        put_response_to_local_cache(parse.remote_url, resp, without_content=parse.streamed_our_response)
+
+    if parse.start_time is not None and not parse.streamed_our_response:
+        # remote request time should be excluded when calculating total time
+        resp.headers.add('X-Header-Req-Time', "%.4f" % req_time_headers)
+        resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
+        resp.headers.add('X-Compute-Time', "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
+
+    resp.headers.add('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
+
+    if developer_dump_all_traffics and not parse.streamed_our_response:
+        dump_zmirror_snapshot("traffic")
+
+    return resp
+
+
+def parse_remote_response():
+    """处理远程服务器的响应
+    :rtype: Response
+    """
     # extract response's mime to thread local var
     parse.content_type = parse.remote_response.headers.get('Content-Type', '') \
                          or parse.remote_response.headers.get('content-type', '')
@@ -1754,23 +1779,23 @@ def request_remote_site_and_parse():
         return generate_simple_resp_page(b'This site is just for static resources.', error_code=403)
 
     # is streamed
-    is_streamed = enable_stream_content_transfer and is_content_type_streamed(parse.content_type)
+    parse.streamed_our_response = enable_stream_content_transfer and is_content_type_streamed(parse.content_type)
 
     # extract cache control header, if not cache, we should disable local cache
     parse.cache_control = parse.remote_response.headers.get('Cache-Control', '') \
                           or parse.remote_response.headers.get('cache-control', '')
-    _response_no_cache = 'no-store' in parse.cache_control or 'must-revalidate' in parse.cache_control
+    parse.cacheable = 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
+                      and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200
 
     if verbose_level >= 4:
         dbgprint('Response Content-Type:', parse.content_type,
-                 'IsStreamed:', is_streamed,
-                 'is_no_cache:', _response_no_cache,
+                 'IsStreamed:', parse.streamed_our_response,
+                 'cacheable:', parse.cacheable,
                  'Line', current_line_number(), v=4)
 
     # add url's MIME info to record, for MIME-based CDN rewrite,
     #   next time we access this url, we would know it's mime
-    if enable_static_resource_CDN and not _response_no_cache \
-            and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200:
+    if enable_static_resource_CDN and parse.cacheable:
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
         if parse.url_no_scheme not in url_to_use_cdn:
@@ -1786,25 +1811,26 @@ def request_remote_site_and_parse():
             else:
                 dbgprint('CDN disabled for:', parse.url_no_scheme)
 
-    # copy and parse remote response
-    resp, req_time_body = copy_response(is_streamed=is_streamed)
 
-    # storge entire our server's response (headers included)
-    if local_cache_enable and not _response_no_cache:
-        put_response_to_local_cache(parse.remote_url, resp, without_content=is_streamed)
+def request_remote_site_and_parse():
 
-    if parse.start_time is not None and not is_streamed:
-        # remote request time should be excluded when calculating total time
-        resp.headers.add('X-Header-Req-Time', "%.4f" % req_time_headers)
-        resp.headers.add('X-Body-Req-Time', "%.4f" % req_time_body)
-        resp.headers.add('X-Compute-Time', "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
+    data = prepare_client_request_data()
 
-    resp.headers.add('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
+    # server's request won't follow 301 or 302 redirection
+    parse.remote_response, req_time_headers = send_request(
+        parse.remote_url,
+        method=request.method,
+        headers=parse.client_header,
+        data=data,
+    )
 
-    if developer_dump_all_traffics and not is_streamed:
-        dump_zmirror_snapshot("traffic")
+    if parse.remote_response.url != parse.remote_url:
+        warnprint('requests\'s remote url', parse.remote_response.url,
+                  'does no equals our rewrited url', parse.remote_url)
 
-    return resp
+    parse_remote_response()
+
+    return generate_our_response(req_time_headers=req_time_headers)
 
 
 def filter_client_request():

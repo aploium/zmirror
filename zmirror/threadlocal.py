@@ -23,6 +23,8 @@ class ZmirrorThreadLocal(threading.local):
          .mime                远程服务器响应的MIME, 比如 "text/html"
          .cache_control       远程服务器响应的cache_control内容
          .remote_response     远程服务器的响应, requests.Response
+         .cacheable           是否可以对这一响应应用缓存 (CDN也算是缓存的一种, 依赖于此选项)
+         .streamed_our_response  是否以 stream 模式向浏览器传送这个响应
          .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
     """
@@ -42,6 +44,8 @@ class ZmirrorThreadLocal(threading.local):
         self.mime = None
         self.cache_control = None
         self.remote_response = None
+        self.streamed_our_response = False
+        self.cacheable = False
         self.temporary_domain_alias = []
 
         self.__dict__.update(kw)
@@ -62,6 +66,8 @@ class ZmirrorThreadLocal(threading.local):
             "cache_control": self.cache_control,
             "temporary_domain_alias": self.temporary_domain_alias,
             "remote_response": self.remote_response,
+            "streamed_our_response": self.streamed_our_response,
+            "cacheable": self.cacheable,
         }
 
     def __str__(self):
@@ -248,3 +254,25 @@ class ZmirrorThreadLocal(threading.local):
     def temporary_domain_alias(self, value):
         """:type value: list"""
         self.__setattr__("_temporary_domain_alias", value)
+
+    @property
+    def streamed_our_response(self):
+        """我们的响应是否用 stream 模式传送
+        :rtype: bool"""
+        return self.__getattribute__("_streamed_our_response")
+
+    @streamed_our_response.setter
+    def streamed_our_response(self, value):
+        """:type value: bool"""
+        self.__setattr__("_streamed_our_response", value)
+
+    @property
+    def cacheable(self):
+        """是否把我们的响应放入本地缓存
+        :rtype: bool"""
+        return self.__getattribute__("_cacheable")
+
+    @cacheable.setter
+    def cacheable(self, value):
+        """:type value: bool"""
+        self.__setattr__("_cacheable", value)
