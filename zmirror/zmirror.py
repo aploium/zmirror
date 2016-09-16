@@ -1766,9 +1766,7 @@ def generate_our_response(req_time_headers=0):
 
 
 def parse_remote_response():
-    """处理远程服务器的响应
-    :rtype: Response
-    """
+    """处理远程服务器的响应"""
     # extract response's mime to thread local var
     parse.content_type = parse.remote_response.headers.get('Content-Type', '') \
                          or parse.remote_response.headers.get('content-type', '')
