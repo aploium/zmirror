@@ -2310,21 +2310,7 @@ def main_function(input_path='/'):
 
     # parse 类似于 flask 的 request, 是 zmirror 特有的一个 thread-local 变量
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
-    # 其各个变量的含义如下:
-    # parse.start_time          处理请求开始的时间, unix 时间戳
-    #      .remote_domain       当前请求对应的远程域名
-    #      .is_external_domain  远程域名是否是外部域名, 比如google镜像, www.gstatic.com 就是外部域名
-    #      .is_https            是否需要用https 来请求远程域名
-    #      .remote_url          远程服务器的url, 比如 https://google.com/search?q=233
-    #      .url_no_scheme       没有协议前缀的url,比如 google.com/search?q=233 通常在缓存中用
-    #      .remote_path_query   对应的远程path+query, 比如 /search?q=2333
-    #      .remote_path         对应的远程path,  比如 /search
-    #      .client_header       经过转换和重写以后的访问者请求头
-    #      .content_type        远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
-    #      .mime                远程服务器响应的MIME, 比如 "text/html"
-    #      .cache_control       远程服务器响应的cache_control内容
-    #      .remote_response     远程服务器的响应, requests.Response
-    #      .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
+    # 其各个变量的含义请看 zmirror.threadlocal.ZmirrorThreadLocal 中的说明
 
     parse.start_time = process_time()  # to display compute time
 
