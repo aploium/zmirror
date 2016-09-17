@@ -1,15 +1,16 @@
 # zmirror
-[![version](https://img.shields.io/badge/version-0.29.0-blue.svg)](https://github.com/aploium/zmirror)
-[![Build Status](https://travis-ci.org/aploium/zmirror.svg?branch=master)](https://travis-ci.org/aploium/zmirror)
-[![codecov](https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg)](https://codecov.io/gh/aploium/zmirror)
-[![Dependency Status](https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57addd5358ae9200345e108c)
-[![Gitter](https://badges.gitter.im/zmirror/zmirror.svg)](https://gitter.im/zmirror/zmirror?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)  
-  
+[![zmirror version](https://img.shields.io/badge/version-0.29.0-blue.svg)](https://github.com/aploium/zmirror)
+[![zmirror Build Status](https://travis-ci.org/aploium/zmirror.svg?branch=master)](https://travis-ci.org/aploium/zmirror)
+[![zmirror unittest coverage](https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg)](https://codecov.io/gh/aploium/zmirror)
+[![zmirror Dependency Status](https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57addd5358ae9200345e108c)  
+[![zmirror PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![zmirror Gitter](https://badges.gitter.im/zmirror/zmirror.svg)](https://gitter.im/zmirror/zmirror?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)  
+
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
 比如国内可以访问的Google镜像/中文维基镜像 请看`more_configs`文件夹下的配置文件  
 
-程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像  
+程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像 Facebook镜像  
   
 ## Demo
 * **Google** 
