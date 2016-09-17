@@ -1758,7 +1758,7 @@ def prepare_client_request_data():
     return data
 
 
-def generate_our_response(req_time_headers=0):
+def generate_our_response(req_time_headers=0.0):
     """
     生成我们的响应
     :rtype: Response
@@ -1903,7 +1903,11 @@ def guess_correct_domain(data, depth=7):
         return None
 
 
-def request_remote_site_and_parse():
+def request_remote_site():
+    """
+    请求远程服务器(high-level), 并在返回404/500时进行 domain_guess 尝试
+    :rtype: float
+    """
     data = prepare_client_request_data()
 
     # server's request won't follow 301 or 302 redirection
@@ -1925,9 +1929,7 @@ def request_remote_site_and_parse():
         if result is not None:
             parse.remote_response, req_time_headers = result
 
-    parse_remote_response()
-
-    return generate_our_response(req_time_headers=req_time_headers)
+    return req_time_headers
 
 
 def filter_client_request():
@@ -2349,7 +2351,11 @@ def main_function(input_path='/'):
     if r is not None:
         return r
 
-    resp = request_remote_site_and_parse()
+    req_time_headers = request_remote_site()
+
+    parse_remote_response()
+
+    resp = generate_our_response(req_time_headers=req_time_headers)
 
     dbgprint('-----EndRequest-----')
     return resp
