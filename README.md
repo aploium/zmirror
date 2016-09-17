@@ -70,12 +70,19 @@ Together with the program, provided several (almost) out-of-box configs
 
 ## Requirements Install and Usage
 
-### Requirements
-* python 3.4+
-* flask
-* request
+### Dependencies
+#### Required
+* Python 3.4/3.5/3.6+
+* [flask](http://flask.pocoo.org/)
+* [requests](http://python-requests.org/)
 
-Theoretically, any environment that can run python3.4+, can also run zmirror  
+#### Optional
+* [cChardet](https://github.com/PyYoshi/cChardet) 编码检测
+* [fastcache](https://github.com/pbrady/fastcache) C implementation of Python 3 lru_cache
+* [lru-dict](https://github.com/amitdev/lru-dict) A fast and memory efficient LRU dict for Python
+
+
+Theoretically, any environment that can run Python3.4+, can also run zmirror  
 Nginx was not officially tested, but it should work pretty well.  
 
 However, due to my limited time, zmirror was only fully tested in:  
@@ -94,9 +101,9 @@ However, due to my limited time, zmirror was only fully tested in:
 
 1. first, install python3  
     **Debian/Ubuntu**  `apt-get install python3`  
-    **Windows**   go to [python's homepage](https://www.python.org/downloads/) and download python3.5 (or newer)  
+    **Windows**   go to [python's homepage](https://www.python.org/downloads/) and download Python3.5 (or newer)  
 2. install or upgrade flask and requests `python3 -m pip install -U flask requests`  
-3. (recommended) `git clone https://github.com/aploium/zmirror` or download and unzip this package(not recommend).  
+3. `git clone https://github.com/aploium/zmirror`  
 4. **copy** the `config_default.py` to `config.py`  
 
     > **Warning: You should NEVER EVER modify the `config_default.py` itself**  
@@ -106,9 +113,9 @@ However, due to my limited time, zmirror was only fully tested in:
 
 5. Execute it: `python3 wsgi.py`  
 6. Open your browser and enter `http://127.0.0.1/`, you will see exactly the `www.kernel.org`, and you can click and browse around. everything of the `*.kernel.org` is withing the mirror.  
-7. please see the following [Setup an actual mirror] section  
+7. please see the following [Deploy](#deploy) section  
 
-#### Deploy an actual mirror
+#### Deploy
 
 请使用: [一键部署脚本](https://github.com/aploium/zmirror-onekey)  
 
@@ -117,10 +124,10 @@ However, due to my limited time, zmirror was only fully tested in:
 1. [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
 2. [在一台VPS部署多个zmirror镜像](https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F)  
 
+Or, if you are familiar with flask, you can see [flask's official deploy tutorial](http://flask.pocoo.org/docs/0.11/deploying/)  
 
 ### Upgrade
- - (for users of git) `cd YOUR_ZMIRROR_FOLDER` and `git pull`
- - (for users of plain zip download) re-download, unzip, and override all files
+ - `cd YOUR_ZMIRROR_FOLDER` and then `git pull`
 
     > **警告**  
     > 由于 v0.27 有很大的结构改动, 所以 v0.27 以内的 custom_func.py 如果有 `from zmirror import ` 语句  
@@ -174,21 +181,17 @@ However, due to my limited time, zmirror was only fully tested in:
 
 ## Issues Report
 
-欢迎发issues, 发issues找我聊天都欢迎.  
+非常欢迎发issues, 发issues找我聊天都欢迎.  
+对于Apache(教程部署的即为Apache), 程序的日志在 `/var/log/apache2/你自定义的日志文件名_error.log` 中    
 
 (以下只是可选步骤)  
-如果遇到Bug需要发issues, 请在`config.py`最下面加上这样两句话, 然后重现一遍问题  
-```python
-developer_dump_all_traffics = True  
-verbose_level = 4
-```
-这样程序会把所有流量dump到程序所在目录的`traffic`文件夹下, 发issues时请将所有程序log和所有dump文件打包发上来, 帮助我debug  
+### Report zmirror Internal Error
+当zmirror发生内部错误时(浏览器看到一个Internal Error页面), zmirror会把当前状态的快照保存到 `zmirror安装目录/error_dump/` 中  
+可以使用pickle来读取其中的dump文件.  
+如果存在对应的dump文件, 请在issues中附上  
 
-对于Apache(教程部署的即为Apache), 程序的日志在 `/var/log/apache2/你自定义的日志文件名.log` 中, 请将它也一并发上来  
-  
-_以下部分需要重写, 写的很乱_
-  
 ## Mirror A Website
+_本部分需要重写, 写的很乱, 也有点过时了_
 Mirror a website is very simple.  
 
 Just set the `target_domain` to it's domain, the `external_domains` to it's external domain and sub domains 
@@ -207,15 +210,8 @@ All detects and rewrites are completely AUTOMATICALLY
   
 ### CDN Support
   please see [使用七牛作为zmirror镜像的CDN](https://github.com/aploium/zmirror/wiki/%E4%BD%BF%E7%94%A8%E4%B8%83%E7%89%9B%E4%BD%9C%E4%B8%BAzmirror%E9%95%9C%E5%83%8F%E7%9A%84CDN)  
-  
 
-## Deploy To Server
-请使用[一键部署脚本](https://github.com/aploium/zmirror-onekey)  
-手动部署可以看 [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
-  
-  
-Or, if you are family with flask, you can see flask's official deploy tutorial:  
-    [http://flask.pocoo.org/docs/0.11/deploying/](http://flask.pocoo.org/docs/0.11/deploying/)  
+----------------------------------------------------
 
 ## Similar Projects
 
