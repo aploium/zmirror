@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8">
     <title>zmirror by aploium</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="0; url=https://github.com/aploium/zmirror">
+    <meta name="keywords" content="zmirror,镜像,Google镜像,Youtube镜像,Twitter镜像,维基镜像,Instagram镜像,Facebook镜像,反向代理,反代,Google反代">
+    <meta name="description" itemprop="description" content="zmirror: 创建任意网站全功能镜像的反向代理, Google镜像无缝整合中文维基镜像, twitter镜像/维基镜像完整支持, youtube镜像"/>
     <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
@@ -14,8 +17,7 @@
       <h1 class="project-name">zmirror</h1>
       <h2 class="project-tagline">reverse http proxy designed to automatically and completely mirror a website (eg. google/twitter/youtube)</h2>
       <a href="https://github.com/aploium/zmirror" class="btn">View on GitHub</a>
-      <a href="https://github.com/aploium/zmirror/zipball/master" class="btn">Download .zip</a>
-      <a href="https://github.com/aploium/zmirror/tarball/master" class="btn">Download .tar.gz</a>
+      <a href="https://github.com/aploium/zmirror-onekey" class="btn">Onekey deploy</a>
     </section>
 
     <section class="main-content">
@@ -23,10 +25,10 @@
 <a id="zmirror" class="anchor" href="#zmirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>zmirror</h1>
 
 <p><a href="https://github.com/aploium/zmirror"><img src="https://img.shields.io/badge/version-0.29.0-blue.svg" alt="version"></a>
-<a href="https://travis-ci.org/aploium/zmirror"><img src="https://travis-ci.org/aploium/zmirror.svg?branch=master" alt="Build Status"></a>
-<a href="https://codecov.io/gh/aploium/zmirror"><img src="https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg" alt="codecov"></a>
-<a href="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c"><img src="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square" alt="Dependency Status"></a>
-<a href="https://gitter.im/zmirror/zmirror?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge"><img src="https://badges.gitter.im/zmirror/zmirror.svg" alt="Gitter"></a>  </p>
+<a href="https://travis-ci.org/aploium/zmirror" rel="external nofollow" target="_blank"><img src="https://travis-ci.org/aploium/zmirror.svg?branch=master" alt="Build Status"></a>
+<a href="https://codecov.io/gh/aploium/zmirror" rel="external nofollow" target="_blank"><img src="https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg" alt="codecov"></a>
+<a href="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c" rel="external nofollow" target="_blank"><img src="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square" alt="Dependency Status"></a>
+<a href="https://gitter.im/zmirror/zmirror?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge" rel="external nofollow" target="_blank"><img src="https://badges.gitter.im/zmirror/zmirror.svg" alt="Gitter"></a>  </p>
 
 <p>an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN<br>
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持<br>
@@ -43,19 +45,19 @@
 
 <ul>
 <li>
-<em>PC &amp; Mobile</em>   <a href="https://g.zmirrordemo.com">https://g.zmirrordemo.com</a><br>
+<em>PC &amp; Mobile</em>   <a href="https://g.zmirrordemo.com" rel="external nofollow" target="_blank">https://g.zmirrordemo.com</a><br>
 google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况<br>
 当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取<br>
 其余demo未启用CDN<br>
 </li>
 <li>
-<em>Scholar</em>   <a href="https://g.zmirrordemo.com/scholar">https://g.zmirrordemo.com/scholar</a><br>
+<em>Scholar</em>   <a href="https://g.zmirrordemo.com/scholar" rel="external nofollow" target="_blank">https://g.zmirrordemo.com/scholar</a><br>
 </li>
 <li>
-<em>Image</em>   <a href="https://g.zmirrordemo.com/imghp">https://g.zmirrordemo.com/imghp</a><br>
+<em>Image</em>   <a href="https://g.zmirrordemo.com/imghp" rel="external nofollow" target="_blank">https://g.zmirrordemo.com/imghp</a><br>
 </li>
 <li>
-<em>中文维基</em>  <a href="https://g.zmirrordemo.com/wiki">https://g.zmirrordemo.com/wiki</a><br>
+<em>中文维基</em>  <a href="https://g.zmirrordemo.com/wiki" rel="external nofollow" target="_blank">https://g.zmirrordemo.com/wiki</a><br>
 </li>
 </ul>
 </li>
@@ -64,10 +66,10 @@ google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查�
 
 <ul>
 <li>
-<em>PC Only</em>  <a href="https://ytb-pc.zmirrordemo.com">https://ytb-pc.zmirrordemo.com</a><br>
+<em>PC Only</em>  <a href="https://ytb-pc.zmirrordemo.com" rel="external nofollow" target="_blank">https://ytb-pc.zmirrordemo.com</a><br>
 </li>
 <li>
-<em>Mobile Only</em> <a href="https://ytb-mobile.zmirrordemo.com">https://ytb-mobile.zmirrordemo.com</a>
+<em>Mobile Only</em> <a href="https://ytb-mobile.zmirrordemo.com" rel="external nofollow" target="_blank">https://ytb-mobile.zmirrordemo.com</a>
 Youtube Mobile 不支持iOS</li>
 </ul>
 </li>
@@ -76,10 +78,10 @@ Youtube Mobile 不支持iOS</li>
 
 <ul>
 <li>
-<em>PC Only</em>  <a href="https://t-pc.zmirrordemo.com">https://t-pc.zmirrordemo.com</a><br>
+<em>PC Only</em>  <a href="https://t-pc.zmirrordemo.com" rel="external nofollow" target="_blank">https://t-pc.zmirrordemo.com</a><br>
 </li>
 <li>
-<em>Mobile Only</em>  <a href="https://t-mobile.zmirrordemo.com">https://t-mobile.zmirrordemo.com</a>
+<em>Mobile Only</em>  <a href="https://t-mobile.zmirrordemo.com" rel="external nofollow" target="_blank">https://t-mobile.zmirrordemo.com</a>
 </li>
 </ul>
 </li>
@@ -88,7 +90,7 @@ Youtube Mobile 不支持iOS</li>
 
 <ul>
 <li>
-<em>PC &amp; Mobile</em>  <a href="https://in.zmirrordemo.com">https://in.zmirrordemo.com</a><br>
+<em>PC &amp; Mobile</em>  <a href="https://in.zmirrordemo.com" rel="external nofollow" target="_blank">https://in.zmirrordemo.com</a><br>
 </li>
 </ul>
 </li>
@@ -97,7 +99,7 @@ Youtube Mobile 不支持iOS</li>
 
 <ul>
 <li>
-<em>PC Only</em>  <a href="https://fb.zmirrordemo.com">https://fb.zmirrordemo.com</a><br>
+<em>PC Only</em>  <a href="https://fb.zmirrordemo.com" rel="external nofollow" target="_blank">https://fb.zmirrordemo.com</a><br>
 功能不完整, 不支持手机.  最大的问题是当地址栏链接改变时不会自动刷新, 需要手动刷新<br>
 未来会写一个脚本, 当url改变后刷新页面<br>
 </li>
@@ -183,8 +185,8 @@ Google就会把真实的访问者当成是机器人.  </p></li>
 
 <ul>
 <li>Python 3.4/3.5/3.6+</li>
-<li><a href="http://flask.pocoo.org/">flask</a></li>
-<li><a href="http://python-requests.org/">requests</a></li>
+<li><a href="http://flask.pocoo.org/" rel="external nofollow" target="_blank">flask</a></li>
+<li><a href="http://python-requests.org/" rel="external nofollow" target="_blank">requests</a></li>
 </ul>
 
 <h4>
@@ -192,11 +194,11 @@ Google就会把真实的访问者当成是机器人.  </p></li>
 
 <ul>
 <li>
-<a href="https://github.com/PyYoshi/cChardet">cChardet</a> 编码检测</li>
+<a href="https://github.com/PyYoshi/cChardet" rel="external nofollow" target="_blank">cChardet</a> 编码检测</li>
 <li>
-<a href="https://github.com/pbrady/fastcache">fastcache</a> C implementation of Python 3 lru_cache</li>
+<a href="https://github.com/pbrady/fastcache" rel="external nofollow" target="_blank">fastcache</a> C implementation of Python 3 lru_cache</li>
 <li>
-<a href="https://github.com/amitdev/lru-dict">lru-dict</a> A fast and memory efficient LRU dict for Python</li>
+<a href="https://github.com/amitdev/lru-dict" rel="external nofollow" target="_blank">lru-dict</a> A fast and memory efficient LRU dict for Python</li>
 </ul>
 
 <p>Theoretically, any environment that can run Python3.4+, can also run zmirror<br>
@@ -223,7 +225,7 @@ windows10-x64 directly run
 <ol>
 <li>first, install python3<br>
 <strong>Debian/Ubuntu</strong>  <code>apt-get install python3</code><br>
-<strong>Windows</strong>   go to <a href="https://www.python.org/downloads/">python's homepage</a> and download Python3.5 (or newer)<br>
+<strong>Windows</strong>   go to <a href="https://www.python.org/downloads/" rel="external nofollow" target="_blank">python's homepage</a> and download Python3.5 (or newer)<br>
 </li>
 <li>install or upgrade flask and requests <code>python3 -m pip install -U flask requests</code><br>
 </li>
@@ -263,7 +265,7 @@ Settings in the <code>config.py</code> would override the default ones  </p>
 </li>
 </ol>
 
-<p>Or, if you are familiar with flask, you can see <a href="http://flask.pocoo.org/docs/0.11/deploying/">flask's official deploy tutorial</a>  </p>
+<p>Or, if you are familiar with flask, you can see <a href="http://flask.pocoo.org/docs/0.11/deploying/" rel="external nofollow" target="_blank">flask's official deploy tutorial</a>  </p>
 
 <h3>
 <a id="upgrade" class="anchor" href="#upgrade" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Upgrade</h3>
@@ -375,17 +377,15 @@ save and run, the program will do the other works!   </p>
 
 <p>Well, zmirror is (currently) better than them.  </p>
 
-<p><a href="https://github.com/zxq2233" class="user-mention">@zxq2233</a> <a href="https://github.com/zxq2233/youtube-php-mirroring">youtube-php-mirroring</a><br>
-<a href="https://github.com/greatfire" class="user-mention">@greatfire</a> <a href="https://github.com/greatfire/website-mirror-by-proxy">website-mirror-by-proxy</a><br>
-<a href="https://github.com/restran" class="user-mention">@restran</a> <a href="https://github.com/restran/web-proxy">web-proxy</a><br>
-<a href="https://github.com/isayme" class="user-mention">@isayme</a> <a href="https://github.com/isayme/google">isayme/google</a><br>
-<a href="https://github.com/zjuyxy" class="user-mention">@zjuyxy</a> <a href="https://github.com/zjuyxy/google200">google200</a><br>
-<a href="https://github.com/cuber" class="user-mention">@cuber</a> <a href="https://github.com/cuber/ngx_http_google_filter_module">ngx_http_google_filter_module</a>  </p>
+<p><a href="https://github.com/zxq2233" class="user-mention" rel="external nofollow" target="_blank">@zxq2233</a> <a href="https://github.com/zxq2233/youtube-php-mirroring">youtube-php-mirroring</a><br>
+<a href="https://github.com/greatfire" class="user-mention" rel="external nofollow" target="_blank">@greatfire</a> <a href="https://github.com/greatfire/website-mirror-by-proxy">website-mirror-by-proxy</a><br>
+<a href="https://github.com/restran" class="user-mention" rel="external nofollow" target="_blank">@restran</a> <a href="https://github.com/restran/web-proxy">web-proxy</a><br>
+<a href="https://github.com/isayme" class="user-mention" rel="external nofollow" target="_blank">@isayme</a> <a href="https://github.com/isayme/google">isayme/google</a><br>
+<a href="https://github.com/zjuyxy" class="user-mention" rel="external nofollow" target="_blank">@zjuyxy</a> <a href="https://github.com/zjuyxy/google200">google200</a><br>
+<a href="https://github.com/cuber" class="user-mention" rel="external nofollow" target="_blank">@cuber</a> <a href="https://github.com/cuber/ngx_http_google_filter_module">ngx_http_google_filter_module</a>  </p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/aploium/zmirror">zmirror</a> is maintained by <a href="https://github.com/aploium">aploium</a>.</span>
-
-        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
       </footer>
 
     </section>
