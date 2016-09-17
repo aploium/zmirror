@@ -1,401 +1,395 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
+<html lang="en-us">
+  <head>
     <meta charset="UTF-8">
-    <title>zmirror | For full-function website mirror</title>
+    <title>zmirror by aploium</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="keywords" content="zmirror,镜像,Google镜像,Youtube镜像,Twitter镜像,维基镜像,Instagram镜像,反向代理">
-    <meta name="description" itemprop="description" content="zmirror: 创建任意网站全功能镜像的反向代理, Google镜像无缝整合中文维基镜像, twitter镜像/维基镜像完整支持, youtube镜像除不支持iOS外完整"/>
     <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
     <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
-</head>
-<body>
-<section class="page-header">
-    <h1 class="project-name">zmirror</h1>
-    <h2 class="project-tagline">reverse http proxy designed to automatically and completely mirror a website (eg.
-        google/twitter/youtube)</h2>
-    <a href="https://github.com/aploium/zmirror" class="btn">View zmirror on GitHub</a>
-    <a href="https://github.com/aploium/zmirror-onekey" class="btn" rel="nofollow" target="_blank">One-key deploy</a>
-</section>
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">zmirror</h1>
+      <h2 class="project-tagline">reverse http proxy designed to automatically and completely mirror a website (eg. google/twitter/youtube)</h2>
+      <a href="https://github.com/aploium/zmirror" class="btn">View on GitHub</a>
+      <a href="https://github.com/aploium/zmirror/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/aploium/zmirror/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
 
-<section class="main-content">
-    <h1>
-        <a id="zmirror" class="anchor" href="#zmirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>zmirror
-    </h1>
+    <section class="main-content">
+      <h1>
+<a id="zmirror" class="anchor" href="#zmirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>zmirror</h1>
 
-    <p>
-        <a href="https://github.com/aploium/zmirror"><img src="https://img.shields.io/badge/version-0.29.0-blue.svg" alt="version"></a>
-        <a href="https://travis-ci.org/aploium/zmirror" rel="nofollow" target="_blank"><img src="https://travis-ci.org/aploium/zmirror.svg?branch=master" alt="Build Status"></a>
-        <a href="https://codecov.io/gh/aploium/zmirror" rel="nofollow" target="_blank"><img src="https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg" alt="codecov"></a>
-        <a href="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c" rel="nofollow" target="_blank"><img src="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square" alt="Dependency Status"></a>
-        <a href="https://gitter.im/zmirror/zmirror?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge" rel="nofollow" target="_blank"><img src="https://badges.gitter.im/zmirror/zmirror.svg" alt="Gitter"></a>
-    </p>
+<p><a href="https://github.com/aploium/zmirror"><img src="https://img.shields.io/badge/version-0.29.0-blue.svg" alt="version"></a>
+<a href="https://travis-ci.org/aploium/zmirror"><img src="https://travis-ci.org/aploium/zmirror.svg?branch=master" alt="Build Status"></a>
+<a href="https://codecov.io/gh/aploium/zmirror"><img src="https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg" alt="codecov"></a>
+<a href="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c"><img src="https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square" alt="Dependency Status"></a>
+<a href="https://gitter.im/zmirror/zmirror?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge"><img src="https://badges.gitter.im/zmirror/zmirror.svg" alt="Gitter"></a>  </p>
 
-    <p>an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache
-        and CDN<br>
-        一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持<br>
-        比如国内可以访问的Google镜像/中文维基镜像 请看<code>more_configs</code>文件夹下的配置文件 </p>
+<p>an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN<br>
+一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持<br>
+比如国内可以访问的Google镜像/中文维基镜像 请看<code>more_configs</code>文件夹下的配置文件  </p>
 
-    <p>程序附了几个配置文件: Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像 </p>
+<p>程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像  </p>
 
-    <h2>
-        <a id="demo" class="anchor" href="#demo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Demo
-    </h2>
+<h2>
+<a id="demo" class="anchor" href="#demo" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Demo</h2>
 
-    <ul>
-        <li>
-            <p><strong>Google</strong></p>
+<ul>
+<li>
+<p><strong>Google</strong> </p>
 
-            <ul>
-                <li>
-                    <em>PC &amp; Mobile</em> <a href="https://g.zmirrordemo.com" rel="nofollow" target="_blank">https://g.zmirrordemo.com</a><br>
-                    google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况<br>
-                    当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取<br>
-                    其余demo未启用CDN<br>
-                </li>
-                <li>
-                    <em>Scholar</em>
-                    <a href="https://g.zmirrordemo.com/scholar" rel="nofollow" target="_blank">https://g.zmirrordemo.com/scholar</a><br>
-                </li>
-                <li>
-                    <em>Image</em> <a href="https://g.zmirrordemo.com/imghp" rel="nofollow" target="_blank">https://g.zmirrordemo.com/imghp</a><br>
-                </li>
-                <li>
-                    <em>中文维基</em> <a href="https://g.zmirrordemo.com/wiki" rel="nofollow" target="_blank">https://g.zmirrordemo.com/wiki</a><br>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <p><strong>Youtube</strong></p>
+<ul>
+<li>
+<em>PC &amp; Mobile</em>   <a href="https://g.zmirrordemo.com">https://g.zmirrordemo.com</a><br>
+google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况<br>
+当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取<br>
+其余demo未启用CDN<br>
+</li>
+<li>
+<em>Scholar</em>   <a href="https://g.zmirrordemo.com/scholar">https://g.zmirrordemo.com/scholar</a><br>
+</li>
+<li>
+<em>Image</em>   <a href="https://g.zmirrordemo.com/imghp">https://g.zmirrordemo.com/imghp</a><br>
+</li>
+<li>
+<em>中文维基</em>  <a href="https://g.zmirrordemo.com/wiki">https://g.zmirrordemo.com/wiki</a><br>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Youtube</strong>  </p>
 
-            <ul>
-                <li>
-                    <em>PC Only</em> <a href="https://ytb-pc.zmirrordemo.com" rel="nofollow" target="_blank">https://ytb-pc.zmirrordemo.com</a><br>
-                </li>
-                <li>
-                    <em>Mobile Only</em>
-                    <a href="https://ytb-mobile.zmirrordemo.com" rel="nofollow" target="_blank">https://ytb-mobile.zmirrordemo.com</a>
-                    Youtube Mobile 不支持iOS
-                </li>
-            </ul>
-        </li>
-        <li>
-            <strong>Twitter</strong>
+<ul>
+<li>
+<em>PC Only</em>  <a href="https://ytb-pc.zmirrordemo.com">https://ytb-pc.zmirrordemo.com</a><br>
+</li>
+<li>
+<em>Mobile Only</em> <a href="https://ytb-mobile.zmirrordemo.com">https://ytb-mobile.zmirrordemo.com</a>
+Youtube Mobile 不支持iOS</li>
+</ul>
+</li>
+<li>
+<strong>Twitter</strong>
 
-            <ul>
-                <li>
-                    <em>PC Only</em> <a href="https://t-pc.zmirrordemo.com" rel="nofollow" target="_blank">https://t-pc.zmirrordemo.com</a><br>
-                </li>
-                <li>
-                    <em>Mobile Only</em> <a href="https://t-mobile.zmirrordemo.com" rel="nofollow" target="_blank">https://t-mobile.zmirrordemo.com</a>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <strong>Instagram</strong>
+<ul>
+<li>
+<em>PC Only</em>  <a href="https://t-pc.zmirrordemo.com">https://t-pc.zmirrordemo.com</a><br>
+</li>
+<li>
+<em>Mobile Only</em>  <a href="https://t-mobile.zmirrordemo.com">https://t-mobile.zmirrordemo.com</a>
+</li>
+</ul>
+</li>
+<li>
+<strong>Instagram</strong>
 
-            <ul>
-                <li>
-                    <em>PC &amp; Mobile</em> <a href="https://in.zmirrordemo.com" rel="nofollow" target="_blank">https://in.zmirrordemo.com</a><br>
-                </li>
-            </ul>
-        </li>
-    </ul>
+<ul>
+<li>
+<em>PC &amp; Mobile</em>  <a href="https://in.zmirrordemo.com">https://in.zmirrordemo.com</a><br>
+</li>
+</ul>
+</li>
+<li>
+<strong>Facebook</strong>
 
-    <h2>
-        <a id="screenshot" class="anchor" href="#screenshot" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Screenshot
-    </h2>
+<ul>
+<li>
+<em>PC Only</em>  <a href="https://fb.zmirrordemo.com">https://fb.zmirrordemo.com</a><br>
+功能不完整, 不支持手机.  最大的问题是当地址栏链接改变时不会自动刷新, 需要手动刷新<br>
+未来会写一个脚本, 当url改变后刷新页面<br>
+</li>
+</ul>
+</li>
+</ul>
 
-    <p>Screenshots are here: <a href="https://github.com/aploium/zmirror/wiki/Screenshots" rel="nofollow" target="_blank">wiki-screenshots</a></p>
+<h2>
+<a id="screenshot" class="anchor" href="#screenshot" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Screenshot</h2>
 
-    <h2>
-        <a id="一键部署脚本" class="anchor" href="#%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2%E8%84%9A%E6%9C%AC" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>一键部署脚本
-    </h2>
+<p>Screenshots are here: <a href="https://github.com/aploium/zmirror/wiki/Screenshots">wiki-screenshots</a>  </p>
 
-    <p><a href="https://github.com/aploium/zmirror-onekey" rel="nofollow" target="_blank">https://github.com/aploium/zmirror-onekey</a></p>
+<h2>
+<a id="一键部署脚本" class="anchor" href="#%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2%E8%84%9A%E6%9C%AC" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>一键部署脚本</h2>
 
-    <h2>
-        <a id="out-of-box-configs" class="anchor" href="#out-of-box-configs" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Out-of-box
-        configs</h2>
+<p><a href="https://github.com/aploium/zmirror-onekey">https://github.com/aploium/zmirror-onekey</a>  </p>
 
-    <p>Together with the program, provided several (almost) out-of-box configs </p>
+<h2>
+<a id="out-of-box-configs" class="anchor" href="#out-of-box-configs" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Out-of-box configs</h2>
 
-    <ul>
-        <li>
-            <p><strong>Google镜像</strong> (整合<strong>中文维基镜像</strong>)</p>
+<p>Together with the program, provided several (almost) out-of-box configs  </p>
 
-            <ul>
-                <li>同时支持PC/手机</li>
-                <li>google搜索与中文维基百科无缝结合</li>
-                <li>大部分功能完全正常: google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...</li>
-                <li>以下服务部分可用: gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)</li>
-                <li>目前暂时无法做到完美的登陆, 登录才可使用的功能无效</li>
-                <li>
-                    <p>不会被Google Ban掉 </p>
+<ul>
+<li>
+<p><strong>Google镜像</strong> (整合<strong>中文维基镜像</strong>)</p>
 
-                    <ul>
-                        <li><p>传统的Nginx反代镜像方案, 时间长了会被Google Ban掉, 或者弹图片验证码,<br>
-                            这是由于Nginx反代镜像非常简陋, 用户的许多请求无法被正确发回到Google服务器,<br>
-                            Google就会把真实的访问者当成是机器人. </p></li>
-                        <li><p>而zmirror比较完善, 用户的请求能全部发回到Google服务器, 不会被当成机器人 </p></li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <p><strong>twitter镜像</strong></p>
+<ul>
+<li>同时支持PC/手机</li>
+<li>google搜索与中文维基百科无缝结合</li>
+<li>大部分功能完全正常: google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...</li>
+<li>以下服务部分可用: gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)</li>
+<li>目前暂时无法做到完美的登陆, 登录才可使用的功能无效</li>
+<li>
+<p>不会被Google Ban掉  </p>
 
-            <ul>
-                <li>支持PC站/手机 (两者需要以不同的域名部署, 详见配置)<br>
-                </li>
-                <li>几乎所有功能完整可用, 大部分视频可以播放<br>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <strong>instagram镜像</strong><br>
+<ul>
+<li><p>传统的Nginx反代镜像方案, 时间长了会被Google Ban掉, 或者弹图片验证码,<br>
+这是由于Nginx反代镜像非常简陋, 用户的许多请求无法被正确发回到Google服务器,<br>
+Google就会把真实的访问者当成是机器人.  </p></li>
+<li><p>而zmirror比较完善, 用户的请求能全部发回到Google服务器, 不会被当成机器人  </p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>twitter镜像</strong></p>
 
-            <ul>
-                <li>所有功能完整可用, 包括视频<br>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <strong>Youtube镜像</strong><br>
+<ul>
+<li>支持PC站/手机  (两者需要以不同的域名部署, 详见配置)<br>
+</li>
+<li>几乎所有功能完整可用, 大部分视频可以播放<br>
+</li>
+</ul>
+</li>
+<li>
+<strong>instagram镜像</strong><br>
 
-            <ul>
-                <li>支持PC站/手机 (两者需要以不同的域名部署, 详见配置)</li>
-                <li>视频播放、高清支持</li>
-                <li>登陆支持、字幕支持</li>
-                <li>小视频上传支持</li>
-            </ul>
-        </li>
-    </ul>
+<ul>
+<li>所有功能完整可用, 包括视频<br>
+</li>
+</ul>
+</li>
+<li>
+<strong>Youtube镜像</strong><br>
 
-    <h2>
-        <a id="requirements-install-and-usage" class="anchor" href="#requirements-install-and-usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements
-        Install and Usage</h2>
+<ul>
+<li>支持PC站/手机  (两者需要以不同的域名部署, 详见配置)</li>
+<li>视频播放、高清支持</li>
+<li>登陆支持、字幕支持</li>
+<li>小视频上传支持</li>
+</ul>
+</li>
+</ul>
 
-    <h3>
-        <a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements
-    </h3>
+<h2>
+<a id="requirements-install-and-usage" class="anchor" href="#requirements-install-and-usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Requirements Install and Usage</h2>
 
-    <ul>
-        <li>python 3.4+</li>
-        <li>flask</li>
-        <li>request</li>
-    </ul>
+<h3>
+<a id="dependencies" class="anchor" href="#dependencies" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Dependencies</h3>
 
-    <p>Theoretically, any environment that can run python3.4+, can also run zmirror<br>
-        Nginx was not officially tested, but it should work pretty well. </p>
+<h4>
+<a id="required" class="anchor" href="#required" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Required</h4>
 
-    <p>However, due to my limited time, zmirror was only fully tested in: </p>
+<ul>
+<li>Python 3.4/3.5/3.6+</li>
+<li><a href="http://flask.pocoo.org/">flask</a></li>
+<li><a href="http://python-requests.org/">requests</a></li>
+</ul>
 
-    <pre><code>Ubuntu14.04-x86_64 Apache2.4 wsgi python3.4
+<h4>
+<a id="optional" class="anchor" href="#optional" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Optional</h4>
+
+<ul>
+<li>
+<a href="https://github.com/PyYoshi/cChardet">cChardet</a> 编码检测</li>
+<li>
+<a href="https://github.com/pbrady/fastcache">fastcache</a> C implementation of Python 3 lru_cache</li>
+<li>
+<a href="https://github.com/amitdev/lru-dict">lru-dict</a> A fast and memory efficient LRU dict for Python</li>
+</ul>
+
+<p>Theoretically, any environment that can run Python3.4+, can also run zmirror<br>
+Nginx was not officially tested, but it should work pretty well.  </p>
+
+<p>However, due to my limited time, zmirror was only fully tested in:  </p>
+
+<pre><code>Ubuntu14.04-x86_64 Apache2.4 wsgi python3.4
 Ubuntu16.04-x86_64 Apache2.4 wsgi python3.5
 windows10-x64 Apache2.4 wsgi python3.5-x64
 
 Ubuntu14.04-x86_64 directly run (I mean, just execute python3 wsgi.py)
-windows10-x64 directly run
+windows10-x64 directly run 
 </code></pre>
 
-    <h3>
-        <a id="installation-and-helloworld" class="anchor" href="#installation-and-helloworld" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation
-        and helloworld</h3>
+<h3>
+<a id="installation-and-helloworld" class="anchor" href="#installation-and-helloworld" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation and helloworld</h3>
 
-    <blockquote>
-        <p>This tutorial is mainly for your <em>localhost</em> demo test<br>
-            If you want to deploy it to server, please complete the <em>localhost</em> demo first </p>
-    </blockquote>
+<blockquote>
+<p>This tutorial is mainly for your <em>localhost</em> demo test<br>
+ If you want to deploy it to server, please complete the <em>localhost</em> demo first  </p>
+</blockquote>
 
-    <ol>
-        <li>first, install python3<br>
-            <strong>Debian/Ubuntu</strong> <code>apt-get install python3</code><br>
-            <strong>CentOS/RHEL</strong> <code>yum install python3</code><br>
-            <strong>Windows</strong> go to <a href="https://www.python.org/downloads/" rel="nofollow" target="_blank">python's homepage</a> and
-            download python3.5 (or newer)<br>
-        </li>
-        <li>install or upgrade flask and requests <code>python3 -m pip install -U flask requests</code><br>
-        </li>
-        <li>(recommended) <code>git clone https://github.com/aploium/zmirror</code> or download and unzip this
-            package(not recommend).<br>
-        </li>
-        <li>
-            <p><strong>copy</strong> the <code>config_default.py</code> to <code>config.py</code></p>
+<ol>
+<li>first, install python3<br>
+<strong>Debian/Ubuntu</strong>  <code>apt-get install python3</code><br>
+<strong>Windows</strong>   go to <a href="https://www.python.org/downloads/">python's homepage</a> and download Python3.5 (or newer)<br>
+</li>
+<li>install or upgrade flask and requests <code>python3 -m pip install -U flask requests</code><br>
+</li>
+<li>
+<code>git clone https://github.com/aploium/zmirror</code><br>
+</li>
+<li>
+<p><strong>copy</strong> the <code>config_default.py</code> to <code>config.py</code>  </p>
 
-            <blockquote>
-                <p><strong>Warning: You should NEVER EVER modify the <code>config_default.py</code> itself</strong><br>
-                    Please edit the <code>config.py</code> instead of <code>config_default.py</code><br>
-                    Unless your are developer.<br>
-                    Settings in the <code>config.py</code> would override the default ones </p>
-            </blockquote>
-        </li>
-        <li><p>Execute it: <code>python3 wsgi.py</code></p></li>
-        <li>Open your browser and enter <code>http://127.0.0.1/</code>, you will see exactly the
-            <code>www.kernel.org</code>, and you can click and browse around. everything of the
-            <code>*.kernel.org</code> is withing the mirror.<br>
-        </li>
-        <li>please see the following [Setup an actual mirror] section<br>
-        </li>
-    </ol>
+<blockquote>
+<p><strong>Warning: You should NEVER EVER modify the <code>config_default.py</code> itself</strong><br>
+Please edit the <code>config.py</code> instead of <code>config_default.py</code><br>
+Unless your are developer.<br>
+Settings in the <code>config.py</code> would override the default ones  </p>
+</blockquote>
+</li>
+<li><p>Execute it: <code>python3 wsgi.py</code>  </p></li>
+<li>Open your browser and enter <code>http://127.0.0.1/</code>, you will see exactly the <code>www.kernel.org</code>, and you can click and browse around. everything of the <code>*.kernel.org</code> is withing the mirror.<br>
+</li>
+<li>please see the following <a href="#deploy">Deploy</a> section<br>
+</li>
+</ol>
 
-    <h4>
-        <a id="deploy-an-actual-mirror" class="anchor" href="#deploy-an-actual-mirror" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy
-        an actual mirror</h4>
+<h4>
+<a id="deploy" class="anchor" href="#deploy" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy</h4>
 
-    <p>请使用: <a href="https://github.com/aploium/zmirror-onekey" rel="nofollow" target="_blank">一键部署脚本</a></p>
+<p>请使用: <a href="https://github.com/aploium/zmirror-onekey">一键部署脚本</a>  </p>
 
-    <p>若希望手工部署, 可以看以下教程: </p>
+<p>若希望手工部署, 可以看以下教程:  </p>
 
-    <ol>
-        <li>
-            <a href="https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F" rel="nofollow" target="_blank">部署支持HTTPS和HTTP/2的zmirror镜像</a><br>
-        </li>
-        <li>
-            <a href="https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F" rel="nofollow" target="_blank">在一台VPS部署多个zmirror镜像</a><br>
-        </li>
-    </ol>
+<ol>
+<li>
+<a href="https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F">部署支持HTTPS和HTTP/2的zmirror镜像</a><br>
+</li>
+<li>
+<a href="https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F">在一台VPS部署多个zmirror镜像</a><br>
+</li>
+</ol>
 
-    <h3>
-        <a id="upgrade" class="anchor" href="#upgrade" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Upgrade
-    </h3>
+<p>Or, if you are familiar with flask, you can see <a href="http://flask.pocoo.org/docs/0.11/deploying/">flask's official deploy tutorial</a>  </p>
 
-    <ul>
-        <li>(for users of git) <code>cd YOUR_ZMIRROR_FOLDER</code> and <code>git pull</code>
-        </li>
-        <li>(for users of plain zip download) re-download, unzip, and override all files</li>
-    </ul>
+<h3>
+<a id="upgrade" class="anchor" href="#upgrade" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Upgrade</h3>
 
-    <h2>
-        <a id="feature" class="anchor" href="#feature" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Feature
-    </h2>
+<ul>
+<li>
+<p><code>cd YOUR_ZMIRROR_FOLDER</code> and then <code>git pull</code></p>
 
-    <ol>
-        <li><p>Completely mirror, provide some (almost) out-of-box configs<br>
-            创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站<br>
-            提供几个(几乎)开箱即用的网站镜像配置文件 </p></li>
-        <li><p>Mirror ANY website, highly compatible<br>
-            非常高的兼容性和通用性, 可以镜像 <em>任意</em> 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整<br>
-            并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站<br>
-            <em>现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进</em></p></li>
-        <li><p>(MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high
-            latency)<br>
-            (基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用) </p></li>
-        <li><p>CDN Support, hot statistic resource can serve by CDN, dramatically increase speed<br>
-            CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时) </p></li>
-        <li><p>Easy to config and deploy, highly automatic<br>
-            非常容易配置和部署, 镜像一个网站只需要添加它的域名即可 </p></li>
-        <li><p>Access control(IP, user-agent), visitor verification(question answer, or custom verification
-            function)<br>
-            访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数) </p></li>
-        <li><p>Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled
-            correctly<br>
-            自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理 </p></li>
-        <li><p>Stream content support (audio/video)<br>
-            流媒体支持(视频/音频) </p></li>
-        <li>
-            <p>Production ready.<br>
-                程序已经经受住了生产环境的考验 </p>
+<blockquote>
+<p><strong>警告</strong><br>
+由于 v0.27 有很大的结构改动, 所以 v0.27 以内的 custom_func.py 如果有 <code>from zmirror import</code> 语句<br>
+将无法在 v0.27 以后的版本工作<br>
+解决办法是将 custom_func.py 中的 <code>from zmirror import</code> 修改为<br>
+<code>from zmirror.zmirror import</code> 其他不需要改变<br>
+若使用自带配置文件, 则只有Youtube和Twitter受影响  </p>
+</blockquote>
+</li>
+</ul>
 
-            <pre><code>使用的服务器均为 256M OpenVZ VPS
-Google:
+<h2>
+<a id="feature" class="anchor" href="#feature" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Feature</h2>
+
+<ol>
+<li><p>Completely mirror, provide some (almost) out-of-box configs<br>
+创建非常完整的镜像, 既支持古老的网站(比如内网网站), 也支持巨型的现代化的网站<br>
+提供几个(几乎)开箱即用的网站镜像配置文件  </p></li>
+<li><p>Mirror ANY website, highly compatible<br>
+非常高的兼容性和通用性, 可以镜像 <em>任意</em> 网站, 而不只是Google/Wiki/twitter/instagram, 而且功能都非常完整<br>
+并且能很好地适应对现代化的、逻辑复杂、功能庞大的网站<br>
+<em>现在还在开发阶段, 虽然所有网站的绝大部分功能都可以开箱即用, 但是某些网站的某些功能仍然不完整, 正在不断改进</em>  </p></li>
+<li><p>(MIME-based) Local statistic file cache support (especially useful if we have low bandwidth or high latency)<br>
+(基于MIME)本地静态文件缓存支持(当镜像服务器与被镜像服务器之间带宽很小或延迟很大时非常有用)  </p></li>
+<li><p>CDN Support, hot statistic resource can serve by CDN, dramatically increase speed<br>
+CDN支持. 让热门静态资源走CDN, 极大提高用户访问速度(特别是使用国内CDN, 而镜像服务器在国外时)  </p></li>
+<li><p>Easy to config and deploy, highly automatic<br>
+非常容易配置和部署, 镜像一个网站只需要添加它的域名即可  </p></li>
+<li><p>Access control(IP, user-agent), visitor verification(question answer, or custom verification function)<br>
+访问控制(IP, user-agent)与用户验证(回答问题, 也支持写自定义的验证函数)  </p></li>
+<li><p>Automatically rewrite JSON/javascript/html/css, even dynamically generated url can ALSO be handled correctly<br>
+自动重写JSON/javascript/html/css中链接, 甚至即使是动态生成的链接, 都能被正确处理  </p></li>
+<li><p>Stream content support (audio/video)<br>
+流媒体支持(视频/音频)  </p></li>
+<li>
+<p>Production ready.<br>
+程序已经经受住了生产环境的考验  </p>
+
+<pre><code>使用的服务器均为 256M OpenVZ VPS
+Google:  
     单台服务器
-    日6kPV, 峰值每小时740PV
-    峰值时段CPU占用小于10%
-Youtube:
-    1台主服务器+8台视频服务器
-    日1wPV, 峰值每小时754PV
-    日发送流量178GB
-    高峰时段1080P流畅
+    日6kPV, 峰值每小时740PV  
+    峰值时段CPU占用小于10%  
+Youtube:  
+    1台主服务器+8台视频服务器  
+    日1wPV, 峰值每小时754PV  
+    日发送流量178GB  
+    高峰时段1080P流畅  
 </code></pre>
-        </li>
-    </ol>
+</li>
+</ol>
 
-    <h2>
-        <a id="issues-report" class="anchor" href="#issues-report" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Issues
-        Report</h2>
+<h2>
+<a id="issues-report" class="anchor" href="#issues-report" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Issues Report</h2>
 
-    <p>欢迎发issues, 发issues找我聊天都欢迎. </p>
+<p>非常欢迎发issues, 发issues找我聊天都欢迎.<br>
+对于Apache(教程部署的即为Apache), 程序的日志在 <code>/var/log/apache2/你自定义的日志文件名_error.log</code> 中    </p>
 
-    <p>(以下只是可选步骤)<br>
-        如果遇到Bug需要发issues, 请在<code>config.py</code>最下面加上这样两句话, 然后重现一遍问题 </p>
+<p>(以下只是可选步骤)  </p>
 
-    <div class="highlight highlight-source-python"><pre>developer_dump_all_traffics <span class="pl-k">=</span> <span class="pl-c1">True</span>
-verbose_level <span class="pl-k">=</span> <span class="pl-c1">4</span></pre>
-    </div>
+<h3>
+<a id="report-zmirror-internal-error" class="anchor" href="#report-zmirror-internal-error" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Report zmirror Internal Error</h3>
 
-    <p>这样程序会把所有流量dump到程序所在目录的<code>traffic</code>文件夹下, 发issues时请将所有程序log和所有dump文件打包发上来, 帮助我debug </p>
+<p>当zmirror发生内部错误时(浏览器看到一个Internal Error页面), zmirror会把当前状态的快照保存到 <code>zmirror安装目录/error_dump/</code> 中<br>
+可以使用pickle来读取其中的dump文件.<br>
+如果存在对应的dump文件, 请在issues中附上  </p>
 
-    <p>对于Apache(教程部署的即为Apache), 程序的日志在 <code>/var/log/apache2/你自定义的日志文件名.log</code> 中, 请将它也一并发上来 </p>
+<h2>
+<a id="mirror-a-website" class="anchor" href="#mirror-a-website" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Mirror A Website</h2>
 
-    <p><em>以下部分需要重写, 写的很乱</em></p>
+<p><em>本部分需要重写, 写的很乱, 也有点过时了</em>
+Mirror a website is very simple.  </p>
 
-    <h2>
-        <a id="mirror-a-website" class="anchor" href="#mirror-a-website" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Mirror
-        A Website</h2>
+<p>Just set the <code>target_domain</code> to it's domain, the <code>external_domains</code> to it's external domain and sub domains 
+such as static resource domains (If it has)<br>
+save and run, the program will do the other works!   </p>
 
-    <p>Mirror a website is very simple. </p>
+<p>All detects and rewrites are completely AUTOMATICALLY  </p>
 
-    <p>Just set the <code>target_domain</code> to it's domain, the <code>external_domains</code> to it's external domain
-        and sub domains
-        such as static resource domains (If it has)<br>
-        save and run, the program will do the other works! </p>
+<p><code>tips:</code> you can find a website's external domains by using the developer tools of your browser, it will log all network traffics for you  </p>
 
-    <p>All detects and rewrites are completely AUTOMATICALLY </p>
+<h2>
+<a id="performance-enhance" class="anchor" href="#performance-enhance" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Performance Enhance</h2>
 
-    <p><code>tips:</code> you can find a website's external domains by using the developer tools of your browser, it
-        will log all network traffics for you </p>
+<h3>
+<a id="local-cache" class="anchor" href="#local-cache" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Local Cache</h3>
 
-    <h2>
-        <a id="performance-enhance" class="anchor" href="#performance-enhance" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Performance
-        Enhance</h2>
+<p>Local file cache (along with 304 support) is implanted and enabled by default<br>
+  If cache hits, you will see an <code>x-zmirror-cache: FileHit</code> in the response header.<br>
+  Local cache will be deleted and cleaned once program exit.  </p>
 
-    <h3>
-        <a id="local-cache" class="anchor" href="#local-cache" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Local
-        Cache</h3>
+<h3>
+<a id="cdn-support" class="anchor" href="#cdn-support" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CDN Support</h3>
 
-    <p>Local file cache (along with 304 support) is implanted and enabled by default<br>
-        If cache hits, you will see an <code>x-zmirror-cache: FileHit</code> in the response header.<br>
-        Local cache will be deleted and cleaned once program exit. </p>
+<p>please see <a href="https://github.com/aploium/zmirror/wiki/%E4%BD%BF%E7%94%A8%E4%B8%83%E7%89%9B%E4%BD%9C%E4%B8%BAzmirror%E9%95%9C%E5%83%8F%E7%9A%84CDN">使用七牛作为zmirror镜像的CDN</a>  </p>
 
-    <h3>
-        <a id="cdn-support" class="anchor" href="#cdn-support" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>CDN
-        Support</h3>
+<hr>
 
-    <p>If you have an CDN service (like qiniu(七牛), cloudflare, etc..), you are able to storge static resource in CDN
-        domains.<br>
-        CDN will dramatically increase your clients' access speed if you have many of them </p>
+<h2>
+<a id="similar-projects" class="anchor" href="#similar-projects" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Similar Projects</h2>
 
-    <p>Please config your CDN service's "source site" or "源站"(chinese) to your domain (same as the front my_host_name).
-        And then add the CDN domain to the config <code>CDN_domains</code> section. Program support many CDN
-        domains.<br>
-        Oh, don't forget to turn <code>enable_static_resource_CDN</code> to True (case sensitive) </p>
+<p>Well, zmirror is (currently) better than them.  </p>
 
-    <p>And, as you think, CDN rewrite is also completely automatically.<br>
-        Only static resource (url ended with .jpg/.js/.css/etc..) would be cached to CDN. </p>
+<p><a href="https://github.com/zxq2233" class="user-mention">@zxq2233</a> <a href="https://github.com/zxq2233/youtube-php-mirroring">youtube-php-mirroring</a><br>
+<a href="https://github.com/greatfire" class="user-mention">@greatfire</a> <a href="https://github.com/greatfire/website-mirror-by-proxy">website-mirror-by-proxy</a><br>
+<a href="https://github.com/restran" class="user-mention">@restran</a> <a href="https://github.com/restran/web-proxy">web-proxy</a><br>
+<a href="https://github.com/isayme" class="user-mention">@isayme</a> <a href="https://github.com/isayme/google">isayme/google</a><br>
+<a href="https://github.com/zjuyxy" class="user-mention">@zjuyxy</a> <a href="https://github.com/zjuyxy/google200">google200</a><br>
+<a href="https://github.com/cuber" class="user-mention">@cuber</a> <a href="https://github.com/cuber/ngx_http_google_filter_module">ngx_http_google_filter_module</a>  </p>
 
-    <p>If your CDN storge your file permanently (like qiniu), you can disable local cache to save space, but if your CDN
-        is temporarily storge (like cloudflare), please keep local cache enabled.</p>
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/aploium/zmirror">zmirror</a> is maintained by <a href="https://github.com/aploium">aploium</a>.</span>
 
-    <h2>
-        <a id="deploy-to-server" class="anchor" href="#deploy-to-server" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploy
-        To Server</h2>
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
 
-    <p>请看这篇教程
-        <a href="https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F" rel="nofollow" target="_blank">部署支持HTTPS和HTTP/2的zmirror镜像</a>
-    </p>
+    </section>
 
-    <p>Or, if you are family with flask, you can see flask's official deploy tutorial:<br>
-        <a href="http://flask.pocoo.org/docs/0.11/deploying/" rel="nofollow" target="_blank">http://flask.pocoo.org/docs/0.11/deploying/</a></p>
-
-    <footer class="site-footer">
-        <span class="site-footer-owner"><a href="https://github.com/aploium/zmirror">zmirror</a> is maintained by <a href="https://github.com/aploium" rel="nofollow" target="_blank">aploium</a>.</span>
-    </footer>
-
-</section>
-
-
-</body>
+  
+  </body>
 </html>
