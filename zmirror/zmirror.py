@@ -1887,7 +1887,7 @@ def guess_correct_domain(data, depth=7):
 
         # 写log
         try:
-            with open("domain_guess.log", "a", encoding="utf-8") as fw:
+            with open(zmirror_root("domain_guess.log"), "a", encoding="utf-8") as fw:
                 fw.write("{}\t{}\t{}\t-->\t{}\n".format(datetime.now(), current_domain, request.path, domain))
         except:  # pragma: no cover
             pass
