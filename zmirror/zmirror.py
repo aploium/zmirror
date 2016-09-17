@@ -1867,30 +1867,37 @@ def guess_correct_domain(data, depth=7):
             # 失败
             dbgprint("Domain guess failed:", domain, v=4)
             continue
-        else:
-            # 成功找到
-            dbgprint("domain guess successful, from", current_domain, "to", domain)
 
-            parse.set_extra_resp_header("X-Domain-Guess", domain)
+        # 成功找到
+        dbgprint("domain guess successful, from", current_domain, "to", domain)
 
-            # 隐式重写域名
-            rewrited_url = encode_mirror_url(  # 重写后的url
-                parse.remote_path_query,
-                remote_domain=domain,
-                is_scheme=True,
-            )
-            dbgprint("Shadow rewriting, from", request.url, "to", rewrited_url)
-            request.url = rewrited_url
+        parse.set_extra_resp_header("X-Domain-Guess", domain)
 
-            # 写入缓存
-            domain_guess_cache[(current_domain, request.path)] = domain
+        # 隐式重写域名
+        rewrited_url = encode_mirror_url(  # 重写后的url
+            parse.remote_path_query,
+            remote_domain=domain,
+            is_scheme=True,
+        )
+        dbgprint("Shadow rewriting, from", request.url, "to", rewrited_url)
+        request.url = rewrited_url
 
-            request.path = urlsplit(rewrited_url).path
+        # 写入缓存
+        domain_guess_cache[(current_domain, request.path)] = domain
 
-            # 重新生成 parse 变量
-            assemble_parse()
+        # 写log
+        try:
+            with open("domain_guess.log", "a", encoding="utf-8") as fw:
+                fw.write("{}\t{}\t{}\t-->\t{}\n".format(datetime.now(), current_domain, request.path, domain))
+        except:  # pragma: no cover
+            pass
 
-            return resp, req_time_headers
+        request.path = urlsplit(rewrited_url).path
+
+        # 重新生成 parse 变量
+        assemble_parse()
+
+        return resp, req_time_headers
 
     else:  # 全部尝试失败 # pragma: no cover
         return None
