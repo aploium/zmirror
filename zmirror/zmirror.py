@@ -1771,9 +1771,10 @@ def generate_our_response(req_time_headers=0.0):
     if local_cache_enable and parse.cacheable:
         put_response_to_local_cache(parse.remote_url, resp, without_content=parse.streamed_our_response)
 
+    if req_time_headers >= 0.00001:
+        parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % req_time_headers)
     if parse.start_time is not None and not parse.streamed_our_response:
         # remote request time should be excluded when calculating total time
-        parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % req_time_headers)
         parse.set_extra_resp_header('X-Body-Req-Time', "%.4f" % req_time_body)
         parse.set_extra_resp_header('X-Compute-Time',
                                     "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
