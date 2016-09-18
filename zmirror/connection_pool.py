@@ -32,11 +32,6 @@ pool = {
 }
 
 locked_session = threading.local()  # 这是一个 thread-local 变量
-# 这个变量用于存储本线程中被锁定的session
-# 当一个session被拿出来使用时, 会从 pool 中被移除, 加入到下面这个变量中
-# 当线程结束后, 需要调用 release_lock() 来释放被锁定的session
-#    此时被锁定的session会重新进入session池
-locked_session.session = []
 
 
 def get_session(domain):
@@ -48,6 +43,13 @@ def get_session(domain):
     """
     if domain not in pool:
         pool[domain] = []
+
+    if not hasattr(locked_session, "session"):
+        # 这个变量用于存储本线程中被锁定的session
+        # 当一个session被拿出来使用时, 会从 pool 中被移除, 加入到下面这个变量中
+        # 当线程结束后, 需要调用 release_lock() 来释放被锁定的session
+        #    此时被锁定的session会重新进入session池
+        locked_session.session = []
 
     if not pool[domain]:
         # 线程池空, 新建一个 session
