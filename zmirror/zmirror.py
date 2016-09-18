@@ -1799,8 +1799,7 @@ def parse_remote_response():
 
     # extract cache control header, if not cache, we should disable local cache
     parse.cache_control = parse.remote_response.headers.get('Cache-Control', '')
-    parse.cacheable = parse.cache_control \
-                      and 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
+    parse.cacheable = 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
                       and "max-age=0" not in parse.cache_control and "private" not in parse.cache_control \
                       and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200
 
