@@ -13,19 +13,21 @@ an http reverse proxy designed to automatically and completely mirror a website 
 程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像 Facebook镜像  
   
 ## Demo
-* **Google** 
+* **Google**  
     * *PC & Mobile*   https://g.zmirrordemo.com  
-        google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况  
-        当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取  
-        其余demo未启用CDN  
+    　　google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况  
+    　　当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取  
+    　　其余demo未启用CDN  
     * *Scholar*   https://g.zmirrordemo.com/scholar  
     * *Image*   https://g.zmirrordemo.com/imghp  
-    * *中文维基*  https://g.zmirrordemo.com/wiki  
+
+* **中文维基**  
+    * *(PC & Mobile)*  https://g.zmirrordemo.com/wiki  
 
 * **Youtube**  
     * *PC Only*  https://ytb-pc.zmirrordemo.com  
-    * *Mobile Only* https://ytb-mobile.zmirrordemo.com
-        Youtube Mobile 不支持iOS
+    * *Mobile Only* https://ytb-mobile.zmirrordemo.com  
+    　　Youtube Mobile 不支持iOS
 * **Twitter**
     * *PC Only*  https://t-pc.zmirrordemo.com  
     * *Mobile Only*  https://t-mobile.zmirrordemo.com
@@ -33,8 +35,8 @@ an http reverse proxy designed to automatically and completely mirror a website 
     * *PC & Mobile*  https://in.zmirrordemo.com  
 * **Facebook**
     * *PC Only*  https://fb.zmirrordemo.com  
-        功能不完整, 不支持手机.  最大的问题是当地址栏链接改变时不会自动刷新, 需要手动刷新  
-        未来会写一个脚本, 当url改变后刷新页面  
+    　　功能不完整, 不支持手机.  最大的问题是当地址栏链接改变时不会自动刷新, 需要手动刷新  
+    　　未来会写一个脚本, 当url改变后刷新页面  
 
 ## Screenshot
 ![zmirror-screenshot-youtube-mirror--1080P](https://github.com/aploium/zmirror/raw/wiki-pages/img/screenshot-youtube-1080p.jpg)  
