@@ -2324,6 +2324,8 @@ def main_function(input_path='/'):
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     # 其各个变量的含义请看 zmirror.threadlocal.ZmirrorThreadLocal 中的说明
 
+    parse.init()
+
     parse.start_time = process_time()  # to display compute time
 
     # 将用户请求的URL解析为对应的目标服务器URL

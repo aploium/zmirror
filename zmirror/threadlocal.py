@@ -35,7 +35,10 @@ class ZmirrorThreadLocal(threading.local):
 
     """
 
-    def __init__(self, **kw):
+    def __init__(self):
+        self.init()
+
+    def init(self):
         # 初始化成空白值
         self.start_time = None
         self.remote_domain = None
@@ -54,8 +57,6 @@ class ZmirrorThreadLocal(threading.local):
         self.cacheable = False
         self.extra_resp_headers = {}
         self.temporary_domain_alias = []
-
-        self.__dict__.update(kw)
 
     def dump(self):
         return {
