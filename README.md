@@ -37,7 +37,8 @@ an http reverse proxy designed to automatically and completely mirror a website 
         未来会写一个脚本, 当url改变后刷新页面  
 
 ## Screenshot
-Screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror/wiki/Screenshots)  
+![zmirror-screenshot-youtube-mirror--1080P](https://github.com/aploium/zmirror/raw/wiki-pages/img/screenshot-youtube-1080p.jpg)  
+More screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror/wiki/Screenshots)  
 
 ## 一键部署脚本
 https://github.com/aploium/zmirror-onekey  
