@@ -69,6 +69,8 @@ def get_session(domain):
 
 
 def release_lock():
+    if not hasattr(locked_session, "session"):
+        return
     for session in locked_session.session:  # type: dict
         pool[session["domain"]].append(session)
 
