@@ -1805,6 +1805,7 @@ def parse_remote_response():
     parse.cache_control = parse.remote_response.headers.get('Cache-Control', '') \
                           or parse.remote_response.headers.get('cache-control', '')
     parse.cacheable = 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
+                        and "max-age=0" not in parse.cache_control and "private" not in parse.cache_control \
                       and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200
 
     if verbose_level >= 4:
