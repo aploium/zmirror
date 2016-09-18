@@ -217,8 +217,6 @@ All detects and rewrites are completely AUTOMATICALLY
 
 ## Similar Projects
 
-Well, zmirror is (currently) better than them.  
-
 @zxq2233 [youtube-php-mirroring](https://github.com/zxq2233/youtube-php-mirroring)  
 @greatfire [website-mirror-by-proxy](https://github.com/greatfire/website-mirror-by-proxy)  
 @restran [web-proxy](https://github.com/restran/web-proxy)  
