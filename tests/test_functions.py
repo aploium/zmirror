@@ -270,3 +270,12 @@ class TestFunctions(ZmirrorTestBase):
         self.assertEqual("%253a", self.zmirror.guess_colon_from_slash("%252f"))
         self.assertEqual("%3A", self.zmirror.guess_colon_from_slash("%2F"))
         self.assertEqual("%3a", self.zmirror.guess_colon_from_slash("%2f"))
+
+    def test__extract_mime_from_content_type(self):
+        f = self.zmirror.extract_mime_from_content_type
+
+        self.assertEqual("text/html", f("text/html"))
+        self.assertEqual("text/html", f("text/HTML"))
+        self.assertEqual("text/html", f("text/html; encoding=utf-8"))
+        self.assertEqual("text/html", f("text/html;encoding=utf-8"))
+        self.assertEqual("text/html", f("text/HTML;encoding=utf-8"))

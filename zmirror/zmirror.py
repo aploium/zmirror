@@ -1013,7 +1013,7 @@ def try_get_cached_response(url, client_header=None):
             return generate_304_response()
         else:
             cached_info = cache.get_info(url)
-            if cached_info.get('without_content', False):
+            if cached_info.get('without_content', True):
                 # 关于 without_content 的解释, 请看update_content_in_local_cache()函数
                 return None
             # dbgprint('FileCacheHit-200')
@@ -1767,10 +1767,6 @@ def generate_our_response(req_time_headers=0.0):
     # copy and parse remote response
     resp, req_time_body = copy_response(is_streamed=parse.streamed_our_response)
 
-    # storge entire our server's response (headers included)
-    if local_cache_enable and parse.cacheable:
-        put_response_to_local_cache(parse.remote_url, resp, without_content=parse.streamed_our_response)
-
     if req_time_headers >= 0.00001:
         parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % req_time_headers)
     if parse.start_time is not None and not parse.streamed_our_response:
@@ -1802,10 +1798,10 @@ def parse_remote_response():
     parse.streamed_our_response = enable_stream_content_transfer and is_content_type_streamed(parse.content_type)
 
     # extract cache control header, if not cache, we should disable local cache
-    parse.cache_control = parse.remote_response.headers.get('Cache-Control', '') \
-                          or parse.remote_response.headers.get('cache-control', '')
-    parse.cacheable = 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
-                        and "max-age=0" not in parse.cache_control and "private" not in parse.cache_control \
+    parse.cache_control = parse.remote_response.headers.get('Cache-Control', '')
+    parse.cacheable = parse.cache_control \
+                      and 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
+                      and "max-age=0" not in parse.cache_control and "private" not in parse.cache_control \
                       and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200
 
     if verbose_level >= 4:
@@ -2370,6 +2366,10 @@ def main_function(input_path='/'):
     parse_remote_response()
 
     resp = generate_our_response(req_time_headers=req_time_headers)
+
+    # storge entire our server's response (headers included)
+    if local_cache_enable and parse.cacheable:
+        put_response_to_local_cache(parse.remote_url, resp, without_content=parse.streamed_our_response)
 
     dbgprint('-----EndRequest-----')
     return resp

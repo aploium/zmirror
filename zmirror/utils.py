@@ -146,9 +146,9 @@ def extract_mime_from_content_type(_content_type):
     """
     c = _content_type.find(';')
     if c == -1:
-        return _content_type
+        return _content_type.lower()
     else:
-        return _content_type[:c]
+        return _content_type[:c].lower()
 
 
 @lru_cache(maxsize=128)

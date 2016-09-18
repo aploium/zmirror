@@ -77,7 +77,7 @@ mime_expire_list = {
 
 
 def get_expire_from_mime(mime):
-    return mime_expire_list.get(mime, DEFAULT_EXPIRE)
+    return mime_expire_list.get(mime, EXPIRE_NOW)
 
 
 def _time_str_to_unix(timestring):
