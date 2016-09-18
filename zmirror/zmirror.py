@@ -119,7 +119,7 @@ ColorfulPyPrint_set_verbose_level(verbose_level)
 
 if developer_enable_experimental_feature:  # pragma: no cover
     # 先处理实验性功能开关
-    enable_connection_keep_alive = True
+    pass
 
 my_host_name_no_port = my_host_name  # 不带有端口号的本机域名
 
