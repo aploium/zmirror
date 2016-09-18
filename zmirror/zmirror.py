@@ -94,8 +94,11 @@ if unittest_mode:
     import importlib
 
     importlib.reload(importlib.import_module("zmirror.utils"))
+    importlib.reload(importlib.import_module("zmirror.connection_pool"))
+
 from .utils import *
 from .lru_dict import LRUDict
+from . import connection_pool
 
 if local_cache_enable:
     try:
@@ -116,7 +119,7 @@ ColorfulPyPrint_set_verbose_level(verbose_level)
 
 if developer_enable_experimental_feature:  # pragma: no cover
     # 先处理实验性功能开关
-    enable_keep_alive_per_domain = True
+    enable_connection_keep_alive = True
 
 my_host_name_no_port = my_host_name  # 不带有端口号的本机域名
 
@@ -224,13 +227,6 @@ url_to_use_cdn["www.fake-domain.com/folder/foo/bar.png"] = [
     "image/png",  # MIME
     17031,  # size, if size too small, will not redirect to cdn
 ]
-
-# keep-alive的连接池, 每个域名保持一个keep-alive连接
-# 借用requests在同一session中, 自动保持keep-alive的特性
-connection_pool_per_domain = {}
-if enable_keep_alive_per_domain:
-    for _domain in allowed_domains_set:
-        connection_pool_per_domain[_domain] = {'session': requests.Session(), }
 
 # 记录最近请求的100个域名, 用于 domain_guess
 # 虽然是个 dict, 但是只有key有用, value是无用的, 暂时全部赋值为 True
@@ -472,8 +468,8 @@ def cache_clean(is_force_flush=False):
     :param is_force_flush: 是否无视有效期, 清理所有缓存
     :type is_force_flush: bool
     """
-    if enable_keep_alive_per_domain:
-        connection_pool_per_domain.clear()
+    if enable_connection_keep_alive:
+        connection_pool.clear(force_flush=is_force_flush)
 
     if local_cache_enable:
         cache.check_all_expire(force_flush_all=is_force_flush)
@@ -1699,19 +1695,24 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     if not data:
         data = None
 
-    if enable_keep_alive_per_domain:
-        if final_hostname not in connection_pool_per_domain:
-            connection_pool_per_domain[final_hostname] = {'session': requests.Session()}
-        _requester = connection_pool_per_domain[final_hostname]['session']
-        _requester.cookies.clear()
+    prepped_req = requests.Request(
+        method,
+        url,
+        headers=headers,
+        params=param_get,
+        data=data,
+    ).prepare()
+
+    # get session
+    if enable_connection_keep_alive:
+        _session = connection_pool.get_session(final_hostname)
     else:
-        _requester = requests
+        _session = requests.Session()
 
     # Send real requests
     req_start_time = process_time()
-    r = _requester.request(
-        method, url,
-        params=param_get, headers=headers, data=data,
+    r = _session.send(
+        prepped_req,
         proxies=requests_proxies,
         allow_redirects=False,
         stream=enable_stream_content_transfer,
@@ -2135,6 +2136,17 @@ def rewrite_client_request():
 
 # ################# End Middle Functions #################
 
+# ################# Begin Flask After Request ################
+
+@app.after_request
+def zmirror_after_request(response):
+    # 移除 connection_pool 中的锁
+    if enable_connection_keep_alive:
+        connection_pool.release_lock()
+    return response
+
+
+# ################# End Flask After Request ################
 
 # ################# Begin Flask #################
 @app.route('/zmirror_stat')

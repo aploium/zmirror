@@ -10,3 +10,4 @@ from .test_custom_response_text_rewrite import TestCustomResponseRewriter
 from .test_developer_functions import TestDeveloperFunctions
 from .test_non_standard_port import TestNonStandardPort
 from .test_regex import TestRegex
+from .test_connection_pool import TestConnectionPool

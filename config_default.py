@@ -133,8 +133,8 @@ force_decode_remote_using_encode = None
 # this will be helpful to solve Chinese GBK issues
 possible_charsets = ['utf-8', 'GBK']
 
-# v0.21.1+ Keep-Alive Per domain (Experimental)
-enable_keep_alive_per_domain = False
+# v0.29.1+ Keep-Alive Per domain (Experimental)
+enable_connection_keep_alive = False
 
 # ############## Builtin server ##############
 # v0.23.1+ configs for flask builtin server (only affect when directly run wsgi.py)
@@ -680,5 +680,5 @@ developer_do_not_verify_ssl = False
 # v0.28.0+
 # 实验性特性开关
 # 一般来说, 每个版本, 至多会有一项实验性功能(可能没有)
-# 当前版本的实验性功能为 enable_keep_alive_per_domain
+# 当前版本的实验性功能为 connection_keep_alive
 developer_enable_experimental_feature = False
