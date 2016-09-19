@@ -40,7 +40,6 @@ class ZmirrorThreadLocal(threading.local):
 
     def init(self):
         # 初始化成空白值
-        self.start_time = None
         self.remote_domain = None
         self.is_external_domain = None
         self.is_https = None
@@ -55,12 +54,13 @@ class ZmirrorThreadLocal(threading.local):
         self.remote_response = None
         self.streamed_our_response = False
         self.cacheable = False
+        self.time = {}
         self.extra_resp_headers = {}
         self.temporary_domain_alias = []
 
     def dump(self):
         return {
-            "start_time": self.start_time,
+            "time": self.time,
             "remote_domain": self.remote_domain,
             "is_external_domain": self.is_external_domain,
             "is_https": self.is_https,
@@ -90,19 +90,6 @@ class ZmirrorThreadLocal(threading.local):
         h = self.extra_resp_headers
         h[name] = value
         self.extra_resp_headers = h
-
-    @property
-    def start_time(self):
-        """
-        处理请求开始的时间, unix 时间戳
-        :rtype: Union[int, None]
-        """
-        return self.__getattribute__("_start_time")
-
-    @start_time.setter
-    def start_time(self, value):
-        """:type value: Union[int, None]"""
-        self.__setattr__("_start_time", value)
 
     @property
     def remote_domain(self):
@@ -305,3 +292,14 @@ class ZmirrorThreadLocal(threading.local):
     def extra_resp_headers(self, value):
         """:type value: Dict[str, str]"""
         self.__setattr__("_extra_resp_headers", value)
+
+    @property
+    def time(self):
+        """用于记录时间
+        :rtype: Dict[str, float]"""
+        return self.__getattribute__("_time")
+
+    @time.setter
+    def time(self, value):
+        """:type value: Dict[str, float]"""
+        self.__setattr__("_time", value)

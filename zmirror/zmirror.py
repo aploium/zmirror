@@ -1263,7 +1263,7 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
 def iter_streamed_response_async():
     """异步, 一边读取远程响应, 一边发送给用户"""
     total_size = 0
-    _start_time = process_time()
+    _start_time = time()
 
     _content_buffer = b''
     _disable_cache_temporary = False
@@ -1305,7 +1305,7 @@ def iter_streamed_response_async():
         if verbose_level >= 4:
             total_size += len(particle_content)
             dbgprint('total_size:', total_size, 'total_speed(KB/s):',
-                     total_size / 1024 / (process_time() - _start_time + 0.000001))
+                     total_size / 1024 / (time() - _start_time + 0.000001))
 
 
 def copy_response(content=None, is_streamed=False):
@@ -1424,9 +1424,9 @@ def response_content_rewrite():
     :return: List[bytes, float]
     """
 
-    _start_time = process_time()
+    _start_time = time()
     _content = parse.remote_response.content
-    req_time_body = process_time() - _start_time
+    req_time_body = time() - _start_time
 
     if parse.mime and is_mime_represents_text(parse.mime):
         # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
@@ -1710,7 +1710,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         _session = requests.Session()
 
     # Send real requests
-    req_start_time = process_time()
+    parse.time["req_start_time"] = time()
     r = _session.send(
         prepped_req,
         proxies=requests_proxies,
@@ -1719,8 +1719,8 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
         verify=not developer_do_not_verify_ssl,
     )
     # remote request time
-    req_time = process_time() - req_start_time
-    dbgprint('RequestTime:', req_time, v=4)
+    parse.time["req_time_header"] = time() - parse.time["req_start_time"]
+    dbgprint('RequestTime:', parse.time["req_time_header"], v=4)
 
     # Some debug output
     # print(r.request.headers, r.headers)
@@ -1731,7 +1731,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
             dbgprint('RemoteRequestRawData: ', r.request.body)
         dbgprint("RemoteResponseHeaders: ", r.headers)
 
-    return r, req_time
+    return r
 
 
 def prepare_client_request_data():
@@ -1759,7 +1759,7 @@ def prepare_client_request_data():
     return data
 
 
-def generate_our_response(req_time_headers=0.0):
+def generate_our_response():
     """
     生成我们的响应
     :rtype: Response
@@ -1767,13 +1767,13 @@ def generate_our_response(req_time_headers=0.0):
     # copy and parse remote response
     resp, req_time_body = copy_response(is_streamed=parse.streamed_our_response)
 
-    if req_time_headers >= 0.00001:
-        parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % req_time_headers)
-    if parse.start_time is not None and not parse.streamed_our_response:
+    if parse.time["req_time_header"] >= 0.00001:
+        parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % parse.time["req_time_header"])
+    if parse.time.get("start_time") is not None and not parse.streamed_our_response:
         # remote request time should be excluded when calculating total time
         parse.set_extra_resp_header('X-Body-Req-Time', "%.4f" % req_time_body)
         parse.set_extra_resp_header('X-Compute-Time',
-                                    "%.4f" % (process_time() - parse.start_time - req_time_headers - req_time_body))
+                                    "%.4f" % (process_time() - parse.time["start_time"]))
 
     parse.set_extra_resp_header('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
 
@@ -1852,7 +1852,7 @@ def guess_correct_domain(data, depth=7):
 
         try:
             # 尝试发送请求, 允许请求失败
-            resp, req_time_headers = send_request(
+            resp = send_request(
                 urlunsplit(sp),
                 method=request.method,
                 headers=parse.client_header,
@@ -1895,7 +1895,7 @@ def guess_correct_domain(data, depth=7):
         # 重新生成 parse 变量
         assemble_parse()
 
-        return resp, req_time_headers
+        return resp
 
     else:  # 全部尝试失败 # pragma: no cover
         return None
@@ -1904,12 +1904,11 @@ def guess_correct_domain(data, depth=7):
 def request_remote_site():
     """
     请求远程服务器(high-level), 并在返回404/500时进行 domain_guess 尝试
-    :rtype: float
     """
     data = prepare_client_request_data()
 
     # server's request won't follow 301 or 302 redirection
-    parse.remote_response, req_time_headers = send_request(
+    parse.remote_response = send_request(
         parse.remote_url,
         method=request.method,
         headers=parse.client_header,
@@ -1925,9 +1924,8 @@ def request_remote_site():
         dbgprint("Domain guessing for", request.url)
         result = guess_correct_domain(data)
         if result is not None:
-            parse.remote_response, req_time_headers = result
+            parse.remote_response = result
 
-    return req_time_headers
 
 
 def filter_client_request():
@@ -2057,8 +2055,8 @@ def posterior_request_redirect():
         resp = try_get_cached_response(parse.remote_url, parse.client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
-            if parse.start_time is not None:
-                parse.set_extra_resp_header('X-Compute-Time', "%.4f" % (process_time() - parse.start_time))
+            if parse.time.get("start_time") is not None:
+                parse.set_extra_resp_header('X-Compute-Time', "%.4f" % (process_time() - parse.time["start_time"]))
             return resp
 
     # 基于 domain_guess 的重定向
@@ -2325,7 +2323,7 @@ def main_function(input_path='/'):
 
     parse.init()
 
-    parse.start_time = process_time()  # to display compute time
+    parse.time["start_time"] = process_time()  # to display compute time
 
     # 将用户请求的URL解析为对应的目标服务器URL
     assemble_parse()
@@ -2362,11 +2360,11 @@ def main_function(input_path='/'):
     if r is not None:
         return r
 
-    req_time_headers = request_remote_site()
+    request_remote_site()
 
     parse_remote_response()
 
-    resp = generate_our_response(req_time_headers=req_time_headers)
+    resp = generate_our_response()
 
     # storge entire our server's response (headers included)
     if local_cache_enable and parse.cacheable:
