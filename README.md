@@ -8,9 +8,10 @@
 
 an http reverse proxy designed to automatically and completely mirror a website (such as google), support cache and CDN  
 一个Python反向HTTP代理程序, 用于快速、简单地创建别的网站的镜像, 自带本地文件缓存、CDN支持  
-比如国内可以访问的Google镜像/中文维基镜像 请看`more_configs`文件夹下的配置文件  
+比如国内可以访问的Google镜像/中文维基镜像  
 
-程序附了几个配置文件:  Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像 Facebook镜像  
+自带了几个配置文件: 比如 Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像 Facebook镜像  
+完整列表请看[zmirror自带镜像配置文件](more_configs/readme.md)  
   
 ## Demo
 * **Google**  
@@ -47,32 +48,36 @@ https://github.com/aploium/zmirror-onekey
 
 ## builtin configs
 Together with the program, provided several (almost) out-of-box configs  
-For more information, please see [more_configs/readme.md](more_configs/readme.md)  
+ 
+### Google镜像 (整合中文维基镜像)
+  * 同时支持PC/手机  
+  * Google搜索与中文维基百科无缝结合  
+  * 大部分功能完全正常: 网页搜索/学术/图片/地图/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
+  * 目前暂时无法做到完美的登陆, 登录才可使用的功能部分无效
+  * 不会被Google Ban掉  
+    　　　传统的Nginx反代Google方案, 时间长了会被Google Ban掉, 或者弹图片验证码,   
+    　这是由于Nginx反代镜像非常简陋, 用户的许多请求无法被正确发回到Google服务器,  
+    　Google就会把真实的访问者当成是机器人.  
+    　　　而zmirror比较完善, 用户的请求能全部发回到Google服务器, 不会被当成机器人  
 
-* **Google镜像** (整合**中文维基镜像**)
-    * 同时支持PC/手机
-    * google搜索与中文维基百科无缝结合
-    * 大部分功能完全正常: google网页搜索/学术/图片/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...
-    * 以下服务部分可用: gg地图(地图可看, 左边栏显示不正常)/G+(不能登录)
-    * 目前暂时无法做到完美的登陆, 登录才可使用的功能无效
-    * 不会被Google Ban掉  
-        * 传统的Nginx反代镜像方案, 时间长了会被Google Ban掉, 或者弹图片验证码,   
-            这是由于Nginx反代镜像非常简陋, 用户的许多请求无法被正确发回到Google服务器,  
-            Google就会把真实的访问者当成是机器人.  
-            
-        * 而zmirror比较完善, 用户的请求能全部发回到Google服务器, 不会被当成机器人  
+### Twitter镜像
+  * 支持PC站/手机  (两者需要以不同的域名部署, 详见配置)  
+  * 几乎所有功能完整可用, 大部分视频可以播放  
 
-* **twitter镜像**
-    * 支持PC站/手机  (两者需要以不同的域名部署, 详见配置)  
-    * 几乎所有功能完整可用, 大部分视频可以播放  
-* **instagram镜像**  
-    * 所有功能完整可用, 包括视频  
-* **Youtube镜像**  
-    * 支持PC站/手机  (两者需要以不同的域名部署, 详见配置)
-    * 视频播放、高清支持
-    * 登陆支持、字幕支持
-    * 小视频上传支持
+### Instagram镜像  
+  * 所有功能完整可用, 包括视频  
 
+### Youtube镜像
+  * 支持PC站/手机  (两者需要以不同的域名部署, 详见配置)  
+  * 视频播放、高清支持  
+  * 登陆支持、字幕支持  
+  * 小视频上传支持  
+
+### 自带其他的镜像配置文件
+  * archive.org  
+  * For more information, please see [more_configs/readme.md](more_configs/readme.md)  
+  
+  
 ## Requirements Install and Usage
 
 ### Dependencies
