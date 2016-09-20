@@ -191,6 +191,8 @@ external_domains = (
     'plus.googleapis.com',
     'youtube.googleapis.com',
     'picasa.google.com',
+
+    'www.gmail.com',
 )
 
 # 强制所有Google站点使用HTTPS
