@@ -45,8 +45,9 @@ More screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror
 ## 一键部署脚本
 https://github.com/aploium/zmirror-onekey  
 
-## Out-of-box configs
+## builtin configs
 Together with the program, provided several (almost) out-of-box configs  
+For more information, please see [more_configs/readme.md](more_configs/readme.md)  
 
 * **Google镜像** (整合**中文维基镜像**)
     * 同时支持PC/手机

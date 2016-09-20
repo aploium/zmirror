@@ -3,7 +3,8 @@
 # 各项设置选项的详细介绍请看 config_default.py 中对应的部分
 #
 # 使用方法:
-#   复制本文件到 zmirror.py 同级目录, 并重命名为 config.py
+#   1. 复制本文件到 zmirror 根目录(wsgi.py所在目录), 并重命名为 config.py
+#   2. 修改 my_host_name 为你自己的域名
 #
 # 本配置文件假定你的服务器本身在墙外
 # 如果服务器本身在墙内(或者在本地环境下测试, 请修改`Proxy Settings`中的设置(在PC站的配置文件中)

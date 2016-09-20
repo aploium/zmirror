@@ -9,8 +9,8 @@
 # 请耐心看完注释
 #
 # 使用方法:
-#   1. 复制本文件和 custom_func_youtube.py 到 zmirror.py 同级目录,
-#   2. 复制后本文件重命名为 config.py, custom_func_youtube.py 重命名为 custom_func.py
+#   1. 复制本文件到 zmirror 根目录(wsgi.py所在目录), 并重命名为 config.py
+#   2. 复制 custom_func_youtube.py 到zmirror根目录, 并重命名为 custom_func.py
 #   3.*本步仅限本地部署需要  在本地hosts(如果不知道这是什么, 请自行google)中加入    127.0.0.1  www.localhost.com
 #   4. 运行命令 python3 wsgi.py 来启动本程序
 #
