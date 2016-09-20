@@ -75,6 +75,7 @@ Together with the program, provided several (almost) out-of-box configs
 
 ### 自带其他的镜像配置文件
   * archive.org  
+  * duckduckgo.com
   * For more information, please see [more_configs/readme.md](more_configs/readme.md)  
   
   

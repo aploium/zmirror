@@ -46,5 +46,7 @@ python3 wsgi.py
   * 小视频上传支持
 
 ### 其他镜像
-  * archive.org镜像  
-    * 基本全功能可用  
+#### archive.org镜像  
+  基本全功能可用  
+#### duckduckgo镜像  
+  基本全功能可用
