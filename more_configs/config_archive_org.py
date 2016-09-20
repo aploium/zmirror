@@ -26,7 +26,6 @@ target_scheme = 'https://'
 # 实际镜像一个新的站时, 手动只需要添加很少的几个域名就可以了.
 # 自动采集(如果开启的话)会不断告诉你新域名
 external_domains = (
-    'archive.org',
     'analytics.archive.org',
     'web.archive.org',
 )
