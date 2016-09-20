@@ -1846,7 +1846,9 @@ def guess_correct_domain(data, depth=7):
     current_domain = parse.remote_domain
     sp = list(urlsplit(parse.remote_url))
 
-    for domain in recent_domains.keys()[:depth]:
+    redirected = None
+
+    for i, domain in enumerate(recent_domains.keys()[:depth]):
         if domain == current_domain:
             continue
 
@@ -1866,7 +1868,24 @@ def guess_correct_domain(data, depth=7):
         if resp.status_code in (400, 404, 500):
             # 失败
             dbgprint("Domain guess failed:", domain, v=4)
-            continue
+            if i != depth - 1 or redirected is None:
+                continue
+            else:
+                # 在所有结果都尝试失败时, 如果之前有请求到重定向的域名, 则取出
+                resp, domain = redirected
+        elif resp.status_code in (301, 302, 307):
+            if i != depth - 1:
+                # 对于重定向结果, 暂时进行缓存, 仅当所有尝试都失败时, 才取出它们
+                if redirected is None:
+                    # 当之前已经出现过一次重定向的结果, 则丢弃迟出现的
+                    # 因为越靠前的域名, 越有可能是真正的域名
+                    redirected = (resp, domain)
+                continue
+            elif redirected is not None:  # 最后一轮执行
+                # 当之前已经出现过一次重定向的结果, 则丢弃迟出现的
+                resp, domain = redirected
+            else:
+                continue
 
         # 成功找到
         dbgprint("domain guess successful, from", current_domain, "to", domain)
@@ -1927,7 +1946,6 @@ def request_remote_site():
         result = guess_correct_domain(data)
         if result is not None:
             parse.remote_response = result
-
 
 
 def filter_client_request():
