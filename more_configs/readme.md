@@ -8,7 +8,7 @@
 3. 修改 config.py 中 `my_host_name` 为你自己的域名  
 4. 如果运行环境在墙内, 请将 `is_use_proxy` 设置为True, 并在 `requests_proxies` 中填入一个墙外代理  
 5. 运行`python3 wsgi.py`  
-    　　**注意** 直接运行wsgi.py仅用于测试性运行, 部署请看 [Deploy](../README.md#Deploy)  
+    　　**注意** 直接运行wsgi.py仅用于测试性运行, 部署请看 [Deploy](../README.md#deploy)  
 
 eg:
 ```bash
