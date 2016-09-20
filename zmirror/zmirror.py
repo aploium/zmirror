@@ -406,7 +406,7 @@ def response_text_basic_mirrorlization(text):
     def regex_reassemble(m):
         remote_domain = get_group("domain", m)
         if remote_domain not in allowed_domains_set:
-            if not developer_enable_experimental_feature or \
+            if not enable_automatic_domains_whitelist or \
                     not try_match_and_add_domain_to_rewrite_white_list(remote_domain):
                 return m.group()
 
