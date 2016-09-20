@@ -199,7 +199,18 @@ external_domains = (
 
     'plus.sandbox.google.com',
 
+    # gmail misc
+    'gmail.com',
     'www.gmail.com',
+    'chatenabled.mail.google.com',
+    'filetransferenabled.mail.google.com',
+    'gmail.google.com',
+    'googlemail.l.google.com',
+    'isolated.mail.google.com',
+    'm.gmail.com',
+    'm.googlemail.com',
+    'mail-settings.google.com',
+    'm.android.com',
 )
 
 # 强制所有Google站点使用HTTPS
