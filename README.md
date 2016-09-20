@@ -74,8 +74,9 @@ Together with the program, provided several (almost) out-of-box configs
   * 小视频上传支持  
 
 ### 自带其他的镜像配置文件
-  * archive.org  
-  * duckduckgo.com
+  * archive.org镜像  
+  * duckduckgo镜像  
+  * Dropbox镜像  
   * For more information, please see [more_configs/readme.md](more_configs/readme.md)  
   
   
