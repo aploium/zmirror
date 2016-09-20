@@ -406,7 +406,9 @@ def response_text_basic_mirrorlization(text):
     def regex_reassemble(m):
         remote_domain = get_group("domain", m)
         if remote_domain not in allowed_domains_set:
-            return m.group()
+            if not developer_enable_experimental_feature or \
+                    not try_match_and_add_domain_to_rewrite_white_list(remote_domain):
+                return m.group()
 
         suffix_slash = get_group("suffix_slash", m)
         slash = get_group("scheme_slash", m) or suffix_slash or "/"
