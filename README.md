@@ -21,6 +21,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
     　　其余demo未启用CDN  
     * *Scholar*   https://g.zmirrordemo.com/scholar  
     * *Image*   https://g.zmirrordemo.com/imghp  
+    * *Gmail*   https://g.zmirrordemo.com/gmail  (请选择"使用基本HTML"版本)  
 
 * **中文维基**  
     * *(PC & Mobile)*  https://g.zmirrordemo.com/wiki  
@@ -50,6 +51,7 @@ https://github.com/aploium/zmirror-onekey
 Together with the program, provided several (almost) out-of-box configs  
  
 ### Google镜像 (整合中文维基镜像)
+  * **Gmail支持!** (请访问 /gmail 并选择基础html视图)
   * 同时支持PC/手机  
   * Google搜索与中文维基百科无缝结合  
   * 大部分功能完全正常: 网页搜索/学术/图片/地图/新闻/图书/视频(搜索)/财经/APP搜索/翻译/网页快照/...

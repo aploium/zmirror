@@ -219,6 +219,10 @@ enable_individual_sites_isolation = True
 isolated_domains = {'zh.wikipedia.org', 'zh.m.wikipedia.org'}
 
 # ############## URL Custom Redirect ##############
-# 这是一个方便的设置, 如果你访问 /wiki ,程序会自动重定向到后面这个长长的wiki首页
 url_custom_redirect_enable = True
-url_custom_redirect_list = {'/wiki': '/extdomains/https-zh.wikipedia.org/'}
+url_custom_redirect_list = {
+    # 这是一个方便的设置, 如果你访问 /wiki ,程序会自动重定向到后面这个长长的wiki首页
+    '/wiki': '/extdomains/https-zh.wikipedia.org/',
+    # 这是gmail
+    '/gmail': '/extdomains/mail.google.com/mail/u/0/h/girbaeneuj90/',
+}
