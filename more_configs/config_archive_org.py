@@ -28,6 +28,7 @@ target_scheme = 'https://'
 external_domains = (
     'archive.org',
     'analytics.archive.org',
+    'web.archive.org',
 )
 
 # 强制所有 archive.org 站点使用HTTPS
