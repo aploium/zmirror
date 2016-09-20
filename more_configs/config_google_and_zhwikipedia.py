@@ -130,6 +130,11 @@ external_domains = (
     'events.google.com',
     'notifications.google.com',
     'plus.google.com',
+    'dl.google.com',
+    'manifest.googlevideo.com',
+    'storage.googleapis.com',
+
+    'gg.google.com',
 
     'scholar.googleusercontent.com',
     'translate.googleusercontent.com',
@@ -191,6 +196,8 @@ external_domains = (
     'plus.googleapis.com',
     'youtube.googleapis.com',
     'picasa.google.com',
+
+    'plus.sandbox.google.com',
 
     'www.gmail.com',
 )

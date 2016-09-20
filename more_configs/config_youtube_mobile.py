@@ -87,6 +87,26 @@ external_domains = [
     'yt3.ggpht.com',
     'fonts.googleapis.com',
 
+    'daily-0.consent.corp.youtube.com',
+    'daily-1.consent.corp.youtube.com',
+    'daily-2.consent.corp.youtube.com',
+    'daily-3.consent.corp.youtube.com',
+    'daily-4.consent.corp.youtube.com',
+    'daily-5.consent.corp.youtube.com',
+    'daily-6.consent.corp.youtube.com',
+
+    'consent-daily-0.sandbox.youtube.com',
+    'consent-daily-1.sandbox.youtube.com',
+    'consent-daily-2.sandbox.youtube.com',
+    'consent-daily-3.sandbox.youtube.com',
+    'consent-daily-4.sandbox.youtube.com',
+    'consent-daily-5.sandbox.youtube.com',
+    'consent-daily-6.sandbox.youtube.com',
+    'consent-autopush.sandbox.youtube.com',
+    'www.corp.google.com',
+    'spreadsheets.google.com',
+    'ytlegos-dashboard.corp.google.com',
+
     'youtu.be',
 ]
 

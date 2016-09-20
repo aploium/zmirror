@@ -59,6 +59,14 @@ external_domains = [
     'business.twitter.com',
     'cards-dev.twitter.com',
 
+    'caps.twitter.com',
+    'quickread.twitter.com',
+    'tailfeather.twimg.com',
+    'publish.twitter.com',
+    'brand.twitter.com',
+    't.lv.twimg.com',
+    'media.twitter.com',
+
     'g2.twimg.com',
     'hca.twimg.com',
     'g.twimg.com',

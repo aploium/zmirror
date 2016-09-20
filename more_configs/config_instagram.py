@@ -54,6 +54,10 @@ external_domains = (
     'external.xx.fbcdn.net',
 
     'fonts.googleapis.com',
+
+    'scontent-lax3-1.cdninstagram.com',
+    'l.instagram.com',
+    'scontent-sjc2-1.cdninstagram.com',
 )
 
 force_https_domains = 'ALL'
