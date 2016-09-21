@@ -1678,6 +1678,7 @@ def client_requests_text_rewrite(raw_text):
     replaced = regex_request_rewriter_extdomains.sub(replace_to_real_domain, raw_text)
 
     if developer_string_trace is not None and developer_string_trace in replaced:
+        # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears client_requests_text_rewrite, code line no. ', current_line_number())
 
     # 正则替换掉单独的, 不含 /extdomains/ 的主域名
@@ -1767,26 +1768,34 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 def prepare_client_request_data():
     """
     解析出浏览者发送过来的data, 如果是文本, 则进行重写
-    :rtype: byte
+    如果是文本, 则对文本内容进行重写后返回str
+    如果是二进制则, 则原样返回, 不进行任何处理 (bytes)
+    :rtype: Union[str, bytes, None]
     """
     data = request.get_data()  # type: bytes
 
-    # 尝试解析浏览器传入的是否是文本内容
+    # 尝试解析浏览器传入的东西的编码
     encoding = encoding_detect(data)
-    # 如果是文本内容, 则解码并进行重写, 如果是二进制内容, 则跳过
+
     if encoding is not None:
         try:
-            _data = data.decode(encoding=encoding)  # type: str
+            data = data.decode(encoding=encoding)  # type: str
         except:
+            # 解码失败, data是二进制内容或无法理解的编码, 原样返回, 不进行重写
+            encoding = None
             pass
         else:
-            data = client_requests_text_rewrite(_data)  # type: str
-            data = data.encode(encoding=encoding)  # type: bytes
+            # data是文本内容, 则进行重写, 并返回str
+            data = client_requests_text_rewrite(data)  # type: str
 
-    if developer_string_trace is not None and developer_string_trace.encode(encoding="utf-8") in data:
-        infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
+    # 下面这个if是debug用代码, 对正常运行无任何作用
+    if developer_string_trace:  # pragma: no cover
+        if isinstance(data, str):
+            data = data.encode(encoding=encoding)
+        if developer_string_trace.encode(encoding=encoding) in data:
+            infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
 
-    return data
+    return data, encoding
 
 
 def generate_our_response():
@@ -1874,7 +1883,7 @@ def parse_remote_response():
                 dbgprint('CDN disabled for:', parse.url_no_scheme)
 
 
-def guess_correct_domain(data, depth=7):
+def guess_correct_domain(depth=7):
     """
     猜测url所对应的正确域名
     当响应码为 404 或 500 时, 很有可能是把请求发送到了错误的域名
@@ -1904,7 +1913,7 @@ def guess_correct_domain(data, depth=7):
                 urlunsplit(sp),
                 method=request.method,
                 headers=parse.client_header,
-                data=data,
+                data=parse.request_data_encoded,
             )
         except:  # pragma: no cover
             continue
@@ -1970,8 +1979,6 @@ def request_remote_site():
     """
     请求远程服务器(high-level), 并在返回404/500时进行 domain_guess 尝试
     """
-    # 解析并重写浏览器请求的data内容
-    data = prepare_client_request_data()
 
     # 请求被镜像的网站
     # 注意: 在zmirror内部不会处理重定向, 重定向响应会原样返回给浏览器
@@ -1979,7 +1986,7 @@ def request_remote_site():
         parse.remote_url,
         method=request.method,
         headers=parse.client_header,
-        data=data,
+        data=parse.request_data_encoded,
     )
 
     if parse.remote_response.url != parse.remote_url:
@@ -1989,7 +1996,7 @@ def request_remote_site():
     if parse.remote_response.status_code in (400, 404, 500):
         # 猜测url所对应的正确域名
         dbgprint("Domain guessing for", request.url)
-        result = guess_correct_domain(data)
+        result = guess_correct_domain()
         if result is not None:
             parse.remote_response = result
 
@@ -2428,6 +2435,9 @@ def main_function(input_path='/'):
     r = posterior_request_redirect()
     if r is not None:
         return r
+
+    # 解析并重写浏览器请求的data内容
+    parse.request_data, parse.request_data_encoding = prepare_client_request_data()
 
     # 请求真正的远程服务器
     # 并在返回404/500时进行 domain_guess 尝试

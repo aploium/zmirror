@@ -3,7 +3,7 @@ import threading
 import requests
 
 try:
-    from typing import Dict
+    from typing import Dict, Union
 except:  # pragma: no cover
     pass
 
@@ -28,6 +28,9 @@ class ZmirrorThreadLocal(threading.local):
          .client_header       经过转换和重写以后的访问者请求头
          .content_type        远程服务器响应头中的 content_type, 比如 "text/plain; encoding=utf-8"
          .mime                远程服务器响应的MIME, 比如 "text/html"
+         .request_data        浏览器传入的data(已经经过重写) 可能为str或bytes或None
+         .request_data_encoding 浏览器传入的data的编码(如果有) 如果为二进制或编码未知, 则为None
+         .request_data_encoded  编码后的二进制 request_data, 只读
          .cache_control       远程服务器响应的cache_control内容
          .remote_response     远程服务器的响应, requests.Response
          .cacheable           是否可以对这一响应应用缓存 (CDN也算是缓存的一种, 依赖于此选项)
@@ -56,6 +59,8 @@ class ZmirrorThreadLocal(threading.local):
         self.remote_response = None
         self.streamed_our_response = False
         self.cacheable = False
+        self.request_data = None
+        self.request_data_encoding = None
         self.time = {}
         self.extra_resp_headers = {}
         self.temporary_domain_alias = []
@@ -79,6 +84,8 @@ class ZmirrorThreadLocal(threading.local):
             "streamed_our_response": self.streamed_our_response,
             "cacheable": self.cacheable,
             "extra_resp_headers": self.extra_resp_headers,
+            "request_data": self.request_data,
+            "request_data_encoding": self.request_data_encoding,
         }
 
     def __str__(self):
@@ -305,3 +312,33 @@ class ZmirrorThreadLocal(threading.local):
     def time(self, value):
         """:type value: Dict[str, float]"""
         self.__setattr__("_time", value)
+
+    @property
+    def request_data(self):
+        """浏览器传入的data(已经经过重写)
+        :rtype: Union[str, bytes, None]"""
+        return self.__getattribute__("_request_data")
+
+    @request_data.setter
+    def request_data(self, value):
+        """:type value: Union[str, bytes, None]"""
+        self.__setattr__("_request_data", value)
+
+    @property
+    def request_data_encoding(self):
+        """浏览器传入的data的编码
+        :rtype: Union[str, None]"""
+        return self.__getattribute__("_request_data_encoding")
+
+    @request_data_encoding.setter
+    def request_data_encoding(self, value):
+        """:type value: Union[str, None]"""
+        self.__setattr__("_request_data_encoding", value)
+
+    @property
+    def request_data_encoded(self):
+        """:rtype: Union[bytes, None]"""
+        if isinstance(self.request_data, str):
+            return self.request_data.encode(encoding=self.request_data_encoding or 'utf-8')
+        else:
+            return self.request_data
