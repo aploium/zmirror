@@ -1314,42 +1314,42 @@ def iter_streamed_response_async():
                      total_size / 1024 / (time() - _start_time + 0.000001))
 
 
-def copy_response(content=None, is_streamed=False):
+def copy_response(is_streamed=False):
     """
     Copy and parse remote server's response headers, generate our flask response object
 
-    :type content: str
     :type is_streamed: bool
-    :param content: pre-rewrited response content, bytes
     :return: flask response object
-    :rtype: Tuple[Response, float]
+    :rtype: Response
     """
-    if content is None:
-        if is_streamed:
-            req_time_body = 0
-            content = iter_streamed_response_async()
-        else:
-            content, req_time_body = response_content_rewrite()
+
+    if is_streamed:
+        parse.time["req_time_body"] = 0
+        # 异步传输内容, 不进行任何重写, 返回一个生成器
+        content = iter_streamed_response_async()
     else:
-        req_time_body = 0
+        # 如果不是异步传输, 则(可能)进行重写
+        content, parse.time["req_time_body"] = response_content_rewrite()
 
     dbgprint('RemoteRespHeaders', parse.remote_response.headers)
+    # 创建基础的Response对象
     resp = Response(content, status=parse.remote_response.status_code)
 
+    # --------------------- 将远程响应头筛选/重写并复制到我们都响应中 -----------------------
+    # 筛选远程响应头时采用白名单制, 只有在 `allowed_remote_response_headers` 中的远程响应头才会被发送回浏览器
     for header_key in parse.remote_response.headers:
         header_key_lower = header_key.lower()
         # Add necessary response headers from the origin site, drop other headers
         if header_key_lower in allowed_remote_response_headers:
             if header_key_lower == 'location':
+                # 对于重定向的 location 的重写, 改写为zmirror的url
                 _location = parse.remote_response.headers[header_key]
-                # try to apply custom rewrite function
-                try:
-                    if custom_text_rewriter_enable:
-                        _loc_rewrite = custom_response_text_rewriter(_location, 'mwm/headers-location', parse.remote_url)
-                        if isinstance(_loc_rewrite, str):
-                            _location = _loc_rewrite
-                except:  # just print err and fallback to normal rewrite # coverage: exclude
-                    return generate_error_page("(LOCATION) Custom Rewrite Function ERROR", is_traceback=True), 0
+
+                if custom_text_rewriter_enable:
+                    # location头也会调用自定义重写函数进行重写, 并且有一个特殊的MIME: mwm/headers-location
+                    # 这部分以后可能会单独独立出一个自定义重写函数
+                    _location = custom_response_text_rewriter(_location, 'mwm/headers-location', parse.remote_url)
+
                 resp.headers[header_key] = encode_mirror_url(_location)
 
             elif header_key_lower == 'content-type':
@@ -1362,7 +1362,7 @@ def copy_response(content=None, is_streamed=False):
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
                 if custom_allowed_origin is None:
                     resp.headers[header_key] = myurl_prefix
-                elif custom_allowed_origin == '_*_':
+                elif custom_allowed_origin == '_*_':  # coverage: exclude
                     _origin = request.headers.get('origin') or request.headers.get('Origin') or myurl_prefix
                     resp.headers[header_key] = _origin
                 else:
@@ -1379,7 +1379,7 @@ def copy_response(content=None, is_streamed=False):
 
     dbgprint('OurRespHeaders:\n', resp.headers)
 
-    return resp, req_time_body
+    return resp
 
 
 # noinspection PyProtectedMember
@@ -1804,13 +1804,13 @@ def generate_our_response():
     :rtype: Response
     """
     # copy and parse remote response
-    resp, req_time_body = copy_response(is_streamed=parse.streamed_our_response)
+    resp = copy_response(is_streamed=parse.streamed_our_response)
 
     if parse.time["req_time_header"] >= 0.00001:
         parse.set_extra_resp_header('X-Header-Req-Time', "%.4f" % parse.time["req_time_header"])
     if parse.time.get("start_time") is not None and not parse.streamed_our_response:
         # remote request time should be excluded when calculating total time
-        parse.set_extra_resp_header('X-Body-Req-Time', "%.4f" % req_time_body)
+        parse.set_extra_resp_header('X-Body-Req-Time', "%.4f" % parse.time["req_time_body"])
         parse.set_extra_resp_header('X-Compute-Time',
                                     "%.4f" % (process_time() - parse.time["start_time"]))
 
@@ -2447,6 +2447,7 @@ def main_function(input_path='/'):
     # 解析远程服务器的响应
     parse_remote_response()
 
+    # 生成我们的响应
     resp = generate_our_response()
 
     # storge entire our server's response (headers included)
