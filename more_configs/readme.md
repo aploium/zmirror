@@ -57,3 +57,4 @@ python3 wsgi.py
   由于注册过程中有 Google Captcha 出现, zmirror暂时还无法兼容captcha, 所以无法注册  
   如果你想要注册一个账号, 暂时得从其他渠道进行  
   但是其他功能基本完整(包括登录以后的功能)  
+  ![zmirror Tumblr镜像 截图](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/Tumblr.jpg)  
