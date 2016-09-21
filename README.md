@@ -79,6 +79,7 @@ Together with the program, provided several (almost) out-of-box configs
   * archive.org镜像  
   * duckduckgo镜像  
   * Dropbox镜像  
+  * Tumblr镜像  
   * For more information, please see [more_configs/readme.md](more_configs/readme.md)  
   
   
