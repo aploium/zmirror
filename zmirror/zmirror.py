@@ -1918,7 +1918,7 @@ def guess_correct_domain(depth=7):
         except:  # coverage: exclude
             continue
 
-        if resp.status_code in (400, 404, 500):
+        if 400 <= resp.status_code <= 599:  # 40x or 50x, eg:404 503 500
             # 失败
             dbgprint("Domain guess failed:", domain, v=4)
             if i != depth - 1 or redirected is None:
@@ -1926,7 +1926,7 @@ def guess_correct_domain(depth=7):
             else:
                 # 在所有结果都尝试失败时, 如果之前有请求到重定向的域名, 则取出
                 resp, domain = redirected
-        elif resp.status_code in (301, 302, 307):
+        elif 300 <= resp.status_code <= 399:
             if i != depth - 1:
                 # 对于重定向结果, 暂时进行缓存, 仅当所有尝试都失败时, 才取出它们
                 if redirected is None:
@@ -1993,7 +1993,7 @@ def request_remote_site():
         warnprint("requests's remote url", parse.remote_response.url,
                   'does no equals our rewrited url', parse.remote_url)
 
-    if parse.remote_response.status_code in (400, 404, 500):
+    if 400 <= parse.remote_response.status_code <= 599:
         # 猜测url所对应的正确域名
         dbgprint("Domain guessing for", request.url)
         result = guess_correct_domain()
