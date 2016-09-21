@@ -1575,37 +1575,61 @@ def ssrf_check_layer_1():
 def extract_client_header():
     """
     Extract necessary client header, filter out some.
-    :return: dict client request headers
+
+    对于浏览器请求头的策略是黑名单制, 在黑名单中的头会被剔除, 其余所有请求头都会被保留
+
+    对于浏览器请求头, zmirror会移除掉其中的 host和content-length
+    并重写其中的cookie头, 把里面可能存在的本站域名修改为远程服务器的域名
+
+    :return: 重写后的请求头
+    :rtype: dict
     """
-    outgoing_head = {}
-    dbgprint('ClientRequestHeaders:', request.headers)
+    rewrited_headers = {}
+    dbgprint('BrowserRequestHeaders:', request.headers)
     for head_name, head_value in request.headers:
-        head_name_l = head_name.lower()
-        # 剔除掉请求头中的 host content-length 和空白的 content-type
-        if (head_name_l not in ('host', 'content-length', 'content-type')) \
-                or (head_name_l == 'content-type' and head_value != ''):
+        head_name_l = head_name.lower()  # requests的请求头是区分大小写的, 统一变为小写
+
+        # ------------------ 特殊请求头的处理 -------------------
+
+        if head_name_l in ('host', 'content-length'):
+            # 丢弃浏览器的这两个头, 会在zmirror请求时重新生成
+            continue
+
+        elif head_name_l == 'content-type' and head_value == '':
+            # 跳过请求头中的空白的 content-type
+            #   在flask的request中, 无论浏览器实际有没有传入, content-type头会始终存在,
+            #   如果它是空值, 则表示实际上没这个头, 则剔除掉
+            continue
+
+        elif head_name_l == 'accept-encoding' and ('br' in head_value or 'sdch' in head_value):
+            # 一些现代浏览器支持sdch和br编码, 而requests不支持, 所以会剔除掉请求头中sdch和br编码的标记
             # For Firefox, they may send 'Accept-Encoding: gzip, deflate, br'
             # For Chrome, they may send 'Accept-Encoding: gzip, deflate, sdch, br'
             #   however, requests cannot decode the br encode, so we have to remove it from the request header.
-            if head_name_l == 'accept-encoding' and ('br' in head_value or 'sdch' in head_value):
-                _str_buff = ''
-                if 'gzip' in head_value:
-                    _str_buff += 'gzip, '
-                if 'deflate' in head_value:
-                    _str_buff += 'deflate'
-                if _str_buff:
-                    outgoing_head[head_name_l] = _str_buff
-            else:
-                outgoing_head[head_name_l] = client_requests_text_rewrite(head_value)
+            _str_buff = ''
+            if 'gzip' in head_value:
+                _str_buff += 'gzip, '
+            if 'deflate' in head_value:
+                _str_buff += 'deflate'
+            if _str_buff:
+                rewrited_headers[head_name_l] = _str_buff
 
-                # 移除掉 cookie 中的 zmirror_verify
-                if head_name_l == "cookie":
-                    outgoing_head[head_name_l] = regex_remove__zmirror_verify__header.sub(
-                        "", outgoing_head[head_name_l]
-                    )
+            continue
 
-    dbgprint('FilteredRequestHeaders:', outgoing_head)
-    return outgoing_head
+        else:
+            # ------------------ 其他请求头的处理 -------------------
+            # 对于其他的头, 进行一次内容重写后保留
+            rewrited_headers[head_name_l] = client_requests_text_rewrite(head_value)
+
+            # 移除掉 cookie 中的 zmirror_verify
+            if head_name_l == "cookie":
+                rewrited_headers[head_name_l] = regex_remove__zmirror_verify__header.sub(
+                    "",
+                    rewrited_headers[head_name_l],
+                )
+
+    dbgprint('FilteredBrowserRequestHeaders:', rewrited_headers)
+    return rewrited_headers
 
 
 # noinspection SpellCheckingInspection
@@ -2368,11 +2392,11 @@ def main_function(input_path='/'):
     # 可能会修改 parse
     has_been_rewrited = rewrite_client_request()
 
+    # 第一层SSRF检查, 防止请求不允许的网站
     if ssrf_check_layer_1():
-        return generate_simple_resp_page(
-            b'SSRF Prevention! Your Domain Are NOT ALLOWED.', 403)
+        return generate_simple_resp_page(b'SSRF Prevention! Your domain is NOT ALLOWED.', 403)
 
-    # 提取出经过必要重写后的客户请求头
+    # 提取出经过必要重写后的浏览器请求头
     parse.client_header = extract_client_header()  # type: dict
 
     # 对用户请求进行第二级重定向(隐式重写后的重定向)
