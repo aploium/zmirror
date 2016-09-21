@@ -69,14 +69,14 @@ if not unittest_mode:  # 在unittest时不输出这几行
 
 try:  # 加载默认设置
     from config_default import *
-except:  # pragma: no cover
+except:  # coverage: exclude
     errprint('the config_default.py is missing, this program may not works normally\n'
              'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
     raise  # v0.23.1+ 当 config_default.py 不存在时, 程序会终止运行
 
 try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
     from config import *
-except:  # pragma: no cover
+except:  # coverage: exclude
     errprint(
         'the config_default.py is missing, fallback to default configs(if we can), '
         'please COPY the config_default.py to config.py, and change it\'s content, '
@@ -105,7 +105,7 @@ if local_cache_enable:
         from .cache_system import FileCache, get_expire_from_mime
 
         cache = FileCache()
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         traceback.print_exc()
         errprint('Can Not Create Local File Cache, local file cache is disabled automatically.')
         local_cache_enable = False
@@ -117,7 +117,7 @@ if local_cache_enable:
 # 开始从配置文件加载配置, 在读代码时可以先跳过这部分, 从 main_function() 开始看
 ColorfulPyPrint_set_verbose_level(verbose_level)
 
-if developer_enable_experimental_feature:  # pragma: no cover
+if developer_enable_experimental_feature:  # coverage: exclude
     # 先处理实验性功能开关
     pass
 
@@ -493,7 +493,7 @@ def cache_clean(is_force_flush=False):
             is_ip_not_in_allow_range.cache_clear()
             # client_requests_text_rewrite.cache_clear()
             # extract_url_path_and_query.cache_clear()
-        except:  # pragma: no cover
+        except:  # coverage: exclude
             errprint('ErrorWhenCleaningFunctionLruCache')
             traceback.print_exc()
 
@@ -525,7 +525,7 @@ def cron_task_container(task_dict, add_task_only=False):
                 *(task_dict.get('args', ())),  # 解开参数以后传递
                 **(task_dict.get('kwargs', {}))
             )
-        except:  # pragma: no cover
+        except:  # coverage: exclude
             errprint('ErrorWhenProcessingCronTasks', task_dict)
             traceback.print_exc()
 
@@ -558,7 +558,7 @@ def cron_task_host():
         sleep(60)
         try:
             task_scheduler.run()
-        except:  # pragma: no cover
+        except:  # coverage: exclude
             errprint('ErrorDuringExecutingCronTasks')
             traceback.print_exc()
 
@@ -626,7 +626,7 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     try:
         with open(zmirror_root('automatic_domains_whitelist.log'), 'a', encoding='utf-8') as fp:
             fp.write(domain + '\n')
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         traceback.print_exc()
 
     return True
@@ -1205,7 +1205,7 @@ def append_ip_whitelist_file(ip_to_allow):
     try:
         with open(zmirror_root(human_ip_verification_whitelist_file_path), 'a', encoding='utf-8') as fp:
             fp.write(ip_to_allow + '\n')
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         errprint('Unable to write whitelist file')
         traceback.print_exc()
 
@@ -1224,7 +1224,7 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
             fp.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + ip_to_allow
                      + " " + str(request.user_agent)
                      + " " + repr(info_record_dict) + "\n")
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         errprint('Unable to write log file', os.path.abspath(human_ip_verification_whitelist_log))
         traceback.print_exc()
 
@@ -1254,7 +1254,7 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
     for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
         try:
             buffer_queue.put(particle_content, timeout=10)
-        except queue.Full:  # pragma: no cover
+        except queue.Full:  # coverage: exclude
             traceback.print_exc()
             exit()
         if verbose_level >= 3: dbgprint('BufferSize', buffer_queue.qsize())
@@ -1282,7 +1282,7 @@ def iter_streamed_response_async():
     while True:
         try:
             particle_content = buffer_queue.get(timeout=15)
-        except queue.Empty:  # pragma: no cover
+        except queue.Empty:  # coverage: exclude
             warnprint('WeGotAnSteamTimeout')
             traceback.print_exc()
             return
@@ -1348,7 +1348,7 @@ def copy_response(content=None, is_streamed=False):
                         _loc_rewrite = custom_response_text_rewriter(_location, 'mwm/headers-location', parse.remote_url)
                         if isinstance(_loc_rewrite, str):
                             _location = _loc_rewrite
-                except:  # just print err and fallback to normal rewrite # pragma: no cover
+                except:  # just print err and fallback to normal rewrite # coverage: exclude
                     return generate_error_page("(LOCATION) Custom Rewrite Function ERROR", is_traceback=True), 0
                 resp.headers[header_key] = encode_mirror_url(_location)
 
@@ -1461,7 +1461,7 @@ def response_content_rewrite():
                     if is_skip_builtin_rewrite:
                         infoprint('Skip_builtin_rewrite', request.url)
                         return resp_text.encode(encoding='utf-8')
-        except:  # just print err and fallback to normal rewrite # pragma: no cover
+        except:  # just print err and fallback to normal rewrite # coverage: exclude
             return generate_error_page(
                 'Error in custom response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
         else:
@@ -1471,7 +1471,7 @@ def response_content_rewrite():
         # then do the normal rewrites
         try:
             resp_text = response_text_rewrite(resp_text)
-        except:  # pragma: no cover
+        except:  # coverage: exclude
             return generate_error_page(
                 'Error in builtin response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
         else:
@@ -1485,7 +1485,7 @@ def response_content_rewrite():
         return _content, req_time_body
 
 
-def response_text_basic_rewrite(*args, **kwargs):  # pragma: no cover
+def response_text_basic_rewrite(*args, **kwargs):  # coverage: exclude
     """本函数在v0.28.3被移除, 对本函数的调用会被映射出去
     如果需要查看本函数代码, 请查看git历史到 v0.28.3 以前
     """
@@ -1789,7 +1789,7 @@ def prepare_client_request_data():
             data = client_requests_text_rewrite(data)  # type: str
 
     # 下面这个if是debug用代码, 对正常运行无任何作用
-    if developer_string_trace:  # pragma: no cover
+    if developer_string_trace:  # coverage: exclude
         if isinstance(data, str):
             data = data.encode(encoding=encoding)
         if developer_string_trace.encode(encoding=encoding) in data:
@@ -1915,7 +1915,7 @@ def guess_correct_domain(depth=7):
                 headers=parse.client_header,
                 data=parse.request_data_encoded,
             )
-        except:  # pragma: no cover
+        except:  # coverage: exclude
             continue
 
         if resp.status_code in (400, 404, 500):
@@ -1961,7 +1961,7 @@ def guess_correct_domain(depth=7):
         try:
             with open(zmirror_root("domain_guess.log"), "a", encoding="utf-8") as fw:
                 fw.write("{}\t{}\t{}\t-->\t{}\n".format(datetime.now(), current_domain, request.path, domain))
-        except:  # pragma: no cover
+        except:  # coverage: exclude
             pass
 
         request.path = urlsplit(rewrited_url).path
@@ -1971,7 +1971,7 @@ def guess_correct_domain(depth=7):
 
         return resp
 
-    else:  # 全部尝试失败 # pragma: no cover
+    else:  # 全部尝试失败 # coverage: exclude
         return None
 
 
@@ -2318,7 +2318,7 @@ def ip_ban_verify_page():
         if 'origin' in request.form:
             try:
                 origin = base64.urlsafe_b64decode(request.form.get('origin')).decode(encoding='utf-8')
-            except:  # pragma: no cover
+            except:  # coverage: exclude
                 return generate_error_page(
                     "Unable to decode origin from value:" + html_escape(request.form.get('origin')), is_traceback=True)
             else:
@@ -2377,7 +2377,7 @@ def zmirror_enter(input_path='/'):
         for name, value in parse.extra_resp_headers.items():
             resp.headers.set(name, value)
 
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         return generate_error_page(is_traceback=True)
     else:
         return resp
@@ -2507,13 +2507,13 @@ try:
         # 所以在 unittest 中, 每次重载 zmirror 的时候, 都需要重载一次 custom_func
         importlib.reload(importlib.import_module("custom_func"))
     from custom_func import *
-except:  # pragma: no cover
+except:  # coverage: exclude
     pass
 
 if custom_text_rewriter_enable:
     try:
         from custom_func import custom_response_text_rewriter
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         warnprint('Cannot import custom_response_text_rewriter custom_func.py,'
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
         raise
@@ -2521,7 +2521,7 @@ if custom_text_rewriter_enable:
 if identity_verify_required:
     try:
         from custom_func import custom_identity_verify
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         identity_verify_required = False
         warnprint('Cannot import custom_identity_verify from custom_func.py,'
                   ' `identity_verify` is now disabled (if it was enabled)')
@@ -2530,7 +2530,7 @@ if identity_verify_required:
 if enable_custom_access_cookie_generate_and_verify:
     try:
         from custom_func import custom_generate_access_cookie, custom_verify_access_cookie
-    except:  # pragma: no cover
+    except:  # coverage: exclude
         enable_custom_access_cookie_generate_and_verify = False
         errprint('Cannot import custom_generate_access_cookie and custom_generate_access_cookie from custom_func.py,'
                  ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')

@@ -13,6 +13,7 @@ omit =
 [report]
 exclude_lines =
     pragma: no cover
+    coverage: exclude
     errprint
     traceback.print_exc\(\)
     if __name__ == .__main__.:
