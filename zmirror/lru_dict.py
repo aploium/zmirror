@@ -27,13 +27,13 @@ class LRUDictManual(OrderedDict):  # pragma: no cover
         super().__setitem__(key, value)
 
     def keys(self):
-        return list(reversed(super().keys()))
+        return list(reversed(list(super().keys())))
 
     def values(self):
-        return list(reversed(super().values()))
+        return list(reversed(list(super().values())))
 
     def items(self):
-        return list(reversed(super().items()))
+        return list(reversed(list(super().items())))
 
     def get_size(self):
         return len(self)
