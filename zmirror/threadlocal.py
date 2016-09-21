@@ -16,8 +16,10 @@ class ZmirrorThreadLocal(threading.local):
 
     本类在 zmirror 中被实例化为变量 parse
     这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
+
     其各个变量的含义如下:
-    parse.start_time          处理请求开始的时间, unix 时间戳
+    parse.time                记录请求过程中的各种时间点
+         .method              请求的方法, 如 GET POST
          .remote_domain       当前请求对应的远程域名
          .is_external_domain  远程域名是否是外部域名, 比如google镜像, www.gstatic.com 就是外部域名
          .is_https            是否需要用https 来请求远程域名
@@ -38,6 +40,10 @@ class ZmirrorThreadLocal(threading.local):
          .streamed_our_response  是否以 stream 模式向浏览器传送这个响应
          .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
+    本类的方法:
+        .dump()                   dump所有信息到dict
+        .set_extra_resp_header()  设置一个响应头, 会发送给访问者, 会在内部操作 self.extra_resp_headers
+
     """
 
     def __init__(self):
@@ -45,6 +51,7 @@ class ZmirrorThreadLocal(threading.local):
 
     def init(self):
         # 初始化成空白值
+        self.method = None
         self.remote_domain = None
         self.is_external_domain = None
         self.is_https = None
@@ -68,6 +75,7 @@ class ZmirrorThreadLocal(threading.local):
     def dump(self):
         return {
             "time": self.time,
+            "method": self.method,
             "remote_domain": self.remote_domain,
             "is_external_domain": self.is_external_domain,
             "is_https": self.is_https,
@@ -138,6 +146,19 @@ class ZmirrorThreadLocal(threading.local):
     def is_https(self, value):
         """:type value: bool"""
         self.__setattr__("_is_https", value)
+
+    @property
+    def method(self):
+        """
+        请求的方法
+        :rtype: str
+        """
+        return self.__getattribute__("_method")
+
+    @method.setter
+    def method(self, value):
+        """:type value: str"""
+        self.__setattr__("_method", value)
 
     @property
     def remote_url(self):

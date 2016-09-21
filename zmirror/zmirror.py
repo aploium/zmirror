@@ -972,7 +972,7 @@ def put_response_to_local_cache(url, _our_resp, without_content=False):
     :type without_content: bool
     """
     # Only cache GET method, and only when remote returns 200(OK) status
-    if request.method != 'GET' or _our_resp.status_code != 200:
+    if parse.method != 'GET' or _our_resp.status_code != 200:
         return
 
     dbgprint('PuttingCache:', url, "without_content:", without_content)
@@ -1008,7 +1008,7 @@ def try_get_cached_response(url, client_header=None):
     :rtype: Union[Response, None]
     """
     # Only use cache when client use GET
-    if local_cache_enable and request.method == 'GET' and cache.is_cached(url):
+    if local_cache_enable and parse.method == 'GET' and cache.is_cached(url):
         if client_header is not None and 'if-modified-since' in client_header and \
                 cache.is_unchanged(url, client_header.get('if-modified-since', None)):
             dbgprint('FileCacheHit-304', url)
@@ -2101,7 +2101,7 @@ def posterior_request_redirect():
             # 并且该资源已经被判断为可以应用CDN
             and url_to_use_cdn[parse.url_no_scheme][0]
             # 只缓存 GET 方法的资源
-            and request.method == 'GET'
+            and parse.method == 'GET'
             # 只有超过大小下限才会重定向
             and url_to_use_cdn[parse.url_no_scheme][2] > cdn_soft_redirect_minimum_size
             # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
@@ -2394,6 +2394,7 @@ def main_function(input_path='/'):
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     # 其各个变量的含义请看 zmirror.threadlocal.ZmirrorThreadLocal 中的说明
     parse.init()
+    parse.method = request.method
     parse.time["start_time"] = process_time()  # to display compute time
 
     # 将用户请求的URL解析为对应的目标服务器URL
