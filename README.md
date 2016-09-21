@@ -80,6 +80,7 @@ Together with the program, provided several (almost) out-of-box configs
   * duckduckgo镜像  
   * Dropbox镜像  
   * Tumblr镜像  
+  * Economist(经济学人)镜像  
   * For more information, please see [more_configs/readme.md](more_configs/readme.md)  
   
   

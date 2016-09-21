@@ -58,3 +58,7 @@ python3 wsgi.py
   如果你想要注册一个账号, 暂时得从其他渠道进行  
   但是其他功能基本完整(包括登录以后的功能)  
   ![zmirror Tumblr镜像 截图](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/Tumblr.jpg)  
+#### Economist(经济学人)镜像
+  经济学人镜像  
+  有一些地方比较鬼畜, 有时候会卡住, 但是绝大部分能用  
+  ![zmirror economist 经济学人镜像 截图](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/Economist.jpg)  
