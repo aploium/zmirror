@@ -12,6 +12,8 @@ class ZmirrorThreadLocal(threading.local):
     """
     由于Python内置thread-local对代码补全的提示非常不友好, 所以自己继承一个
 
+    如果不知道什么是thread-local, 请看 http://tinyurl.com/hqgb2r8
+
     本类在 zmirror 中被实例化为变量 parse
     这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     其各个变量的含义如下:

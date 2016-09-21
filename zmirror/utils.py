@@ -218,16 +218,16 @@ def is_domain_match_glob_whitelist(domain):
 
 
 @lru_cache(maxsize=128)
-def is_content_type_streamed(_content_type):
+def is_mime_streamed(mime):
     """
     根据content-type判断是否应该用stream模式传输(服务器下载的同时发送给用户)
      视频/音频/图片等二进制内容默认用stream模式传输
-     :param _content_type: content_type, eg: "plain/text; encoding=utf-8"
-     :type _content_type: str
+     :param mime: mime or content-type, eg: "plain/text; encoding=utf-8"
+     :type mime: str
      :rtype: bool
     """
     for streamed_keyword in steamed_mime_keywords:
-        if streamed_keyword in _content_type:
+        if streamed_keyword in mime:
             return True
     return False
 

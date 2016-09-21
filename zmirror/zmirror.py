@@ -480,7 +480,7 @@ def cache_clean(is_force_flush=False):
         try:
             url_to_use_cdn.clear()
             is_domain_match_glob_whitelist.cache_clear()
-            is_content_type_streamed.cache_clear()
+            is_mime_streamed.cache_clear()
             extract_real_url_from_embedded_url.cache_clear()
             embed_real_url_to_embedded_url.cache_clear()
             check_global_ua_pass.cache_clear()
@@ -1812,19 +1812,23 @@ def generate_our_response():
 def parse_remote_response():
     """处理远程服务器的响应"""
     # extract response's mime to thread local var
-    parse.content_type = parse.remote_response.headers.get('Content-Type', '') \
-                         or parse.remote_response.headers.get('content-type', '')
+    parse.content_type = parse.remote_response.headers.get('Content-Type', '')
     parse.mime = extract_mime_from_content_type(parse.content_type)
 
     # only_serve_static_resources
     if only_serve_static_resources and not is_content_type_using_cdn(parse.content_type):
         return generate_simple_resp_page(b'This site is just for static resources.', error_code=403)
 
-    # is streamed
-    parse.streamed_our_response = enable_stream_content_transfer and is_content_type_streamed(parse.content_type)
+    # 是否以stream(流)式传输响应内容
+    #   关于flask的stream传输, 请看官方文档 http://flask.pocoo.org/docs/0.11/patterns/streaming/
+    #   如果启用stream传输, 并且响应的mime在启用stream的类型中, 就使用stream传输
+    #   关于stream模式的更多内容, 请看 config_default.py 中 `enable_stream_content_transfer` 的部分
+    #   如果你正在用PyCharm, 只需要按住Ctrl然后点下面↓↓这个变量↓↓就行
+    parse.streamed_our_response = enable_stream_content_transfer and is_mime_streamed(parse.mime)
 
     # extract cache control header, if not cache, we should disable local cache
     parse.cache_control = parse.remote_response.headers.get('Cache-Control', '')
+    # 判断响应是否允许缓存. 使用相当保守的缓存策略
     parse.cacheable = 'no-store' not in parse.cache_control and 'must-revalidate' not in parse.cache_control \
                       and "max-age=0" not in parse.cache_control and "private" not in parse.cache_control \
                       and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200
@@ -1950,9 +1954,11 @@ def request_remote_site():
     """
     请求远程服务器(high-level), 并在返回404/500时进行 domain_guess 尝试
     """
+    # 解析并重写浏览器请求的data内容
     data = prepare_client_request_data()
 
-    # server's request won't follow 301 or 302 redirection
+    # 请求被镜像的网站
+    # 注意: 在zmirror内部不会处理重定向, 重定向响应会原样返回给浏览器
     parse.remote_response = send_request(
         parse.remote_url,
         method=request.method,
@@ -1961,7 +1967,7 @@ def request_remote_site():
     )
 
     if parse.remote_response.url != parse.remote_url:
-        warnprint('requests\'s remote url', parse.remote_response.url,
+        warnprint("requests's remote url", parse.remote_response.url,
                   'does no equals our rewrited url', parse.remote_url)
 
     if parse.remote_response.status_code in (400, 404, 500):
@@ -2195,7 +2201,7 @@ def zmirror_status():
         return generate_simple_resp_page(b'Only 127.0.0.1 are allowed', 403)
     output = ""
     output += strx('extract_real_url_from_embedded_url', extract_real_url_from_embedded_url.cache_info())
-    output += strx('\nis_content_type_streamed', is_content_type_streamed.cache_info())
+    output += strx('\nis_content_type_streamed', is_mime_streamed.cache_info())
     output += strx('\nembed_real_url_to_embedded_url', embed_real_url_to_embedded_url.cache_info())
     output += strx('\ncheck_global_ua_pass', check_global_ua_pass.cache_info())
     output += strx('\nextract_mime_from_content_type', extract_mime_from_content_type.cache_info())
@@ -2364,9 +2370,7 @@ def main_function(input_path='/'):
     # parse 类似于 flask 的 request, 是 zmirror 特有的一个 thread-local 变量
     # 这个变量的重要性不亚于 request, 在 zmirror 各个部分都会用到
     # 其各个变量的含义请看 zmirror.threadlocal.ZmirrorThreadLocal 中的说明
-
     parse.init()
-
     parse.time["start_time"] = process_time()  # to display compute time
 
     # 将用户请求的URL解析为对应的目标服务器URL
@@ -2382,8 +2386,12 @@ def main_function(input_path='/'):
 
     # 对用户请求进行第一级重定向(隐式重写前的重定向)
     # 函数不会修改 parse
+    # 此重定向对用户可见, 是301/302/307重定向
     r = prior_request_redirect()
     if r is not None:
+        # 如果返回的是None, 则表示未发生重定向, 照常继续
+        # 如果返回的是一个flask Response 对象, 则表示需要进行重定向, 原样返回此对象即可
+        # 下同
         return r
 
     # 进行请求的隐式重写/重定向
@@ -2400,12 +2408,17 @@ def main_function(input_path='/'):
     parse.client_header = extract_client_header()  # type: dict
 
     # 对用户请求进行第二级重定向(隐式重写后的重定向)
+    # 与一级重定向一样, 是301/302/307重定向
     r = posterior_request_redirect()
     if r is not None:
         return r
 
+    # 请求真正的远程服务器
+    # 并在返回404/500时进行 domain_guess 尝试
+    # domain_guess的解释请看函数 guess_correct_domain() 中的注释
     request_remote_site()
 
+    # 解析远程服务器的响应
     parse_remote_response()
 
     resp = generate_our_response()
