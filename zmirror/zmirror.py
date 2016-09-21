@@ -1299,6 +1299,10 @@ def iter_streamed_response_async():
 
             yield particle_content
         else:
+            if parse.url_no_scheme in url_to_use_cdn:
+                # 更新记录中的响应的长度
+                url_to_use_cdn[parse.url_no_scheme][2] = len(_content_buffer)
+
             if local_cache_enable and not _disable_cache_temporary:
                 update_content_in_local_cache(parse.remote_url, _content_buffer,
                                               method=parse.remote_response.request.method)
@@ -1845,8 +1849,20 @@ def parse_remote_response():
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
         if parse.url_no_scheme not in url_to_use_cdn:
+            # 计算远程响应的长度
+            if "Content-Length" in parse.remote_response.headers:
+                # 如果服务器在响应头中指定了长度, 那么就直接读取
+                length = parse.remote_response.headers.get("Content-Length")
+            elif parse.streamed_our_response:
+                # 在流式传输下, 我们无法立即读取响应内容, 所以如果服务器没有提供响应, 我们无法知道到底有多长
+                #   响应的实际长度会在实际读取响应时被计算出来, 但是可能会不准确
+                length = -1
+            else:
+                # 在非流式传输的情况下, requests会立即取回整个响应体, 所以可以直接测量它的长度
+                length = len(parse.remote_response.content)
+
             # 记录本URL的信息
-            url_to_use_cdn[parse.url_no_scheme] = [False, parse.mime, len(parse.remote_response.content)]
+            url_to_use_cdn[parse.url_no_scheme] = [False, parse.mime, length]
 
             if is_content_type_using_cdn(parse.mime):
                 # mark it to use cdn, and record it's url without scheme.
