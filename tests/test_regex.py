@@ -502,6 +502,12 @@ class TestRegex(ZmirrorTestBase):
                 main=r"""it(); return true;" action="/bankToAcc.action?__continue=997ec1b2e3453a4ec2c69da040dddf6e" method="post">""",
                 ext=r"""it(); return true;" action="/extdomains/{ext_domain}/bankToAcc.action?__continue=997ec1b2e3453a4ec2c69da040dddf6e" method="post">""",
 
+            ),
+            dict(
+                raw=r"""allback'; };window['__google_recaptcha_client'] = true;var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = 'https://www.gstatic.com/recaptcha/api2/r20160913151359/recaptcha__zh_cn.js'; var elem = document.querySelector('script[nonce]');var non""",
+                main=r"""allback'; };window['__google_recaptcha_client'] = true;var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = '{our_scheme}{our_domain}/extdomains/www.gstatic.com/recaptcha/api2/r20160913151359/recaptcha__zh_cn.js'; var elem = document.querySelector('script[nonce]');var non""",
+                ext=r"""allback'; };window['__google_recaptcha_client'] = true;var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;po.src = '{our_scheme}{our_domain}/extdomains/www.gstatic.com/recaptcha/api2/r20160913151359/recaptcha__zh_cn.js'; var elem = document.querySelector('script[nonce]');var non""",
+                mime="text/javascript",
             )
         )
 
@@ -525,6 +531,7 @@ class TestRegex(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
             for test_case in test_cases:
+                self.zmirror.parse.mime = test_case.get("mime", "text/html")
                 raw = self._url_format(test_case["raw"])
                 main = self._url_format(test_case["main"])
                 # ext = url_format(test_case["ext"])
@@ -542,6 +549,7 @@ class TestRegex(ZmirrorTestBase):
                 headers=headers(),
             )  # type: Response
             for test_case in test_cases:
+                self.zmirror.parse.mime = test_case.get("mime", "text/html")
                 raw = self._url_format(test_case["raw"])
                 ext = self._url_format(test_case["ext"])
 
