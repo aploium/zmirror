@@ -81,6 +81,7 @@ Together with the program, provided several (almost) out-of-box configs
   * Dropbox镜像  
   * Tumblr镜像  
   * Economist(经济学人)镜像  
+  * thepiratebay(海盗湾)镜像  
   * For more information, please see [more_configs/readme.md](more_configs/readme.md)  
   
   

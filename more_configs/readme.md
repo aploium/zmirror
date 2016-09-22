@@ -62,3 +62,7 @@ python3 wsgi.py
   经济学人镜像  
   有一些地方比较鬼畜, 有时候会卡住, 但是绝大部分能用  
   ![zmirror economist 经济学人镜像 截图](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/Economist.jpg)  
+#### thepiratebay(海盗湾)镜像
+  海盗湾镜像  
+  全功能完整  
+  btw: 海盗湾居然只有一个域名, 真是太方便了  
