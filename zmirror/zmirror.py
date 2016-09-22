@@ -377,7 +377,9 @@ regex_remove__zmirror_verify__header = re.compile(
 
 app = Flask(  # type: Flask
     __name__ if not unittest_mode
-    else 'unittest' + str(random.random()).replace('.', '')
+    else 'unittest' + str(random.random()).replace('.', ''),
+    static_folder=None,
+    template_folder=None,
 )
 
 
