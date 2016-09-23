@@ -630,6 +630,22 @@ CDN_domains = ('cdn1.example.com', 'cdn2.example.com', 'cdn3.example.com')
 # 请参考 custom_func.sample.py 中的示例函数
 custom_text_rewriter_enable = False
 
+# ############# Custom Redirection #################
+
+# v0.30.0+
+# ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
+# ### 这是一项高级选项, 你需要写一些自己的Python代码才行 ###
+# 用于使用自定义函数, 在 prior_request_redirect 的最后执行自定义重定向.
+# 需要在 custom_func.py 中写一个函数:
+#
+#     custom_prior_redirect_func(request, parse)
+#
+#   自定义函数若返回一个 flask.Response 对象, 则执行重定向, 直接返回这个 Response
+#   自定义函数若返回None, 则不进行重定向
+# 不应该修改parse变量 (添加头和cookie除外)
+custom_prior_request_redirect_enable = False
+
+
 # ############## Misc ##############
 # v0.18.5+
 # eg: {'access-control-max-age', 'access-control-allow-origin', 'x-connection-hash'}

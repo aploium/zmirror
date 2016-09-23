@@ -2052,6 +2052,8 @@ def prior_request_redirect():
     第一阶段重定向, 是在 rewrite_client_request() 内部隐式重写 *之前* 的重定向
     第二阶段重定向, 是在 rewrite_client_request() 内部隐式重写 *之后* 的重定向
 
+    如果 `custom_prior_request_redirect_enable` 启用, 则会调用 custom_func.custom_prior_redirect_func() 进行自定义重定向
+
     :return: 如果不需要重定向, 则返回None, 否则返回重定向的 Response
     :rtype: Union[Response, None]
     """
@@ -2080,6 +2082,12 @@ def prior_request_redirect():
                 redirect_to = re.sub(regex_match, regex_replace, parse.remote_path_query, flags=re.IGNORECASE)
                 dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)
+
+    if custom_prior_request_redirect_enable:
+        # 自定义重定向
+        redirection = custom_prior_redirect_func(request, parse)  # type: Union[Response, None]
+        if redirection is not None:
+            return redirection
 
 
 def posterior_request_redirect():
@@ -2378,6 +2386,10 @@ def zmirror_enter(input_path='/'):
         # 加入额外的响应头
         for name, value in parse.extra_resp_headers.items():
             resp.headers.set(name, value)
+
+        # 加入额外的cookies
+        for name, cookie_string in parse.extra_cookies.items():
+            resp.headers.add("Set-Cookie", cookie_string)
 
     except:  # coverage: exclude
         return generate_error_page(is_traceback=True)

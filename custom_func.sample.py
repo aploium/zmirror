@@ -1,5 +1,6 @@
 # coding=utf-8
 import re
+from flask import Response, Request
 from zmirror.zmirror import *
 
 # regex patton from @stephenhay, via https://mathiasbynens.be/demo/url-regex
@@ -69,6 +70,33 @@ def custom_response_text_rewriter(raw_text, content_mime, remote_url):
         raw_text = raw_text.replace('</head>', my_statistic_code + '</head>', 1)
 
     return raw_text
+
+
+def custom_prior_redirect_func(request, parse):
+    """
+    用于在 prior_request_redirect 阶段的自定义重定向
+
+    若返回一个 flask.Response 对象, 则执行重定向, 直接返回这个 Response
+    若返回None, 则不进行重定向
+
+    不应该修改parse变量 (添加头和cookie除外)
+
+    详见 `config_default.py` 中 `Custom Redirection` 部分
+
+    :param request: flask request object
+    :type request: Request
+    :param parse: the zmirror parse variable
+    :type parse: ZmirrorThreadLocal
+    :rtype: Union[Response, None]
+    """
+    print(request.url, parse.remote_url)
+
+    from flask import redirect
+
+    # 如果你想重定向, 请使用这句
+    # return redirect("/location/you/want/redirect/to")
+
+    return None  # 不进行自定义重定向
 
 
 def custom_identity_verify(identity_dict):

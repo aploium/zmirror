@@ -3,7 +3,7 @@ import threading
 import requests
 
 try:
-    from typing import Dict, Union
+    from typing import Dict, Union, Tuple
 except:  # pragma: no cover
     pass
 
@@ -37,12 +37,14 @@ class ZmirrorThreadLocal(threading.local):
          .remote_response     远程服务器的响应, requests.Response
          .cacheable           是否可以对这一响应应用缓存 (CDN也算是缓存的一种, 依赖于此选项)
          .extra_resp_headers  发送给浏览器的额外响应头 (比如一些调试信息什么的)
+         .extra_cookies       额外的cookies, 在目前版本只能添加, 不能覆盖已有cookie
          .streamed_our_response  是否以 stream 模式向浏览器传送这个响应
          .temporary_domain_alias 用于纯文本域名替换, 见 `plain_replace_domain_alias` 选项
 
     本类的方法:
         .dump()                   dump所有信息到dict
         .set_extra_resp_header()  设置一个响应头, 会发送给访问者, 会在内部操作 self.extra_resp_headers
+        .set_cookie()             添加一个cookie 会在内部操作 self.extra_cookies, 目前版本只能添加新的cookie, 不能覆盖已有cookie
 
     """
 
@@ -71,6 +73,7 @@ class ZmirrorThreadLocal(threading.local):
         self.time = {}
         self.extra_resp_headers = {}
         self.temporary_domain_alias = []
+        self.extra_cookies = {}
 
     def dump(self):
         return {
@@ -92,6 +95,7 @@ class ZmirrorThreadLocal(threading.local):
             "streamed_our_response": self.streamed_our_response,
             "cacheable": self.cacheable,
             "extra_resp_headers": self.extra_resp_headers,
+            "extra_cookies": self.extra_cookies,
             "request_data": self.request_data,
             "request_data_encoding": self.request_data_encoding,
         }
@@ -107,6 +111,22 @@ class ZmirrorThreadLocal(threading.local):
         h = self.extra_resp_headers
         h[name] = value
         self.extra_resp_headers = h
+
+    def set_cookies(self, name, value, ttl=12 * 35 * 24 * 60 * 60, path='/'):
+        """
+        :param ttl: cookie有效时间, 秒
+        :type ttl: int
+        :type path: str
+        :type name:  str
+        :type value:  str
+        """
+        from http.cookies import SimpleCookie
+        c = SimpleCookie()
+        c[name] = value
+        c[name]["path"] = path
+        c[name]["expires"] = ttl
+
+        self.extra_cookies[name] = c[name].OutputString()
 
     @property
     def remote_domain(self):
@@ -322,6 +342,17 @@ class ZmirrorThreadLocal(threading.local):
     def extra_resp_headers(self, value):
         """:type value: Dict[str, str]"""
         self.__setattr__("_extra_resp_headers", value)
+
+    @property
+    def extra_cookies(self):
+        """额外的cookie
+        :rtype: Dict[str, str]"""
+        return self.__getattribute__("_extra_cookies")
+
+    @extra_cookies.setter
+    def extra_cookies(self, value):
+        """:type value: Dict[str, str]"""
+        self.__setattr__("_extra_cookies", value)
 
     @property
     def time(self):
