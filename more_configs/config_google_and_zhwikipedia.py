@@ -196,6 +196,7 @@ external_domains = (
     'plus.googleapis.com',
     'youtube.googleapis.com',
     'picasa.google.com',
+    "www-onepick-opensocial.googleusercontent.com",
 
     'plus.sandbox.google.com',
 
@@ -219,7 +220,7 @@ force_https_domains = 'ALL'
 # 自动动态添加域名
 enable_automatic_domains_whitelist = True
 domains_whitelist_auto_add_glob_list = (
-    '*.google.com', '*.gstatic.com', '*.google.com.hk', '*.googleapis.com')
+    '*.google.com', '*.gstatic.com', '*.google.com.hk', '*.googleapis.com', "*.googleusercontent.com",)
 
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
