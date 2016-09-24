@@ -632,7 +632,7 @@ custom_text_rewriter_enable = False
 
 # ############# Custom Redirection #################
 
-# v0.30.0+
+# v0.29.3+
 # ### IT IS AN EXPERT SETTING THAT YOU HAVE TO WRITE SOME YOUR OWN PYTHON CODES ###
 # ### 这是一项高级选项, 你需要写一些自己的Python代码才行 ###
 # 用于使用自定义函数, 在 prior_request_redirect 的最后执行自定义重定向.
