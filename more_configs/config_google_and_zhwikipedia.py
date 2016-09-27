@@ -245,3 +245,32 @@ url_custom_redirect_list = {
     # 这是gmail
     '/gmail': '/extdomains/mail.google.com/mail/u/0/h/girbaeneuj90/',
 }
+
+# ############# Additional Functions #############
+# 移除google搜索结果页面的url跳转
+#   原理是往页面中插入一下面这段js
+# js来自: http://userscripts-mirror.org/scripts/review/117942
+custom_inject_content = {
+    "head_first": [
+        {
+            "content": r"""<script>
+function checksearch(){
+   var list = document.getElementById('ires');
+   if(list){
+       document.removeEventListener('DOMNodeInserted',checksearch,false);
+       document.addEventListener('DOMNodeInserted',clear,false)
+   }
+};
+
+function clear(){
+   var i; var items = document.querySelectorAll('a[onmousedown]');
+   for(i =0;i<items.length;i++){
+       items[i].removeAttribute('onmousedown');
+   }
+};
+document.addEventListener('DOMNodeInserted',checksearch,false)
+</script>""",
+            "url_regex": r"^www\.google(?:\.[a-z]{2,3}){1,2}",
+        },
+    ]
+}
