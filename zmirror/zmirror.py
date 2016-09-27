@@ -1439,76 +1439,70 @@ def response_cookies_deep_copy():
 def response_content_rewrite():
     """
     Rewrite requests response's content's url. Auto skip binary (based on MIME).
-    :return: List[bytes, float]
+    :return: Tuple[bytes, float]
     """
 
     _start_time = time()
     _content = parse.remote_response.content
     req_time_body = time() - _start_time
 
-    if parse.mime and is_mime_represents_text(parse.mime):
-        # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
-        if verbose_level >= 3: dbgprint('Text-like', parse.content_type,
-                                        parse.remote_response.text[:15], _content[:15])
-
-        # 自己进行编码检测, 因为 requests 内置的编码检测在天朝GBK面前非常弱鸡
-        encoding = encoding_detect(parse.remote_response.content)
-        if encoding is not None:
-            parse.remote_response.encoding = encoding
-
-        # simply copy the raw text, for custom rewriter function first.
-        resp_text = parse.remote_response.text
-
-        if developer_string_trace is not None and developer_string_trace in resp_text:
-            infoprint('StringTrace: appears in the RAW remote response text, code line no. ', current_line_number())
-
-        # try to apply custom rewrite function
-        try:
-            if custom_text_rewriter_enable:
-                resp_text2 = custom_response_text_rewriter(resp_text, parse.mime, parse.remote_url)
-                if isinstance(resp_text2, str):
-                    resp_text = resp_text2
-                elif isinstance(resp_text2, tuple) or isinstance(resp_text2, list):
-                    resp_text, is_skip_builtin_rewrite = resp_text2
-                    if is_skip_builtin_rewrite:
-                        infoprint('Skip_builtin_rewrite', request.url)
-                        return resp_text.encode(encoding='utf-8')
-        except:  # just print err and fallback to normal rewrite # coverage: exclude
-            return generate_error_page(
-                'Error in custom response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
-        else:
-            if developer_string_trace is not None and developer_string_trace in resp_text:
-                infoprint('StringTrace: appears after custom text rewrite, code line no. ', current_line_number())
-
-        # then do the normal rewrites
-        try:
-            resp_text = response_text_rewrite(resp_text)
-        except:  # coverage: exclude
-            return generate_error_page(
-                'Error in builtin response rewrite', is_traceback=True, content_only=True).encode(), req_time_body
-        else:
-            if developer_string_trace is not None and developer_string_trace in resp_text:
-                infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
-
-        # 在页面中插入自定义内容
-        # 详见 default_config.py 的 `Custom Content Injection` 部分
-        if custom_inject_content and parse.mime == "text/html":
-            for position, items in custom_inject_content.items():  # 遍历设置中的所有位置
-                for item in items:  # 每个位置中的条目
-
-                    # 判断正则是否匹配当前url, 不匹配跳过
-                    r = item.get("url_regex")
-                    if r is not None and not r.match(parse.url_no_scheme):
-                        continue
-
-                    # 将内容插入到html
-                    resp_text = inject_content(position, resp_text, item["content"])
-
-        return resp_text.encode(encoding='utf-8'), req_time_body  # return bytes
-    else:
+    if not is_mime_represents_text(parse.mime):
         # simply don't touch binary response content
         dbgprint('Binary', parse.content_type)
         return _content, req_time_body
+
+    # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
+    if verbose_level >= 3: dbgprint('Text-like', parse.content_type,
+                                    parse.remote_response.text[:15], _content[:15])
+
+    # 自己进行编码检测, 因为 requests 内置的编码检测在天朝GBK面前非常弱鸡
+    encoding = encoding_detect(parse.remote_response.content)
+    if encoding is not None:
+        parse.remote_response.encoding = encoding
+
+    # simply copy the raw text, for custom rewriter function first.
+    resp_text = parse.remote_response.text
+
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        # debug用代码, 对正常运行无任何作用
+        infoprint('StringTrace: appears in the RAW remote response text, code line no. ', current_line_number())
+
+    # try to apply custom rewrite function
+    if custom_text_rewriter_enable:
+        resp_text2 = custom_response_text_rewriter(resp_text, parse.mime, parse.remote_url)
+        if isinstance(resp_text2, str):
+            resp_text = resp_text2
+        elif isinstance(resp_text2, tuple) or isinstance(resp_text2, list):
+            resp_text, is_skip_builtin_rewrite = resp_text2
+            if is_skip_builtin_rewrite:
+                infoprint('Skip_builtin_rewrite', request.url)
+                return resp_text.encode(encoding='utf-8'), req_time_body
+
+        if developer_string_trace is not None and developer_string_trace in resp_text:
+            # debug用代码, 对正常运行无任何作用
+            infoprint('StringTrace: appears after custom text rewrite, code line no. ', current_line_number())
+
+    # then do the normal rewrites
+    resp_text = response_text_rewrite(resp_text)
+
+    if developer_string_trace is not None and developer_string_trace in resp_text:
+        # debug用代码, 对正常运行无任何作用
+        infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
+
+    # 在页面中插入自定义内容
+    # 详见 default_config.py 的 `Custom Content Injection` 部分
+    if custom_inject_content and parse.mime == "text/html":
+        for position, items in custom_inject_content.items():  # 遍历设置中的所有位置
+            for item in items:  # 每个位置中的条目
+                # 判断正则是否匹配当前url, 不匹配跳过
+                r = item.get("url_regex")
+                if r is not None and not r.match(parse.url_no_scheme):
+                    continue
+
+                # 将内容插入到html
+                resp_text = inject_content(position, resp_text, item["content"])
+
+    return resp_text.encode(encoding='utf-8'), req_time_body  # return bytes
 
 
 def response_text_basic_rewrite(*args, **kwargs):  # coverage: exclude
@@ -1535,12 +1529,14 @@ def response_text_rewrite(resp_text):
     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
 
     if developer_string_trace is not None and developer_string_trace in resp_text:
+        # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after advanced rewrite, code line no. ', current_line_number())
 
     # v0.28.0 实验性功能, 在v0.28.3后默认启用
     resp_text = response_text_basic_mirrorlization(resp_text)
 
     if developer_string_trace is not None and developer_string_trace in resp_text:
+        # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after basic mirrorlization, code line no. ', current_line_number())
 
     # for cookies set string (in js) replace
@@ -1552,6 +1548,7 @@ def response_text_rewrite(resp_text):
     resp_text = resp_text.replace("\'" + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
 
     if developer_string_trace is not None and developer_string_trace in resp_text:
+        # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
 
     # resp_text = resp_text.replace('lang="zh-Hans"', '', 1)
