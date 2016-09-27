@@ -15,5 +15,6 @@ The following people have helped zmirror with :heart: in suggestions, ideas, cod
 * gaocegege https://github.com/gaocegege  
 * ClarkeCheng https://github.com/ClarkeCheng  
 * zxq2233 https://github.com/zxq2233  
-* aljun https://github.com/salamer
-* licess https://github.com/licess
+* aljun https://github.com/salamer  
+* licess https://github.com/licess  
+* lexil https://github.com/lexil  
