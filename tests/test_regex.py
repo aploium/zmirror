@@ -1,5 +1,6 @@
 # coding=utf-8
 import json
+import copy
 from pprint import pprint
 from flask import Response
 import requests
@@ -520,10 +521,12 @@ class TestRegex(ZmirrorTestBase):
         google_config["my_host_name"] = self.C.my_host_name
         google_config["my_host_scheme"] = self.C.my_host_scheme
         google_config["is_use_proxy"] = os.environ.get("ZMIRROR_UNITTEST_INSIDE_GFW") == "True"
+        _google_config = copy.deepcopy(google_config)
         # google_config["verbose_level"] = 5
 
         for path in ("/", "/aaa", "/aaa/", "/aaa/bbb", "/aaa/bbb/", "/aaa/bb/cc", "/aaa/bb/cc/", "/aaa/b/c/dd"):
             # 测试主站
+            google_config = copy.deepcopy(_google_config)
             self.reload_zmirror(configs_dict=google_config)
             self.rv = self.client.get(
                 self.url(path),
@@ -542,6 +545,7 @@ class TestRegex(ZmirrorTestBase):
                 )
 
             # 测试外部站
+            google_config = copy.deepcopy(_google_config)
             self.reload_zmirror(configs_dict=google_config)
             self.rv = self.client.get(
                 self.url("/extdomains/{domain}{path}".format(domain=self.zmirror.external_domains[0], path=path)),
