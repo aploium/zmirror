@@ -156,6 +156,48 @@ built_in_server_extra_params = {}
 #   an 304 response support is implanted inside
 local_cache_enable = True
 
+# ############## Custom Content Injection #############
+# v0.29.4+
+# 允许方便地向某些页面的某些地方插入文本内容(js/css等)
+#   比如加入统计代码/某些修改页面行为的js之类的
+#   只会添加到满足条件的html中 (mime为 text/html)
+#
+# 格式如下, 注意下面这个示例会被覆盖掉, 默认是空的
+custom_inject_content = {
+    "head_first":
+    # head_first 中的内容会被加入到head中第一个现有<script>之前
+    #   如果head中不存在<script>, 则加在</head>标签之前
+    #   注意: 出于性能考虑, 如果不存在 head 标签, 则无法添加.
+    #
+    # !!!!! 警告: 程序无法辨别 <script>和</head> 是否是出现于注释中
+    # !!!!!   例如 <!--[if IE]> <script></script> <![endif]-->
+    # !!!!! 内容会被插入到注释中而失效, 下同
+        [
+            {
+                # ------- 本体 -----------
+                "content": r'''<script>alert(1);</script>''',  # 要加入的内容, 这里是一个js
+
+                # ------- 约束条件(后续版本会添加更多) ----------
+                "url_regex": None,
+                # url需要满足的 **正则表达式** 注意此处的url指实际的url, 并且[不包含协议前缀]
+                # eg: r"^www\.google\.com(\.hk)?.*$" (注意没有 http://)
+                # 使用 re.match() 对目标url进行匹配 正则文档可看 https://docs.python.org/3/library/re.html
+                # 不区分大小写(flag=re.I)
+                # None 表示不限制
+            },
+            {},  # 这边可以放多个不同条件的js
+        ],
+
+    "head_last":
+    # head_last 中的内容会出现在 head 的尾部, 即刚刚在 </head> 之前
+        [
+            {},  # 格式同上
+        ],
+}
+# !!! 注意: 上面的示例会在此被清空 !!!
+del custom_inject_content
+custom_inject_content = {}
+
 # ############## Search Engine Deny ##############
 # If turns to True, will send an 403 if user-agent contains 'spider' or 'bot'
 # And, don't worry, no browser's user-agent contains these two words.
@@ -644,7 +686,6 @@ custom_text_rewriter_enable = False
 #   自定义函数若返回None, 则不进行重定向
 # 不应该修改parse变量 (添加头和cookie除外)
 custom_prior_request_redirect_enable = False
-
 
 # ############## Misc ##############
 # v0.18.5+

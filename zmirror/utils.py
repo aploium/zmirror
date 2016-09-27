@@ -381,3 +381,66 @@ def attributes(var, to_dict=False, max_len=1024):
             else:
                 output += strx(name, ":", value, "\n")
     return output
+
+
+def inject_content(position, html, content):
+    """
+    将文本内容注入到html中
+    详见 default_config.py 的 `Custom Content Injection` 部分
+    :param position: 插入位置
+    :type position: str
+    :param html: 原始html
+    :type html: str
+    :param content: 等待插入的自定义文本内容
+    :type content: str
+    :return: 处理后的html
+    :rtype: str
+    """
+    if position == "head_first":
+        return inject_content_head_first(html, content)
+    elif position == "head_last":
+        return inject_content_head_last(html, content)
+    else:  # coverage: exclude
+        raise ValueError("Unknown Injection Position: {}".format(position))
+
+
+def inject_content_head_first(html, content):
+    """
+    将文本内容插入到head中第一个现有<script>之前
+    如果head中不存在<script>, 则加在</head>标签之前
+
+    :type html: str
+    :type content: str
+    :rtype: str
+    """
+    head_end_pos = html.find("</head")  # 找到 </head> 标签结束的位置
+    script_begin_pos = html.find("<script")  # 找到第一个 <script> 开始的地方
+
+    if head_end_pos == -1:  # coverage: exclude
+        # 如果没有 </head> 就不进行插入
+        return html
+
+    if script_begin_pos != -1 and script_begin_pos < head_end_pos:
+        # 如果<head>中存在<script>标签, 则插入到第一个 <script> 标签之前
+        return html[:script_begin_pos] + content + html[script_begin_pos:]
+
+    else:
+        # 如果<head>中 *不* 存在<script>标签, 则插入到 </head> 之前
+        return html[:head_end_pos] + content + html[head_end_pos:]
+
+
+def inject_content_head_last(html, content):
+    """
+    将文本内容插入到head的尾部
+
+    :type html: str
+    :type content: str
+    :rtype: str
+    """
+    head_end_pos = html.find("</head")  # 找到 </head> 标签结束的位置
+
+    if head_end_pos == -1:
+        # 如果没有 </head> 就不进行插入
+        return html
+
+    return html[:head_end_pos] + content + html[head_end_pos:]

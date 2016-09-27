@@ -373,6 +373,16 @@ regex_remove__zmirror_verify__header = re.compile(
     r"""zmirror_verify=[a-zA-Z0-9]+\b;? ?"""
 )
 
+# 遍历编译 custom_inject_content 中的regex
+custom_inject_content = custom_inject_content or {}
+for k, v in custom_inject_content.items():
+    if not v:
+        continue
+    for a in v:
+        if a.get("url_regex") is None:
+            continue
+        a["url_regex"] = re.compile(a["url_regex"], flags=re.I)
+
 # ########## Flask app ###########
 
 app = Flask(  # type: Flask
@@ -1479,6 +1489,20 @@ def response_content_rewrite():
         else:
             if developer_string_trace is not None and developer_string_trace in resp_text:
                 infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
+
+        # 在页面中插入自定义内容
+        # 详见 default_config.py 的 `Custom Content Injection` 部分
+        if custom_inject_content and parse.mime == "text/html":
+            for position, items in custom_inject_content.items():  # 遍历设置中的所有位置
+                for item in items:  # 每个位置中的条目
+
+                    # 判断正则是否匹配当前url, 不匹配跳过
+                    r = item.get("url_regex")
+                    if r is not None and not r.match(parse.url_no_scheme):
+                        continue
+
+                    # 将内容插入到html
+                    resp_text = inject_content(position, resp_text, item["content"])
 
         return resp_text.encode(encoding='utf-8'), req_time_body  # return bytes
     else:
