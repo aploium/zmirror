@@ -53,7 +53,7 @@ LC_ALL=C.UTF-8 sudo add-apt-repository -y ppa:ondrej/apache2 &&
 sudo apt-key update &&
 sudo apt-get update &&
 sudo apt-get upgrade -y &&
-sudo apt-get --only-upgrade install apache2 -y &&
+sudo apt-get install apache2 -y &&
 sudo a2enmod rewrite mime include headers filter expires deflate autoindex setenvif ssl http2 &&
 sudo apt-get install libapache2-mod-wsgi-py3 -y
 ```
