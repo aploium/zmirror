@@ -15,7 +15,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
   
 ## Demo
 * **Google**  
-    * *PC & Mobile*   https://g.zmirrordemo.com  
+    * *网页搜索*   https://g.zmirrordemo.com  
     * *Scholar*   https://g.zmirrordemo.com/scholar  
     * *Image*   https://g.zmirrordemo.com/imghp  
     * *Gmail*   https://g.zmirrordemo.com/gmail  (请选择"使用基本HTML"版本)  
