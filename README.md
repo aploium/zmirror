@@ -16,9 +16,6 @@ an http reverse proxy designed to automatically and completely mirror a website 
 ## Demo
 * **Google**  
     * *PC & Mobile*   https://g.zmirrordemo.com  
-    　　google demo站静态资源使用了CDN, 请使用浏览器的开发者工具查看资源加载情况  
-    　　当一项静态资源(js/css/图片等)被第二次访问时, 会从CDN中获取  
-    　　其余demo未启用CDN  
     * *Scholar*   https://g.zmirrordemo.com/scholar  
     * *Image*   https://g.zmirrordemo.com/imghp  
     * *Gmail*   https://g.zmirrordemo.com/gmail  (请选择"使用基本HTML"版本)  
