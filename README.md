@@ -237,3 +237,4 @@ All detects and rewrites are completely AUTOMATICALLY
 @cuber [ngx_http_google_filter_module](https://github.com/cuber/ngx_http_google_filter_module)  
 @arnofeng [ngx_google_deployment](https://github.com/arnofeng/ngx_google_deployment)  
 @imlinhanchao [ngx_proxy_wiki](https://github.com/imlinhanchao/ngx_proxy_wiki)  
+@joymufeng [play-google](https://github.com/joymufeng/play-google)  
