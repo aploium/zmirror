@@ -34,8 +34,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
     * *PC & Mobile*  https://in.zmirrordemo.com  
 * **Facebook**
     * *PC Only*  https://fb.zmirrordemo.com  
-    　　功能不完整, 不支持手机.  最大的问题是当地址栏链接改变时不会自动刷新, 需要手动刷新  
-    　　未来会写一个脚本, 当url改变后刷新页面  
+    　　绝大部分功能可用, 但是不完整  
 
 ## Screenshot
 ![zmirror-screenshot-youtube-mirror--1080P](https://github.com/aploium/zmirror/raw/wiki-pages/img/screenshot-youtube-1080p.jpg)  
@@ -71,6 +70,9 @@ Together with the program, provided several (almost) out-of-box configs
   * 视频播放、高清支持  
   * 登陆支持、字幕支持  
   * 小视频上传支持  
+
+### Facebook镜像
+  * 绝大部分功能可用, 但是不完整  
 
 ### 自带其他的镜像配置文件
   * archive.org镜像  

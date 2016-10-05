@@ -231,6 +231,24 @@ domains_whitelist_auto_add_glob_list = (
     "*.fb.com", "*.facebook.net",
 )
 
+# ############# Additional Functions #############
+custom_inject_content = {
+    "head_first": [
+        {
+            "content": r"""<script>
+zmirror_facebook_href = window.location.href;
+zmirror_facebook_refresh_flag = false;
+setInterval(function() {
+  if (window.location.href != zmirror_facebook_href && !zmirror_facebook_refresh_flag){
+    zmirror_facebook_refresh_flag = true;
+    location.reload();
+  }
+}, 500);
+</script>""",
+        },
+    ]
+}
+
 # ############## Proxy Settings ##############
 # 如果你在墙内使用本配置文件, 请指定一个墙外的http代理
 is_use_proxy = False
