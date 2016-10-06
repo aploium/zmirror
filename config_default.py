@@ -447,7 +447,7 @@ stream_transfer_async_preload_max_packages_size = 15
 # ############## Cron Tasks ##############
 # v0.21.4+ Cron Tasks, if you really know what you are doing, please do not disable this option
 # 定时任务, 除非你真的知道你在做什么, 否则请不要关闭本选项
-enable_cron_tasks = True
+enable_cron_tasks = False
 
 # from custom_func import your_own_cron_function
 
@@ -727,7 +727,7 @@ developer_temporary_disable_ssrf_prevention = False
 
 # v0.25.0+
 # 本选项在 unittest 中会自动开启, 不需要人工开启
-unittest_mode = False
+unittest_mode = True
 
 # v0.25.0+
 # 强制内部requests在请求远程服务器时不验证SSL证书

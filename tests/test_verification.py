@@ -92,7 +92,7 @@ class TestVerification(ZmirrorTestBase):
         self.assertIn(self.CaseCfg.tip_texts_in_verification_page,
                       page_content, msg=self.dump())
 
-        self.assertIn(self.zmirror.human_ip_verification_title,
+        self.assertIn(self.zmirror.cfg.human_ip_verification_title,
                       page_content, msg=self.dump())
 
         self.assertIn(self.C.human_ip_verification_questions[0][0],
@@ -190,7 +190,7 @@ class TestVerification(ZmirrorTestBase):
         page_content = self.rv.data.decode()  # type: str
 
         self.assertIn("Page Redirect", page_content, msg=self.dump())
-        self.assertIn(self.zmirror.human_ip_verification_success_msg, page_content, msg=self.dump())
+        self.assertIn(self.zmirror.cfg.human_ip_verification_success_msg, page_content, msg=self.dump())
         self.assertIn(self.query_string_dict["zhi"], page_content, msg=self.dump())
         self.assertIn(self.query_string_dict["zmirror"], page_content, msg=self.dump())
 

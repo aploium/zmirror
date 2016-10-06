@@ -12,6 +12,7 @@ import random
 import traceback
 import ipaddress
 import threading
+import importlib
 
 from fnmatch import fnmatch
 from time import time, sleep, process_time
@@ -40,12 +41,12 @@ if os.path.abspath(os.getcwd()) != CONSTS.ZMIRROR_ROOT:
 
 from .external_pkgs.ColorfulPyPrint import *  # TODO: Migrate logging tools to the stdlib logging
 
-if "ZMIRROR_UNITTEST" in os.environ:
-    # 这边根据环境变量得到的unittest_mode信息会被config中的覆盖掉
-    # 只是因为此时还没有加载 config, 所以先根据env里的临时定一下
-    unittest_mode = True
-else:
-    unittest_mode = False
+from . import cfg
+
+if not cfg.unittest_mode:  # 在unittest时不输出这几行
+    infoprint('zmirror version: {version} author: {author}'.format(version=CONSTS.__VERSION__, author=CONSTS.__AUTHOR__))
+    infoprint('Github: {site_url}'.format(site_url=CONSTS.__GITHUB_URL__))
+infoprint('Mirroring: ', cfg.target_domain)
 
 try:  # lru_cache的c语言实现, 比Python内置lru_cache更快
     from fastcache import lru_cache  # lru_cache用于缓存函数的执行结果
@@ -58,49 +59,22 @@ except:
               'Considering install it using "pip3 install fastcache"'
               )
 else:
-    if not unittest_mode:
+    if not cfg.unittest_mode:
         infoprint('lru_cache loaded successfully from fastcache')
 
 from .threadlocal import ZmirrorThreadLocal
 
-if not unittest_mode:  # 在unittest时不输出这几行
-    infoprint('zmirror version: {version} author: {author}'.format(version=CONSTS.__VERSION__, author=CONSTS.__AUTHOR__))
-    infoprint('Github: {site_url}'.format(site_url=CONSTS.__GITHUB_URL__))
-
-try:  # 加载默认设置
-    from config_default import *
-except:  # coverage: exclude
-    errprint('the config_default.py is missing, this program may not works normally\n'
-             'config_default.py 文件丢失, 这会导致配置文件不向后兼容, 请重新下载一份 config_default.py')
-    raise  # v0.23.1+ 当 config_default.py 不存在时, 程序会终止运行
-
-try:  # 加载用户自定义配置文件, 覆盖掉默认配置的同名项
-    from config import *
-except:  # coverage: exclude
-    errprint(
-        'the config_default.py is missing, fallback to default configs(if we can), '
-        'please COPY the config_default.py to config.py, and change it\'s content, '
-        'or use the configs in the more_configs folder\n'
-        '自定义配置文件 config.py 丢失或存在错误, 将使用默认设置, 请将 config_default.py 复制一份为 config.py, '
-        '并根据自己的需求修改里面的设置'
-        '(或者使用 more_configs 中的配置文件)'
-    )
-    raise  # v0.23.1+ 当config文件存在错误或不存在时, 程序会终止运行
-else:
-    target_domain = target_domain.strip("./ \t").replace("https://", "").replace("http://", "")
-    infoprint('config file found, mirroring: ', target_domain)
-
-if unittest_mode:
-    import importlib
-
-    importlib.reload(importlib.import_module("zmirror.utils"))
+if cfg.unittest_mode:
+    importlib.reload(importlib.import_module("zmirror.utils_simple"))
+    importlib.reload(importlib.import_module("zmirror.utils_complex"))
     importlib.reload(importlib.import_module("zmirror.connection_pool"))
 
-from .utils import *
+from .utils_simple import *
+from .utils_complex import *
 from .lru_dict import LRUDict
 from . import connection_pool
 
-if local_cache_enable:
+if cfg.local_cache_enable:
     try:
         from .cache_system import FileCache, get_expire_from_mime
 
@@ -108,109 +82,18 @@ if local_cache_enable:
     except:  # coverage: exclude
         traceback.print_exc()
         errprint('Can Not Create Local File Cache, local file cache is disabled automatically.')
-        local_cache_enable = False
+        cfg.local_cache_enable = False
     else:
-        if not unittest_mode:
+        if not cfg.unittest_mode:
             infoprint('Local file cache enabled')
 
 # ########## Basic Init #############
 # 开始从配置文件加载配置, 在读代码时可以先跳过这部分, 从 main_function() 开始看
-ColorfulPyPrint_set_verbose_level(verbose_level)
+ColorfulPyPrint_set_verbose_level(cfg.verbose_level)
 
-if developer_enable_experimental_feature:  # coverage: exclude
+if cfg.developer_enable_experimental_feature:  # coverage: exclude
     # 先处理实验性功能开关
     pass
-
-my_host_name_no_port = my_host_name  # 不带有端口号的本机域名
-
-if my_host_port is not None:
-    my_host_name += ':' + str(my_host_port)  # 带有端口号的本机域名, 如果为标准端口则不带显式端口号
-    my_host_name_urlencoded = quote_plus(my_host_name)  # url编码后的
-else:
-    my_host_name_urlencoded = my_host_name
-
-if external_domains is None:
-    external_domains = []
-external_domains = list([d.strip("./ \t").replace("https://", "").replace("http://", "") for d in external_domains])
-
-external_domains_set = set(external_domains or [])
-allowed_domains_set = external_domains_set.copy()
-allowed_domains_set.add(target_domain)
-for _domain in external_domains:  # for support domain with port
-    allowed_domains_set.add(urlsplit('http://' + _domain).hostname)
-
-domain_alias_to_target_set = set()  # 那些被视为主域名的域名, 如 www.google.com和google.com可以都被视为主域名
-domain_alias_to_target_set.add(target_domain)
-domains_alias_to_target_domain = list(domains_alias_to_target_domain)
-if domains_alias_to_target_domain:
-    for _domain in domains_alias_to_target_domain:
-        allowed_domains_set.add(_domain)
-        domain_alias_to_target_set.add(_domain)
-    domains_alias_to_target_domain.append(target_domain)
-else:
-    domains_alias_to_target_domain = [target_domain]
-my_host_scheme_escaped = my_host_scheme.replace('/', r'\/')
-myurl_prefix = my_host_scheme + my_host_name  # http(s)://www.my-mirror-site.com  末尾没有反斜线
-myurl_prefix_escaped = myurl_prefix.replace('/', r'\/')
-cdn_domains_number = len(CDN_domains)
-allowed_remote_response_headers = {
-    'content-type', 'date', 'expires', 'cache-control', 'last-modified', 'server', 'location',
-    'accept-ranges',
-    'access-control-allow-origin', 'access-control-allow-headers', 'access-control-allow-methods',
-    'access-control-expose-headers', 'access-control-max-age', 'access-control-allow-credentials',
-    'timing-allow-origin',
-}
-allowed_remote_response_headers.update(custom_allowed_remote_headers)
-# ## Get Target Domain and MyHostName's Root Domain ##
-target_domain_root = extract_root_domain(target_domain)[0]  # type: str
-my_host_name_root = extract_root_domain(target_domain)[0]  # type: str
-
-# ########## Handle dependencies #############
-
-if not enable_stream_content_transfer:
-    steamed_mime_keywords = ()
-
-if not url_custom_redirect_enable:
-    url_custom_redirect_list = {}
-    url_custom_redirect_regex = ()
-    shadow_url_redirect_regex = ()
-    plain_replace_domain_alias = []
-
-if isinstance(plain_replace_domain_alias, tuple):
-    plain_replace_domain_alias = list(plain_replace_domain_alias)
-
-if not enable_stream_content_transfer:
-    enable_stream_transfer_async_preload = False
-
-if not enable_automatic_domains_whitelist:
-    domains_whitelist_auto_add_glob_list = tuple()
-
-if not enable_individual_sites_isolation:
-    isolated_domains = set()
-else:
-    for isolated_domain in isolated_domains:
-        if isolated_domain not in external_domains_set:
-            warnprint('An isolated domain:', isolated_domain,
-                      'would not have effect because it did not appears in the `external_domains` list')
-
-if enable_custom_access_cookie_generate_and_verify:
-    human_ip_verification_whitelist_from_cookies = False
-
-if not is_use_proxy:
-    requests_proxies = None
-if human_ip_verification_enabled:
-    buff = []
-    for network in human_ip_verification_default_whitelist_networks:
-        buff.append(ipaddress.ip_network(network, strict=False))
-    human_ip_verification_default_whitelist_networks = tuple(buff)
-    for question in human_ip_verification_questions:
-        human_ip_verification_answers_hash_str += question[1]
-else:
-    identity_verify_required = False
-    human_ip_verification_whitelist_from_cookies = False
-    must_verify_cookies = False
-if not human_ip_verification_whitelist_from_cookies and not enable_custom_access_cookie_generate_and_verify:
-    must_verify_cookies = False
 
 # ########### Global Variables ###############
 # 与flask的request变量功能类似, 存储了一些解析后的请求信息, 在程序中会经常被调用
@@ -231,7 +114,7 @@ url_to_use_cdn["www.fake-domain.com/folder/foo/bar.png"] = [
 # 记录最近请求的100个域名, 用于 domain_guess
 # 虽然是个 dict, 但是只有key有用, value是无用的, 暂时全部赋值为 True
 recent_domains = LRUDict(100)
-recent_domains[target_domain] = True
+recent_domains[cfg.target_domain] = True
 
 # domain_guess 中已知的记录
 # 对于已知的记录, 会使用307重定向
@@ -256,11 +139,11 @@ REGEX_SLASH = r"""(?:\\*(?:/|x2[Ff])|%(?:(?:25)?5[Cc]%)*(?:25)?2[Ff])"""
 REGEX_QUOTE = r"""(?:\\*["']|%(?:(?:25)?5[Cc]%)*2(?:52)?[27]|&quot;)"""
 
 # 代表本镜像域名的正则
-if my_host_port is not None:
-    REGEX_MY_HOST_NAME = r'(?:' + re.escape(my_host_name_no_port) + REGEX_COLON + re.escape(str(my_host_port)) \
-                         + r'|' + re.escape(my_host_name_no_port) + r')'
+if cfg.my_host_port is not None:
+    REGEX_MY_HOST_NAME = r'(?:' + re.escape(cfg.my_host_name_no_port) + REGEX_COLON + re.escape(str(cfg.my_host_port)) \
+                         + r'|' + re.escape(cfg.my_host_name_no_port) + r')'
 else:
-    REGEX_MY_HOST_NAME = re.escape(my_host_name)
+    REGEX_MY_HOST_NAME = re.escape(cfg.my_host_name)
 
 # Advanced url rewriter, see function response_text_rewrite()
 # #### 这个正则表达式是整个程序的最核心的部分, 它的作用是从 html/css/js 中提取出长得类似于url的东西 ####
@@ -335,7 +218,7 @@ def _regex_generate__basic_mirrorlization():
     from collections import Counter
 
     # 统计各个后缀出现的频率, 并且按照出现频率降序排列, 有助于提升正则效率
-    c = Counter(re.escape(x.split(".")[-1]) for x in allowed_domains_set)
+    c = Counter(re.escape(x.split(".")[-1]) for x in cfg.allowed_domains_set)
     regex_all_remote_tld = sorted(list(c.keys()), key=lambda x: c[x], reverse=True)
 
     regex_all_remote_tld = "(?:" + "|".join(regex_all_remote_tld) + ")"
@@ -373,20 +256,10 @@ regex_remove__zmirror_verify__header = re.compile(
     r"""zmirror_verify=[a-zA-Z0-9]+\b;? ?"""
 )
 
-# 遍历编译 custom_inject_content 中的regex
-custom_inject_content = custom_inject_content or {}
-for k, v in custom_inject_content.items():
-    if not v:
-        continue
-    for a in v:
-        if a.get("url_regex") is None:
-            continue
-        a["url_regex"] = re.compile(a["url_regex"], flags=re.I)
-
 # ########## Flask app ###########
 
 app = Flask(  # type: Flask
-    __name__ if not unittest_mode
+    __name__ if not cfg.unittest_mode
     else 'unittest' + str(random.random()).replace('.', ''),
     static_folder=None,
     template_folder=None,
@@ -417,8 +290,8 @@ def response_text_basic_mirrorlization(text):
 
     def regex_reassemble(m):
         remote_domain = get_group("domain", m)
-        if remote_domain not in allowed_domains_set:
-            if not enable_automatic_domains_whitelist or \
+        if remote_domain not in cfg.allowed_domains_set:
+            if not cfg.enable_automatic_domains_whitelist or \
                     not try_match_and_add_domain_to_rewrite_white_list(remote_domain):
                 return m.group()
 
@@ -427,9 +300,9 @@ def response_text_basic_mirrorlization(text):
 
         colon = get_group("colon", m) or guess_colon_from_slash(slash)
 
-        _my_host_name = my_host_name.replace(":", colon) if my_host_port else my_host_name
+        _my_host_name = cfg.my_host_name.replace(":", colon) if cfg.my_host_port else cfg.my_host_name
 
-        if remote_domain not in domain_alias_to_target_set:
+        if remote_domain not in cfg.domain_alias_to_target_set:
             # 外部域名
             core = _my_host_name + slash + "extdomains" + slash + remote_domain + suffix_slash
         else:
@@ -442,7 +315,7 @@ def response_text_basic_mirrorlization(text):
         else:  # http(s)://target.domain  //target.domain
 
             if get_group("colon", m):  # http(s)://target.domain
-                return my_host_scheme.replace(":", colon).replace("/", slash) + core
+                return cfg.my_host_scheme.replace(":", colon).replace("/", slash) + core
             else:  # //target.domain
                 return slash * 2 + core
 
@@ -458,10 +331,10 @@ def encoding_detect(byte_content):
     :rtype: Union[str, None]
     """
 
-    if force_decode_remote_using_encode is not None:
-        return force_decode_remote_using_encode
-    if possible_charsets:
-        for charset in possible_charsets:
+    if cfg.force_decode_remote_using_encode is not None:
+        return cfg.force_decode_remote_using_encode
+    if cfg.possible_charsets:
+        for charset in cfg.possible_charsets:
             try:
                 byte_content.decode(encoding=charset)
             except:
@@ -482,10 +355,10 @@ def cache_clean(is_force_flush=False):
     :param is_force_flush: 是否无视有效期, 清理所有缓存
     :type is_force_flush: bool
     """
-    if enable_connection_keep_alive:
+    if cfg.enable_connection_keep_alive:
         connection_pool.clear(force_flush=is_force_flush)
 
-    if local_cache_enable:
+    if cfg.local_cache_enable:
         cache.check_all_expire(force_flush_all=is_force_flush)
 
     if is_force_flush:
@@ -542,7 +415,7 @@ def cron_task_container(task_dict, add_task_only=False):
             traceback.print_exc()
 
     # 当全局开关关闭时, 自动退出线程
-    if not enable_cron_tasks:
+    if not cfg.enable_cron_tasks:
         if threading.current_thread() != threading.main_thread():
             exit()
         else:
@@ -561,7 +434,7 @@ def cron_task_host():
     """定时任务宿主, 每分钟检查一次列表, 运行时间到了的定时任务"""
     while True:
         # 当全局开关关闭时, 自动退出线程
-        if not enable_cron_tasks:
+        if not cfg.enable_cron_tasks:
             if threading.current_thread() != threading.main_thread():
                 exit()
             else:
@@ -594,11 +467,6 @@ def add_temporary_domain_alias(source_domain, replaced_to_domain):
              parse.temporary_domain_alias)
 
 
-def is_external_domain(domain):
-    """是否是外部域名"""
-    return domain not in domains_alias_to_target_domain
-
-
 # noinspection PyGlobalUndefined
 def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     """
@@ -611,23 +479,22 @@ def try_match_and_add_domain_to_rewrite_white_list(domain, force_add=False):
     :type force_add: bool
     :rtype: bool
     """
-    global external_domains, external_domains_set, allowed_domains_set, prefix_buff
     global regex_basic_mirrorlization
 
     if domain is None or not domain:
         return False
-    if domain in allowed_domains_set:
+    if domain in cfg.allowed_domains_set:
         return True
     if not force_add and not is_domain_match_glob_whitelist(domain):
         return False
 
     infoprint('A domain:', domain, 'was added to external_domains list')
 
-    _buff = list(external_domains)  # external_domains是tuple类型, 添加前需要先转换
+    _buff = list(cfg.external_domains)  # external_domains是tuple类型, 添加前需要先转换
     _buff.append(domain)
-    external_domains = tuple(_buff)  # 转换回tuple, tuple有一些性能优势
-    external_domains_set.add(domain)
-    allowed_domains_set.add(domain)
+    cfg.external_domains = tuple(_buff)  # 转换回tuple, tuple有一些性能优势
+    cfg.external_domains_set.add(domain)
+    cfg.allowed_domains_set.add(domain)
 
     prefix_buff[domain] = calc_domain_replace_prefix(domain)
 
@@ -700,8 +567,8 @@ def decode_mirror_url(mirror_url=None):
 
     if _is_escaped_dot: input_path_query = input_path_query.replace('.', r'\.')
     if _is_escaped_slash: input_path_query = s_esc(input_path_query)
-    result['domain'] = target_domain
-    result['is_https'] = (target_scheme == 'https://')
+    result['domain'] = cfg.target_domain
+    result['is_https'] = (cfg.target_scheme == 'https://')
     result['path_query'] = input_path_query
     result['path'] = urlsplit(result['path_query']).path
     return result
@@ -728,15 +595,15 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
     sp = urlsplit(_raw_url_or_path)
     if '/extdomains/' == sp.path[:12]:
         return raw_url_or_path
-    domain = remote_domain or sp.netloc or parse.remote_domain or target_domain
-    if domain not in allowed_domains_set:
+    domain = remote_domain or sp.netloc or parse.remote_domain or cfg.target_domain
+    if domain not in cfg.allowed_domains_set:
         return raw_url_or_path
 
     if is_scheme is not False:
         if _raw_url_or_path[:2] == '//':
-            our_prefix = '//' + my_host_name
+            our_prefix = '//' + cfg.my_host_name
         elif is_scheme or sp.scheme:
-            our_prefix = myurl_prefix
+            our_prefix = cfg.myurl_prefix
         else:
             our_prefix = ''
     else:
@@ -761,11 +628,11 @@ convert_to_mirror_url = encode_mirror_url
 
 def is_target_domain_use_https(domain):
     """请求目标域名时是否使用https"""
-    if force_https_domains == 'NONE':
+    if cfg.force_https_domains == 'NONE':
         return False
-    if force_https_domains == 'ALL':
+    if cfg.force_https_domains == 'ALL':
         return True
-    if domain in force_https_domains:
+    if domain in cfg.force_https_domains:
         return True
     else:
         return False
@@ -775,8 +642,7 @@ def add_ssrf_allowed_domain(domain):
     """添加域名到ssrf白名单, 不支持通配符
     :type domain: str
     """
-    global allowed_domains_set
-    allowed_domains_set.add(domain)
+    cfg.allowed_domains_set.add(domain)
 
 
 def dump_zmirror_snapshot(folder="error_dump", msg=None, our_response=None):
@@ -797,14 +663,12 @@ def dump_zmirror_snapshot(folder="error_dump", msg=None, our_response=None):
             os.mkdir(zmirror_root(folder))
         _time_str = datetime.now().strftime('snapshot_%Y-%m-%d_%H-%M-%S')
 
-        import config
-
         snapshot = {
             "time": datetime.now(),
             "parse": parse.dump(),
             "msg": msg,
             "traceback": traceback.format_exc(),
-            "config": attributes(config, to_dict=True),
+            "config": attributes(cfg, to_dict=True),
             "FlaskRequest": attributes(request, to_dict=True),
         }
         if our_response is not None:
@@ -912,13 +776,13 @@ def generate_ip_verify_hash(input_dict):
     hash(前7位+salt) = 后7位 以此来进行验证
     :rtype str
     """
-    strbuff = human_ip_verification_answers_hash_str
+    strbuff = cfg.human_ip_verification_answers_hash_str
     for key in input_dict:
         strbuff += key + input_dict[key] + str(random.randint(0, 9000000))
     input_key_hash = hex(zlib.adler32(strbuff.encode(encoding='utf-8')))[2:]
     while len(input_key_hash) < 7:
         input_key_hash += '0'
-    output_hash = hex(zlib.adler32((input_key_hash + human_ip_verification_answers_hash_str).encode(encoding='utf-8')))[2:]
+    output_hash = hex(zlib.adler32((input_key_hash + cfg.human_ip_verification_answers_hash_str).encode(encoding='utf-8')))[2:]
     while len(output_hash) < 7:
         output_hash += '0'
     return input_key_hash + output_hash
@@ -938,7 +802,7 @@ def verify_ip_hash_cookie(hash_cookie_value):
         input_key_hash = hash_cookie_value[:8]
         output_hash = hash_cookie_value[8:]
         calculated_hash = hex(zlib.adler32(
-            (input_key_hash + human_ip_verification_answers_hash_str).encode(encoding='utf-8')
+            (input_key_hash + cfg.human_ip_verification_answers_hash_str).encode(encoding='utf-8')
         ))[2:]
         if output_hash == calculated_hash:
             return True
@@ -951,7 +815,7 @@ def verify_ip_hash_cookie(hash_cookie_value):
 def update_content_in_local_cache(url, content, method='GET'):
     """更新 local_cache 中缓存的资源, 追加content
     在stream模式中使用"""
-    if local_cache_enable and method == 'GET' and cache.is_cached(url):
+    if cfg.local_cache_enable and method == 'GET' and cache.is_cached(url):
         info_dict = cache.get_info(url)
         resp = cache.get_obj(url)
         resp.set_data(content)
@@ -962,7 +826,7 @@ def update_content_in_local_cache(url, content, method='GET'):
         # 此时程序会先将只有头部的响应添加到本地缓存, 在内容实际接收完成后再追加内容
         info_dict['without_content'] = False
 
-        if verbose_level >= 4: dbgprint('LocalCache_UpdateCache', url, content[:30], len(content))
+        if cfg.verbose_level >= 4: dbgprint('LocalCache_UpdateCache', url, content[:30], len(content))
         cache.put_obj(
             url,
             resp,
@@ -1020,7 +884,7 @@ def try_get_cached_response(url, client_header=None):
     :rtype: Union[Response, None]
     """
     # Only use cache when client use GET
-    if local_cache_enable and parse.method == 'GET' and cache.is_cached(url):
+    if cfg.local_cache_enable and parse.method == 'GET' and cache.is_cached(url):
         if client_header is not None and 'if-modified-since' in client_header and \
                 cache.is_unchanged(url, client_header.get('if-modified-since', None)):
             dbgprint('FileCacheHit-304', url)
@@ -1088,7 +952,7 @@ def regex_url_reassemble(match_obj):
         return whole_match_string
 
     # v0.19.0+ Automatic Domains Whitelist (Experimental)
-    if enable_automatic_domains_whitelist:
+    if cfg.enable_automatic_domains_whitelist:
         try_match_and_add_domain_to_rewrite_white_list(match_domain)
 
     # dbgprint(match_obj.groups(), v=5)
@@ -1097,7 +961,7 @@ def regex_url_reassemble(match_obj):
     # dbgprint('rewrite match_obj:', match_obj, 'domain:', domain, v=5)
 
     # skip if the domain are not in our proxy list
-    if domain not in allowed_domains_set:
+    if domain not in cfg.allowed_domains_set:
         # dbgprint('return untouched because domain not match', domain, whole_match_string, v=5)
         return match_obj.group()  # return raw, do not change
 
@@ -1121,11 +985,11 @@ def regex_url_reassemble(match_obj):
 
     # dbgprint('url_no_scheme', url_no_scheme, v=5)
     # add extdomains prefix in path if need
-    if domain in external_domains_set:
+    if domain in cfg.external_domains_set:
         path = '/extdomains/' + url_no_scheme
 
     # dbgprint('final_path', path, v=5)
-    if enable_static_resource_CDN and url_no_scheme in url_to_use_cdn:
+    if cfg.enable_static_resource_CDN and url_no_scheme in url_to_use_cdn:
         # dbgprint('We Know:', url_no_scheme, v=5)
         _this_url_mime_cdn = url_to_use_cdn[url_no_scheme][0]
     else:
@@ -1142,19 +1006,19 @@ def regex_url_reassemble(match_obj):
         # http(s)://target.com/img/love_lucia.jpg --> http(s)://your.cdn.domains.com/img/love_lucia.jpg
         # http://external.com/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.com/css/main.css
         # http://external.pw/css/main.css --> http(s)://your.cdn.domains.com/extdomains/external.pw/css/main.css
-        replace_to_scheme_domain = my_host_scheme + CDN_domains[zlib.adler32(path.encode()) % cdn_domains_number]
+        replace_to_scheme_domain = cfg.my_host_scheme + cfg.CDN_domains[zlib.adler32(path.encode()) % cfg.cdn_domains_number]
 
     # else:  # parse.mime == 'application/javascript':
     #     replace_to_scheme_domain = ''  # Do not use explicit url prefix in js, to prevent potential error
     elif not scheme:
         replace_to_scheme_domain = ''
     elif 'http' not in scheme:
-        replace_to_scheme_domain = '//' + my_host_name
+        replace_to_scheme_domain = '//' + cfg.my_host_name
     else:
-        replace_to_scheme_domain = myurl_prefix
+        replace_to_scheme_domain = cfg.myurl_prefix
 
     reassembled_url = urljoin(replace_to_scheme_domain, path)
-    if _this_url_mime_cdn and cdn_redirect_encode_query_str_into_url:
+    if _this_url_mime_cdn and cfg.cdn_redirect_encode_query_str_into_url:
         reassembled_url = embed_real_url_to_embedded_url(
             reassembled_url,
             url_mime=url_to_use_cdn[url_no_scheme][1],
@@ -1181,9 +1045,9 @@ def is_ua_in_whitelist(ua_str):
     :type ua_str: str
     """
     ua_str = ua_str.lower()
-    if global_ua_white_name in ua_str:
+    if cfg.global_ua_white_name in ua_str:
         return True
-    for allowed_ua in spider_ua_white_list:
+    for allowed_ua in cfg.spider_ua_white_list:
         if allowed_ua in ua_str:
             return True
     return False
@@ -1203,25 +1067,6 @@ def is_denied_because_of_spider(ua_str):
         return False
 
 
-def load_ip_whitelist_file():
-    """从文件加载ip白名单"""
-    set_buff = set()
-    if os.path.exists(zmirror_root(human_ip_verification_whitelist_file_path)):
-        with open(zmirror_root(human_ip_verification_whitelist_file_path), 'r', encoding='utf-8') as fp:
-            set_buff.add(fp.readline().strip())
-    return set_buff
-
-
-def append_ip_whitelist_file(ip_to_allow):
-    """写入ip白名单到文件"""
-    try:
-        with open(zmirror_root(human_ip_verification_whitelist_file_path), 'a', encoding='utf-8') as fp:
-            fp.write(ip_to_allow + '\n')
-    except:  # coverage: exclude
-        errprint('Unable to write whitelist file')
-        traceback.print_exc()
-
-
 def ip_whitelist_add(ip_to_allow, info_record_dict=None):
     """添加ip到白名单, 并写入文件"""
     if ip_to_allow in single_ip_allowed_set:
@@ -1232,12 +1077,12 @@ def ip_whitelist_add(ip_to_allow, info_record_dict=None):
     append_ip_whitelist_file(ip_to_allow)
     # dbgprint(single_ip_allowed_set)
     try:
-        with open(zmirror_root(human_ip_verification_whitelist_log), 'a', encoding='utf-8') as fp:
+        with open(zmirror_root(cfg.human_ip_verification_whitelist_log), 'a', encoding='utf-8') as fp:
             fp.write(datetime.now().strftime('%Y-%m-%d %H:%M:%S') + " " + ip_to_allow
                      + " " + str(request.user_agent)
                      + " " + repr(info_record_dict) + "\n")
     except:  # coverage: exclude
-        errprint('Unable to write log file', os.path.abspath(human_ip_verification_whitelist_log))
+        errprint('Unable to write log file', os.path.abspath(cfg.human_ip_verification_whitelist_log))
         traceback.print_exc()
 
 
@@ -1247,7 +1092,7 @@ def is_ip_not_in_allow_range(ip_address):
     if ip_address in single_ip_allowed_set:
         return False
     ip_address_obj = ipaddress.ip_address(ip_address)
-    for allowed_network in human_ip_verification_default_whitelist_networks:
+    for allowed_network in cfg.human_ip_verification_default_whitelist_networks:
         if ip_address_obj in allowed_network:
             return False
     return True
@@ -1263,13 +1108,13 @@ def preload_streamed_response_content_async(requests_response_obj, buffer_queue)
     :param requests_response_obj:
     :type buffer_queue: queue.Queue
     """
-    for particle_content in requests_response_obj.iter_content(stream_transfer_buffer_size):
+    for particle_content in requests_response_obj.iter_content(cfg.stream_transfer_buffer_size):
         try:
             buffer_queue.put(particle_content, timeout=10)
         except queue.Full:  # coverage: exclude
             traceback.print_exc()
             exit()
-        if verbose_level >= 3: dbgprint('BufferSize', buffer_queue.qsize())
+        if cfg.verbose_level >= 3: dbgprint('BufferSize', buffer_queue.qsize())
     buffer_queue.put(None, timeout=10)
     exit()
 
@@ -1282,7 +1127,7 @@ def iter_streamed_response_async():
     _content_buffer = b''
     _disable_cache_temporary = False
 
-    buffer_queue = queue.Queue(maxsize=stream_transfer_async_preload_max_packages_size)
+    buffer_queue = queue.Queue(maxsize=cfg.stream_transfer_async_preload_max_packages_size)
 
     t = threading.Thread(
         target=preload_streamed_response_content_async,
@@ -1302,7 +1147,7 @@ def iter_streamed_response_async():
 
         if particle_content is not None:
             # 由于stream的特性, content会被消耗掉, 所以需要额外储存起来
-            if local_cache_enable and not _disable_cache_temporary:
+            if cfg.local_cache_enable and not _disable_cache_temporary:
                 if len(_content_buffer) > 8 * 1024 * 1024:  # 8MB
                     _disable_cache_temporary = True
                     _content_buffer = None
@@ -1315,12 +1160,12 @@ def iter_streamed_response_async():
                 # 更新记录中的响应的长度
                 url_to_use_cdn[parse.url_no_scheme][2] = len(_content_buffer)
 
-            if local_cache_enable and not _disable_cache_temporary:
+            if cfg.local_cache_enable and not _disable_cache_temporary:
                 update_content_in_local_cache(parse.remote_url, _content_buffer,
                                               method=parse.remote_response.request.method)
             return
 
-        if verbose_level >= 4:
+        if cfg.verbose_level >= 4:
             total_size += len(particle_content)
             dbgprint('total_size:', total_size, 'total_speed(KB/s):',
                      total_size / 1024 / (time() - _start_time + 0.000001))
@@ -1352,12 +1197,12 @@ def copy_response(is_streamed=False):
     for header_key in parse.remote_response.headers:
         header_key_lower = header_key.lower()
         # Add necessary response headers from the origin site, drop other headers
-        if header_key_lower in allowed_remote_response_headers:
+        if header_key_lower in cfg.allowed_remote_response_headers:
             if header_key_lower == 'location':
                 # 对于重定向的 location 的重写, 改写为zmirror的url
                 _location = parse.remote_response.headers[header_key]
 
-                if custom_text_rewriter_enable:
+                if cfg.custom_text_rewriter_enable:
                     # location头也会调用自定义重写函数进行重写, 并且有一个特殊的MIME: mwm/headers-location
                     # 这部分以后可能会单独独立出一个自定义重写函数
                     _location = custom_response_text_rewriter(_location, 'mwm/headers-location', parse.remote_url)
@@ -1372,13 +1217,13 @@ def copy_response(is_streamed=False):
                     resp.headers[header_key] = parse.remote_response.headers[header_key]
 
             elif header_key_lower in ('access-control-allow-origin', 'timing-allow-origin'):
-                if custom_allowed_origin is None:
-                    resp.headers[header_key] = myurl_prefix
-                elif custom_allowed_origin == '_*_':  # coverage: exclude
-                    _origin = request.headers.get('origin') or request.headers.get('Origin') or myurl_prefix
+                if cfg.custom_allowed_origin is None:
+                    resp.headers[header_key] = cfg.myurl_prefix
+                elif cfg.custom_allowed_origin == '_*_':  # coverage: exclude
+                    _origin = request.headers.get('origin') or request.headers.get('Origin') or cfg.myurl_prefix
                     resp.headers[header_key] = _origin
                 else:
-                    resp.headers[header_key] = custom_allowed_origin
+                    resp.headers[header_key] = cfg.custom_allowed_origin
 
             else:
                 resp.headers[header_key] = parse.remote_response.headers[header_key]
@@ -1416,19 +1261,19 @@ def response_cookies_deep_copy():
     header_cookies_string_list = []
     for name, value in raw_headers:
         if name.lower() == 'set-cookie':
-            if my_host_scheme == 'http://':
+            if cfg.my_host_scheme == 'http://':
                 value = value.replace('Secure;', '')
                 value = value.replace(';Secure', ';')
                 value = value.replace('; Secure', ';')
             if 'httponly' in value.lower():
-                if enable_aggressive_cookies_path_rewrite:
+                if cfg.enable_aggressive_cookies_path_rewrite:
                     # 暴力cookie path重写, 把所有path都重写为 /
                     value = regex_cookie_path_rewriter.sub('path=/;', value)
-                elif enable_aggressive_cookies_path_rewrite is not None:
+                elif cfg.enable_aggressive_cookies_path_rewrite is not None:
                     # 重写HttpOnly Cookies的path到当前url下
                     # eg(/extdomains/a.foobar.com): path=/verify; -> path=/extdomains/a.foobar.com/verify
 
-                    if parse.remote_domain not in domain_alias_to_target_set:  # do not rewrite main domains
+                    if parse.remote_domain not in cfg.domain_alias_to_target_set:  # do not rewrite main domains
                         value = regex_cookie_path_rewriter.sub(
                             '\g<prefix>=/extdomains/' + parse.remote_domain + '\g<path>', value)
 
@@ -1452,8 +1297,8 @@ def response_content_rewrite():
         return _content, req_time_body
 
     # Do text rewrite if remote response is text-like (html, css, js, xml, etc..)
-    if verbose_level >= 3: dbgprint('Text-like', parse.content_type,
-                                    parse.remote_response.text[:15], _content[:15])
+    if cfg.verbose_level >= 3: dbgprint('Text-like', parse.content_type,
+                                        parse.remote_response.text[:15], _content[:15])
 
     # 自己进行编码检测, 因为 requests 内置的编码检测在天朝GBK面前非常弱鸡
     encoding = encoding_detect(parse.remote_response.content)
@@ -1463,12 +1308,12 @@ def response_content_rewrite():
     # simply copy the raw text, for custom rewriter function first.
     resp_text = parse.remote_response.text
 
-    if developer_string_trace is not None and developer_string_trace in resp_text:
+    if cfg.developer_string_trace is not None and cfg.developer_string_trace in resp_text:
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears in the RAW remote response text, code line no. ', current_line_number())
 
     # try to apply custom rewrite function
-    if custom_text_rewriter_enable:
+    if cfg.custom_text_rewriter_enable:
         resp_text2 = custom_response_text_rewriter(resp_text, parse.mime, parse.remote_url)
         if isinstance(resp_text2, str):
             resp_text = resp_text2
@@ -1478,21 +1323,21 @@ def response_content_rewrite():
                 infoprint('Skip_builtin_rewrite', request.url)
                 return resp_text.encode(encoding='utf-8'), req_time_body
 
-        if developer_string_trace is not None and developer_string_trace in resp_text:
+        if cfg.developer_string_trace is not None and cfg.developer_string_trace in resp_text:
             # debug用代码, 对正常运行无任何作用
             infoprint('StringTrace: appears after custom text rewrite, code line no. ', current_line_number())
 
     # then do the normal rewrites
     resp_text = response_text_rewrite(resp_text)
 
-    if developer_string_trace is not None and developer_string_trace in resp_text:
+    if cfg.developer_string_trace is not None and cfg.developer_string_trace in resp_text:
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after builtin rewrite, code line no. ', current_line_number())
 
     # 在页面中插入自定义内容
     # 详见 default_config.py 的 `Custom Content Injection` 部分
-    if custom_inject_content and parse.mime == "text/html":
-        for position, items in custom_inject_content.items():  # 遍历设置中的所有位置
+    if cfg.custom_inject_content and parse.mime == "text/html":
+        for position, items in cfg.custom_inject_content.items():  # 遍历设置中的所有位置
             for item in items:  # 每个位置中的条目
                 # 判断正则是否匹配当前url, 不匹配跳过
                 r = item.get("url_regex")
@@ -1521,33 +1366,33 @@ def response_text_rewrite(resp_text):
     :rtype: str
     """
     # v0.20.6+ plain replace domain alias, support json/urlencoded/json-urlencoded/plain
-    if url_custom_redirect_enable:
-        for before_replace, after_replace in (plain_replace_domain_alias + parse.temporary_domain_alias):
+    if cfg.url_custom_redirect_enable:
+        for before_replace, after_replace in (cfg.plain_replace_domain_alias + parse.temporary_domain_alias):
             resp_text = resp_text.replace(before_replace, after_replace)
 
     # v0.9.2+: advanced url rewrite engine
     resp_text = regex_adv_url_rewriter.sub(regex_url_reassemble, resp_text)
 
-    if developer_string_trace is not None and developer_string_trace in resp_text:
+    if cfg.developer_string_trace is not None and cfg.developer_string_trace in resp_text:
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after advanced rewrite, code line no. ', current_line_number())
 
     # v0.28.0 实验性功能, 在v0.28.3后默认启用
     resp_text = response_text_basic_mirrorlization(resp_text)
 
-    if developer_string_trace is not None and developer_string_trace in resp_text:
+    if cfg.developer_string_trace is not None and cfg.developer_string_trace in resp_text:
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after basic mirrorlization, code line no. ', current_line_number())
 
     # for cookies set string (in js) replace
     # eg: ".twitter.com" --> "foo.com"
-    resp_text = resp_text.replace('\".' + target_domain_root + '\"', '\"' + my_host_name_no_port + '\"')
-    resp_text = resp_text.replace("\'." + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
-    resp_text = resp_text.replace("domain=." + target_domain_root, "domain=" + my_host_name_no_port)
-    resp_text = resp_text.replace('\"' + target_domain_root + '\"', '\"' + my_host_name_no_port + '\"')
-    resp_text = resp_text.replace("\'" + target_domain_root + "\'", "\'" + my_host_name_no_port + "\'")
+    resp_text = resp_text.replace('\".' + cfg.target_domain_root + '\"', '\"' + cfg.my_host_name_no_port + '\"')
+    resp_text = resp_text.replace("\'." + cfg.target_domain_root + "\'", "\'" + cfg.my_host_name_no_port + "\'")
+    resp_text = resp_text.replace("domain=." + cfg.target_domain_root, "domain=" + cfg.my_host_name_no_port)
+    resp_text = resp_text.replace('\"' + cfg.target_domain_root + '\"', '\"' + cfg.my_host_name_no_port + '\"')
+    resp_text = resp_text.replace("\'" + cfg.target_domain_root + "\'", "\'" + cfg.my_host_name_no_port + "\'")
 
-    if developer_string_trace is not None and developer_string_trace in resp_text:
+    if cfg.developer_string_trace is not None and cfg.developer_string_trace in resp_text:
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
 
@@ -1560,7 +1405,7 @@ def response_cookie_rewrite(cookie_string):
     rewrite response cookie string's domain to `my_host_name`
     :type cookie_string: str
     """
-    cookie_string = regex_cookie_rewriter.sub('domain=' + my_host_name_no_port, cookie_string)
+    cookie_string = regex_cookie_rewriter.sub('domain=' + cfg.my_host_name_no_port, cookie_string)
     return cookie_string
 
 
@@ -1579,7 +1424,7 @@ def assemble_remote_url():
         return urljoin(scheme + parse.remote_domain, parse.remote_path_query)
     else:
         # 请求的是主域名及可以被当做(alias)主域名的域名
-        return urljoin(target_scheme + target_domain, parse.remote_path_query)
+        return urljoin(cfg.target_scheme + cfg.target_domain, parse.remote_path_query)
 
 
 def ssrf_check_layer_1():
@@ -1589,9 +1434,10 @@ def ssrf_check_layer_1():
     :rtype: bool
     """
     # Only external in-zone domains are allowed (SSRF check layer 1)
-    if parse.remote_domain not in allowed_domains_set:
+    if parse.remote_domain not in cfg.allowed_domains_set:
+        dbgprint("domain {} not in allowed_domains_set:{}".format(parse.remote_domain, cfg.allowed_domains_set))
         if not try_match_and_add_domain_to_rewrite_white_list(parse.remote_domain):  # 请求的域名是否满足通配符
-            if developer_temporary_disable_ssrf_prevention:  # 是否在设置中临时关闭了SSRF防护
+            if cfg.developer_temporary_disable_ssrf_prevention:  # 是否在设置中临时关闭了SSRF防护
                 add_ssrf_allowed_domain(parse.remote_domain)
                 return False
             else:
@@ -1700,15 +1546,15 @@ def client_requests_text_rewrite(raw_text):
     # 详见本文件顶部, regex_request_rewriter_extdomains 本体
     replaced = regex_request_rewriter_extdomains.sub(replace_to_real_domain, raw_text)
 
-    if developer_string_trace is not None and developer_string_trace in replaced:
+    if cfg.developer_string_trace is not None and cfg.developer_string_trace in replaced:
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears client_requests_text_rewrite, code line no. ', current_line_number())
 
     # 正则替换掉单独的, 不含 /extdomains/ 的主域名
-    replaced = regex_request_rewriter_main_domain.sub(target_domain, replaced)
+    replaced = regex_request_rewriter_main_domain.sub(cfg.target_domain, replaced)
 
     # 为了保险起见, 再进行一次裸的替换
-    replaced = replaced.replace(my_host_name, target_domain)
+    replaced = replaced.replace(cfg.my_host_name, cfg.target_domain)
 
     dbgprint('ClientRequestedUrl: ', raw_text, '<- Has Been Rewrited To ->', replaced)
     return replaced
@@ -1742,7 +1588,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     final_hostname = urlsplit(url).netloc
     dbgprint('FinalRequestUrl', url, 'FinalHostname', final_hostname)
     # Only external in-zone domains are allowed (SSRF check layer 2)
-    if final_hostname not in allowed_domains_set and not developer_temporary_disable_ssrf_prevention:
+    if final_hostname not in cfg.allowed_domains_set and not cfg.developer_temporary_disable_ssrf_prevention:
         raise ConnectionAbortedError('Trying to access an OUT-OF-ZONE domain(SSRF Layer 2):', final_hostname)
 
     # set zero data to None instead of b''
@@ -1758,7 +1604,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     ).prepare()
 
     # get session
-    if enable_connection_keep_alive:
+    if cfg.enable_connection_keep_alive:
         _session = connection_pool.get_session(final_hostname)
     else:
         _session = requests.Session()
@@ -1767,10 +1613,10 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
     parse.time["req_start_time"] = time()
     r = _session.send(
         prepped_req,
-        proxies=requests_proxies,
+        proxies=cfg.requests_proxies,
         allow_redirects=False,
-        stream=enable_stream_content_transfer,
-        verify=not developer_do_not_verify_ssl,
+        stream=cfg.enable_stream_content_transfer,
+        verify=not cfg.developer_do_not_verify_ssl,
     )
     # remote request time
     parse.time["req_time_header"] = time() - parse.time["req_start_time"]
@@ -1778,7 +1624,7 @@ def send_request(url, method='GET', headers=None, param_get=None, data=None):
 
     # Some debug output
     # print(r.request.headers, r.headers)
-    if verbose_level >= 3:
+    if cfg.verbose_level >= 3:
         dbgprint(r.request.method, "FinalSentToRemoteRequestUrl:", r.url, "\nRem Resp Stat: ", r.status_code)
         dbgprint("RemoteRequestHeaders: ", r.request.headers)
         if data:
@@ -1812,10 +1658,10 @@ def prepare_client_request_data():
             data = client_requests_text_rewrite(data)  # type: str
 
     # 下面这个if是debug用代码, 对正常运行无任何作用
-    if developer_string_trace:  # coverage: exclude
+    if cfg.developer_string_trace:  # coverage: exclude
         if isinstance(data, str):
             data = data.encode(encoding=encoding)
-        if developer_string_trace.encode(encoding=encoding) in data:
+        if cfg.developer_string_trace.encode(encoding=encoding) in data:
             infoprint('StringTrace: appears after client_requests_bin_rewrite, code line no. ', current_line_number())
 
     return data, encoding
@@ -1839,7 +1685,7 @@ def generate_our_response():
 
     parse.set_extra_resp_header('X-Powered-By', 'zmirror/%s' % CONSTS.__VERSION__)
 
-    if developer_dump_all_traffics and not parse.streamed_our_response:
+    if cfg.developer_dump_all_traffics and not parse.streamed_our_response:
         dump_zmirror_snapshot("traffic")
 
     return resp
@@ -1852,7 +1698,7 @@ def parse_remote_response():
     parse.mime = extract_mime_from_content_type(parse.content_type)
 
     # only_serve_static_resources
-    if only_serve_static_resources and not is_content_type_using_cdn(parse.content_type):
+    if cfg.only_serve_static_resources and not is_content_type_using_cdn(parse.content_type):
         return generate_simple_resp_page(b'This site is just for static resources.', error_code=403)
 
     # 是否以stream(流)式传输响应内容
@@ -1860,7 +1706,7 @@ def parse_remote_response():
     #   如果启用stream传输, 并且响应的mime在启用stream的类型中, 就使用stream传输
     #   关于stream模式的更多内容, 请看 config_default.py 中 `enable_stream_content_transfer` 的部分
     #   如果你正在用PyCharm, 只需要按住Ctrl然后点下面↓↓这个变量↓↓就行
-    parse.streamed_our_response = enable_stream_content_transfer and is_mime_streamed(parse.mime)
+    parse.streamed_our_response = cfg.enable_stream_content_transfer and is_mime_streamed(parse.mime)
 
     # extract cache control header, if not cache, we should disable local cache
     parse.cache_control = parse.remote_response.headers.get('Cache-Control', '')
@@ -1869,7 +1715,7 @@ def parse_remote_response():
                       and "max-age=0" not in parse.cache_control and "private" not in parse.cache_control \
                       and parse.remote_response.request.method == 'GET' and parse.remote_response.status_code == 200
 
-    if verbose_level >= 4:
+    if cfg.verbose_level >= 4:
         dbgprint('Response Content-Type:', parse.content_type,
                  'IsStreamed:', parse.streamed_our_response,
                  'cacheable:', parse.cacheable,
@@ -1877,7 +1723,7 @@ def parse_remote_response():
 
     # add url's MIME info to record, for MIME-based CDN rewrite,
     #   next time we access this url, we would know it's mime
-    if enable_static_resource_CDN and parse.cacheable:
+    if cfg.enable_static_resource_CDN and parse.cacheable:
         # we should only cache GET method, and response code is 200
         # noinspection PyUnboundLocalVariable
         if parse.url_no_scheme not in url_to_use_cdn:
@@ -2039,18 +1885,19 @@ def filter_client_request():
     if check_global_ua_pass(str(request.user_agent)):
         return None
 
-    if is_deny_spiders_by_403 and is_denied_because_of_spider(str(request.user_agent)):
+    if cfg.is_deny_spiders_by_403 and is_denied_because_of_spider(str(request.user_agent)):
         return generate_simple_resp_page(b'Spiders Are Not Allowed To This Site', 403)
 
-    if human_ip_verification_enabled and (
-                ((human_ip_verification_whitelist_from_cookies or enable_custom_access_cookie_generate_and_verify)
-                 and must_verify_cookies)
+    if cfg.human_ip_verification_enabled and (
+                ((cfg.human_ip_verification_whitelist_from_cookies or cfg.enable_custom_access_cookie_generate_and_verify)
+                 and cfg.must_verify_cookies)
             or is_ip_not_in_allow_range(request.remote_addr)
     ):
         dbgprint('ip', request.remote_addr, 'is verifying cookies')
         if 'zmirror_verify' in request.cookies and \
-                ((human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(request.cookies.get('zmirror_verify')))
-                 or (enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
+                ((cfg.human_ip_verification_whitelist_from_cookies and verify_ip_hash_cookie(
+                    request.cookies.get('zmirror_verify')))
+                 or (cfg.enable_custom_access_cookie_generate_and_verify and custom_verify_access_cookie(
                         request.cookies.get('zmirror_verify'), request))):
             ip_whitelist_add(request.remote_addr, info_record_dict=request.cookies.get('zmirror_verify'))
             dbgprint('add to ip_whitelist because cookies:', request.remote_addr)
@@ -2085,26 +1932,26 @@ def prior_request_redirect():
         return redirect(parse.remote_path_query, code=307)
 
     # 镜像隔离机制, 根据 referer 判断当前所处的镜像, 在子镜像中, 若请求不包含 /extdomains/ 的url, 将会被重定向修正
-    if enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
+    if cfg.enable_individual_sites_isolation and '/extdomains/' != request.path[:12] and request.headers.get('referer'):
         reference_domain = decode_mirror_url(request.headers.get('referer'))['domain']
-        if reference_domain in isolated_domains:
+        if reference_domain in cfg.isolated_domains:
             return redirect(encode_mirror_url(parse.remote_path_query, reference_domain), code=307)
 
-    if url_custom_redirect_enable:
+    if cfg.url_custom_redirect_enable:
         # 简单的自定义重定向, 详见 config: url_custom_redirect_list
-        if request.path in url_custom_redirect_list:
-            redirect_to = request.url.replace(request.path, url_custom_redirect_list[request.path], 1)
+        if request.path in cfg.url_custom_redirect_list:
+            redirect_to = request.url.replace(request.path, cfg.url_custom_redirect_list[request.path], 1)
             dbgprint('Redirect from', request.url, 'to', redirect_to)
             return redirect(redirect_to, code=307)
 
         # 基于正则的自定义重定向, 详见 config: url_custom_redirect_regex
-        for regex_match, regex_replace in url_custom_redirect_regex:
+        for regex_match, regex_replace in cfg.url_custom_redirect_regex:
             if re.match(regex_match, parse.remote_path_query, flags=re.IGNORECASE) is not None:
                 redirect_to = re.sub(regex_match, regex_replace, parse.remote_path_query, flags=re.IGNORECASE)
                 dbgprint('Redirect from', request.url, 'to', redirect_to)
                 return redirect(redirect_to, code=307)
 
-    if custom_prior_request_redirect_enable:
+    if cfg.custom_prior_request_redirect_enable:
         # 自定义重定向
         redirection = custom_prior_redirect_func(request, parse)  # type: Union[Response, None]
         if redirection is not None:
@@ -2125,8 +1972,8 @@ def posterior_request_redirect():
 
     # CDN软重定向
     # 具体请看 config 中 cdn_redirect_code_if_cannot_hard_rewrite 选项的说明
-    if enable_static_resource_CDN:  # CDN总开关
-        if (cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
+    if cfg.enable_static_resource_CDN:  # CDN总开关
+        if (cfg.cdn_redirect_code_if_cannot_hard_rewrite  # CDN软(301/307)重定向开关
             # 该URL所对应的资源已知, 即之前已经被成功请求过
             and parse.url_no_scheme in url_to_use_cdn
             # 并且该资源已经被判断为可以应用CDN
@@ -2134,28 +1981,28 @@ def posterior_request_redirect():
             # 只缓存 GET 方法的资源
             and parse.method == 'GET'
             # 只有超过大小下限才会重定向
-            and url_to_use_cdn[parse.url_no_scheme][2] > cdn_soft_redirect_minimum_size
+            and url_to_use_cdn[parse.url_no_scheme][2] > cfg.cdn_soft_redirect_minimum_size
             # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
             and not is_ua_in_whitelist(str(request.user_agent))
             ):
             # 下面这个urljoin, 是把形如 https://foo.com/a.png?q=233 的url转化为对应的CDN URL https://cdn.com/a.png?q=233
             redirect_to_url = urljoin(
-                my_host_scheme
+                cfg.my_host_scheme
                 # 根据url的crc32取余来选取一个CDN域名
                 # 使用crc32, 而不是随机数, 是为了确保相同的URL每次都能应用相同的CDN域名
                 # 以增加CDN和缓存命中率
-                + CDN_domains[zlib.adler32(parse.url_no_scheme.encode()) % cdn_domains_number],
+                + cfg.CDN_domains[zlib.adler32(parse.url_no_scheme.encode()) % cfg.cdn_domains_number],
                 extract_url_path_and_query()  # 得到目标url的 /a.png?q=233 这么个部分
             )
-            if cdn_redirect_encode_query_str_into_url:
+            if cfg.cdn_redirect_encode_query_str_into_url:
                 # 将 ?q=233 这种查询字串编码进path, 详情看config里的说明
                 redirect_to_url = embed_real_url_to_embedded_url(
                     redirect_to_url, url_mime=url_to_use_cdn[parse.url_no_scheme][1])
 
-            return redirect(redirect_to_url, code=cdn_redirect_code_if_cannot_hard_rewrite)
+            return redirect(redirect_to_url, code=cfg.cdn_redirect_code_if_cannot_hard_rewrite)
 
     # 本地缓存若命中则直接返回
-    if local_cache_enable:
+    if cfg.local_cache_enable:
         resp = try_get_cached_response(parse.remote_url, parse.client_header)
         if resp is not None:
             dbgprint('CacheHit,Return')
@@ -2202,7 +2049,7 @@ def rewrite_client_request():
     has_been_rewrited = False
 
     # ------------- 请求重写代码开始 ----------------
-    if cdn_redirect_encode_query_str_into_url:
+    if cfg.cdn_redirect_encode_query_str_into_url:
         real_url = extract_real_url_from_embedded_url(request.url)
         if real_url is not None:
             dbgprint("BeforeEmbeddedExtract:", request.url, " After:", real_url)
@@ -2210,15 +2057,15 @@ def rewrite_client_request():
             request.path = urlsplit(real_url).path
             has_been_rewrited = True
 
-    if url_custom_redirect_enable and shadow_url_redirect_regex:
+    if cfg.url_custom_redirect_enable and cfg.shadow_url_redirect_regex:
         _path_query = extract_url_path_and_query()
         _path_query_raw = _path_query
 
-        for before, after in shadow_url_redirect_regex:
+        for before, after in cfg.shadow_url_redirect_regex:
             _path_query = re.sub(before, after, _path_query)
             if _path_query != _path_query_raw:
                 dbgprint('ShadowUrlRedirect:', _path_query_raw, 'to', _path_query)
-                request.url = myurl_prefix + _path_query
+                request.url = cfg.myurl_prefix + _path_query
                 request.path = urlsplit(_path_query).path
                 has_been_rewrited = True
                 break
@@ -2240,7 +2087,7 @@ def rewrite_client_request():
 @app.after_request
 def zmirror_after_request(response):
     # 移除 connection_pool 中的锁
-    if enable_connection_keep_alive:
+    if cfg.enable_connection_keep_alive:
         connection_pool.release_lock()
     return response
 
@@ -2271,7 +2118,7 @@ def zmirror_status():
     # output += strx('\nextract_url_path_and_query', extract_url_path_and_query.cache_info())
 
     output += strx('\n----------------\n')
-    output += strx('\ndomain_alias_to_target_set', domain_alias_to_target_set)
+    output += strx('\ndomain_alias_to_target_set', cfg.domain_alias_to_target_set)
 
     return "<pre>" + output + "</pre>\n"
 
@@ -2282,14 +2129,14 @@ def ip_ban_verify_page():
     if request.method == 'GET':
         dbgprint('Verifying IP:', request.remote_addr)
         form_body = ''
-        for q_id, _question in enumerate(human_ip_verification_questions):
+        for q_id, _question in enumerate(cfg.human_ip_verification_questions):
             form_body += r"""%s <input type="text" name="%d" placeholder="%s" style="width: 190px;" /><br/>""" \
                          % (_question[0], q_id, (html_escape(_question[2]) if len(_question) >= 3 else ""))
 
-        for rec_explain_string, rec_name, input_type in human_ip_verification_identity_record:
+        for rec_explain_string, rec_name, input_type in cfg.human_ip_verification_identity_record:
             form_body += r"""%s %s<input type="%s" name="%s" /><br/>""" % (
                 rec_explain_string,
-                ('<span style="color: red;">(必填)<span> ' if human_ip_verification_answer_any_one_questions_is_ok else ""),
+                ('<span style="color: red;">(必填)<span> ' if cfg.human_ip_verification_answer_any_one_questions_is_ok else ""),
                 html_escape(input_type), html_escape(rec_name))
 
         if 'origin' in request.args:
@@ -2312,34 +2159,34 @@ def ip_ban_verify_page():
           </form>
         </body>
         </html>""" % (
-            html_escape(human_ip_verification_title), html_escape(human_ip_verification_title),
-            ("只需要回答出以下<b>任意一个</b>问题即可" if human_ip_verification_answer_any_one_questions_is_ok
+            html_escape(cfg.human_ip_verification_title), html_escape(cfg.human_ip_verification_title),
+            ("只需要回答出以下<b>任意一个</b>问题即可" if cfg.human_ip_verification_answer_any_one_questions_is_ok
              else "你需要回答出以下<b>所有问题</b>"),
-            human_ip_verification_description, form_body)
+            cfg.human_ip_verification_description, form_body)
 
     elif request.method == 'POST':
         dbgprint('Verifying Request Form', request.form)
 
         # 遍历所有问题, 看有没有正确回答上来
-        for q_id, _question in enumerate(human_ip_verification_questions):
+        for q_id, _question in enumerate(cfg.human_ip_verification_questions):
             submitted_answer = request.form.get(str(q_id), '')
             if submitted_answer == '':  # 没有回答这个问题
-                if human_ip_verification_answer_any_one_questions_is_ok:  # 如果只需要回答一个, 那么就跳过
+                if cfg.human_ip_verification_answer_any_one_questions_is_ok:  # 如果只需要回答一个, 那么就跳过
                     continue
                 else:  # 如果全部都需要回答, 那么报错
                     return generate_simple_resp_page(b'Please answer question: ' + _question[0].encode(), 200)
 
             if submitted_answer != _question[1]:  # 如果回答了, 但是答案错误
                 return generate_simple_resp_page(b'Wrong answer in: ' + _question[0].encode(), 200)
-            elif human_ip_verification_answer_any_one_questions_is_ok:
+            elif cfg.human_ip_verification_answer_any_one_questions_is_ok:
                 break  # 只需要正确回答出一个, 就通过
 
         else:  # 如果在for中是break跳出的, 就不会执行else, 只有正常执行完for才会进入else
-            if human_ip_verification_answer_any_one_questions_is_ok:  # 如果只需要回答一个, 进入else表示一个问题都没回答
+            if cfg.human_ip_verification_answer_any_one_questions_is_ok:  # 如果只需要回答一个, 进入else表示一个问题都没回答
                 return generate_simple_resp_page(b'Please answer at least ONE question', 200)
 
         record_dict = {}
-        for rec_explain_string, rec_name, form_type in human_ip_verification_identity_record:
+        for rec_explain_string, rec_name, form_type in cfg.human_ip_verification_identity_record:
             if rec_name not in request.form or not request.form[rec_name]:
                 return generate_simple_resp_page(b'Param Missing or Blank: ' + rec_explain_string.encode(), 200)
             else:
@@ -2354,28 +2201,28 @@ def ip_ban_verify_page():
                     "Unable to decode origin from value:" + html_escape(request.form.get('origin')), is_traceback=True)
             else:
                 netloc = urlsplit(origin).netloc
-                if netloc and netloc != my_host_name:
+                if netloc and netloc != cfg.my_host_name:
                     origin = '/'
 
-        if identity_verify_required:
+        if cfg.identity_verify_required:
             if not custom_identity_verify(record_dict):
                 return generate_simple_resp_page(b'Verification Failed, please check', 200)
 
-        resp = generate_html_redirect_page(origin, msg=human_ip_verification_success_msg)
+        resp = generate_html_redirect_page(origin, msg=cfg.human_ip_verification_success_msg)
 
-        if human_ip_verification_whitelist_from_cookies:
+        if cfg.human_ip_verification_whitelist_from_cookies:
             _hash = generate_ip_verify_hash(record_dict)
             resp.set_cookie(
                 'zmirror_verify',
                 _hash,
-                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
-                max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
+                expires=datetime.now() + timedelta(days=cfg.human_ip_verification_whitelist_cookies_expires_days),
+                max_age=cfg.human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
                 # httponly=True,
                 # domain=my_host_name
             )
             record_dict['__zmirror_verify'] = _hash
 
-        elif enable_custom_access_cookie_generate_and_verify:
+        elif cfg.enable_custom_access_cookie_generate_and_verify:
             _hash = custom_generate_access_cookie(record_dict, request)
 
             dbgprint('SelfGeneratedCookie:', _hash)
@@ -2386,8 +2233,8 @@ def ip_ban_verify_page():
             resp.set_cookie(
                 'zmirror_verify',
                 _hash,
-                expires=datetime.now() + timedelta(days=human_ip_verification_whitelist_cookies_expires_days),
-                max_age=human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
+                expires=datetime.now() + timedelta(days=cfg.human_ip_verification_whitelist_cookies_expires_days),
+                max_age=cfg.human_ip_verification_whitelist_cookies_expires_days * 24 * 3600
                 # httponly=True,
                 # domain=my_host_name
             )
@@ -2487,7 +2334,7 @@ def main_function(input_path='/'):
     resp = generate_our_response()
 
     # storge entire our server's response (headers included)
-    if local_cache_enable and parse.cacheable:
+    if cfg.local_cache_enable and parse.cacheable:
         put_response_to_local_cache(parse.remote_url, resp, without_content=parse.streamed_our_response)
 
     dbgprint('-----EndRequest-----')
@@ -2516,8 +2363,8 @@ Note: Love Luciaz Forever!
 Mirroring: {source_site}
 This site: {my_domain}
 """.format(version=CONSTS.__VERSION__, author=CONSTS.__AUTHOR__,
-           github_url=CONSTS.__GITHUB_URL__, source_site=target_domain,
-           my_domain=my_host_name),
+           github_url=CONSTS.__GITHUB_URL__, source_site=cfg.target_domain,
+           my_domain=cfg.my_host_name),
                     content_type='text/plain')
 
 
@@ -2527,18 +2374,16 @@ This site: {my_domain}
 
 # ########### domain replacer prefix string buff ###############
 prefix_buff = {}
-for _domain in allowed_domains_set:
+for _domain in cfg.allowed_domains_set:
     prefix_buff[_domain] = calc_domain_replace_prefix(_domain)
 
-if human_ip_verification_enabled:
+if cfg.human_ip_verification_enabled:
     single_ip_allowed_set = load_ip_whitelist_file()
 else:
     single_ip_allowed_set = set()
 
 try:
-    if unittest_mode:
-        import importlib
-
+    if cfg.unittest_mode:
         # 在 unittest 中, 由于 custom_func 也会引用 zmirror
         # 带来一个额外的引用计数
         # 所以在 unittest 中, 每次重载 zmirror 的时候, 都需要重载一次 custom_func
@@ -2547,7 +2392,7 @@ try:
 except:  # coverage: exclude
     pass
 
-if custom_text_rewriter_enable:
+if cfg.custom_text_rewriter_enable:
     try:
         from custom_func import custom_response_text_rewriter
     except:  # coverage: exclude
@@ -2555,26 +2400,24 @@ if custom_text_rewriter_enable:
                   ' `custom_text_rewriter` is now disabled(if it was enabled)')
         raise
 
-if identity_verify_required:
+if cfg.identity_verify_required:
     try:
         from custom_func import custom_identity_verify
     except:  # coverage: exclude
-        identity_verify_required = False
         warnprint('Cannot import custom_identity_verify from custom_func.py,'
                   ' `identity_verify` is now disabled (if it was enabled)')
         raise
 
-if enable_custom_access_cookie_generate_and_verify:
+if cfg.enable_custom_access_cookie_generate_and_verify:
     try:
         from custom_func import custom_generate_access_cookie, custom_verify_access_cookie
     except:  # coverage: exclude
-        enable_custom_access_cookie_generate_and_verify = False
         errprint('Cannot import custom_generate_access_cookie and custom_generate_access_cookie from custom_func.py,'
                  ' `enable_custom_access_cookie_generate_and_verify` is now disabled (if it was enabled)')
         raise
 
-if enable_cron_tasks:
-    for _task_dict in cron_tasks_list:
+if cfg.enable_cron_tasks:
+    for _task_dict in cfg.cron_tasks_list:
         try:
             _task_dict['target'] = globals()[_task_dict['target']]
             cron_task_container(_task_dict, add_task_only=True)

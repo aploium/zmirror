@@ -230,9 +230,9 @@ class TestRegex(ZmirrorTestBase):
                 .replace("{path}", path)
                 .replace("{path_up}", path_up)
 
-                .replace("{our_scheme_esc}", slash_esc(self.zmirror.my_host_scheme))
-                .replace("{our_scheme}", self.zmirror.my_host_scheme)
-                .replace("{our_domain}", self.zmirror.my_host_name)
+                .replace("{our_scheme_esc}", slash_esc(self.zmirror.cfg.my_host_scheme))
+                .replace("{our_scheme}", self.zmirror.cfg.my_host_scheme)
+                .replace("{our_domain}", self.zmirror.cfg.my_host_name)
 
         )
 
@@ -548,7 +548,7 @@ class TestRegex(ZmirrorTestBase):
             google_config = copy.deepcopy(_google_config)
             self.reload_zmirror(configs_dict=google_config)
             self.rv = self.client.get(
-                self.url("/extdomains/{domain}{path}".format(domain=self.zmirror.external_domains[0], path=path)),
+                self.url("/extdomains/{domain}{path}".format(domain=self.zmirror.cfg.external_domains[0], path=path)),
                 environ_base=env(),
                 headers=headers(),
             )  # type: Response
