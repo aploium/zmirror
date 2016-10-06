@@ -13,6 +13,13 @@ try:  # lru_cache的c语言实现, 比Python内置lru_cache更快
 except:
     from functools import lru_cache
 
+try:  # 用于检测html的文本编码, cchardet是chardet的c语言实现, 非常快
+    from cchardet import detect as c_chardet
+except:
+    cchardet_available = False
+else:
+    cchardet_available = True
+
 from . import cfg
 from . import utils_simple
 
@@ -190,3 +197,28 @@ def append_ip_whitelist_file(ip_to_allow):
     except:  # coverage: exclude
         print('Unable to write whitelist file')
         traceback.print_exc()
+
+
+def encoding_detect(byte_content):
+    """
+    试图解析并返回二进制串的编码, 如果失败, 则返回 None
+    :param byte_content: 待解码的二进制串
+    :type byte_content: bytes
+    :return: 编码类型或None
+    :rtype: Union[str, None]
+    """
+
+    if cfg.force_decode_remote_using_encode is not None:
+        return cfg.force_decode_remote_using_encode
+    if cfg.possible_charsets:
+        for charset in cfg.possible_charsets:
+            try:
+                byte_content.decode(encoding=charset)
+            except:
+                pass
+            else:
+                return charset
+    if cchardet_available:  # detect the encoding using cchardet (if we have)
+        return c_chardet(byte_content)['encoding']
+
+    return None

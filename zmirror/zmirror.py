@@ -28,12 +28,6 @@ try:
     from typing import Union, List, Any, Tuple
 except:
     pass
-try:  # 用于检测html的文本编码, cchardet是chardet的c语言实现, 非常快
-    from cchardet import detect as c_chardet
-except:
-    cchardet_available = False
-else:
-    cchardet_available = True
 
 if os.path.abspath(os.getcwd()) != CONSTS.ZMIRROR_ROOT:
     os.chdir(CONSTS.ZMIRROR_ROOT)
@@ -182,31 +176,6 @@ def response_text_basic_mirrorlization(text):
                 return slash * 2 + core
 
     return regex.regex_basic_mirrorlization.sub(regex_reassemble, text)
-
-
-def encoding_detect(byte_content):
-    """
-    试图解析并返回二进制串的编码, 如果失败, 则返回 None
-    :param byte_content: 待解码的二进制串
-    :type byte_content: bytes
-    :return: 编码类型或None
-    :rtype: Union[str, None]
-    """
-
-    if cfg.force_decode_remote_using_encode is not None:
-        return cfg.force_decode_remote_using_encode
-    if cfg.possible_charsets:
-        for charset in cfg.possible_charsets:
-            try:
-                byte_content.decode(encoding=charset)
-            except:
-                pass
-            else:
-                return charset
-    if cchardet_available:  # detect the encoding using cchardet (if we have)
-        return c_chardet(byte_content)['encoding']
-
-    return None
 
 
 def cache_clean(is_force_flush=False):

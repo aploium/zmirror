@@ -235,6 +235,11 @@ class TestFunctions(ZmirrorTestBase):
         )
 
     def test__encoding_detect(self):
+        self.assertEqual(
+            "UTF-8",
+            self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8"))
+        )
+
         self.zmirror.cfg.force_decode_remote_using_encode = "utf-8"
         self.assertEqual(
             "utf-8",
@@ -247,10 +252,10 @@ class TestFunctions(ZmirrorTestBase):
             "utf-8",
             self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8"))
         )
-
-        self.zmirror.cfg.possible_charsets = None
-        self.zmirror.cchardet_available = False
-        self.assertIsNone(self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8")))
+        self.assertEqual(
+            "gbk",
+            self.zmirror.encoding_detect("测试中文".encode(encoding="gbk"))
+        )
 
     def test__get_group(self):
         import re
