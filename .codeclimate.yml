@@ -16,3 +16,4 @@ exclude_paths:
 - "external_pkgs/"
 - "more_configs/"
 - "zmirror/external_pkgs/"
+- "zmirror/tests/"

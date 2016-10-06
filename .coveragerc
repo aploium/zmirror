@@ -4,6 +4,7 @@ omit =
     tests/*
     more_configs/*
     zmirror/external_pkgs/*
+    zmirror/tests/*
     test.py
     wsgi.py
     config.py

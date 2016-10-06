@@ -6,7 +6,7 @@ import random
 from flask import Response
 
 basedir = os.path.dirname(os.path.abspath(__file__))
-zmirror_dir = os.path.abspath(os.path.join(basedir, '..'))
+zmirror_dir = os.path.abspath(os.path.join(basedir, '../..'))
 
 
 def zmirror_file(filename):
