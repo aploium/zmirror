@@ -1,5 +1,5 @@
 # zmirror
-[![zmirror version](https://img.shields.io/badge/version-0.29.4-blue.svg)](https://github.com/aploium/zmirror)
+[![zmirror version](https://img.shields.io/badge/version-0.30.0.dev-blue.svg)](https://github.com/aploium/zmirror)
 [![zmirror Build Status](https://travis-ci.org/aploium/zmirror.svg?branch=master)](https://travis-ci.org/aploium/zmirror)
 [![zmirror unittest coverage](https://codecov.io/gh/aploium/zmirror/branch/master/graph/badge.svg)](https://codecov.io/gh/aploium/zmirror)
 [![zmirror Dependency Status](https://www.versioneye.com/user/projects/57addd5358ae9200345e108c/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/57addd5358ae9200345e108c)  
