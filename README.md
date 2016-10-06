@@ -12,7 +12,11 @@ an http reverse proxy designed to automatically and completely mirror a website 
 
 自带了几个配置文件: 比如 Google镜像(含学术/其他/中文维基) twitter镜像 Youtube镜像 instagram镜像 Facebook镜像  
 完整列表请看[zmirror自带镜像配置文件](more_configs/readme.md)  
-  
+
+**请在遵守当地相关法律法规的前提下使用本项目**  
+**本人拒绝为任何商业或非法目的提供任何技术支持**  
+**本项目仅为科研人员更方便地查询知识而创建, 请勿大范围传播**
+
 ## Demo
 * **Google**  
     * *网页搜索*   https://g.zmirrordemo.com  
