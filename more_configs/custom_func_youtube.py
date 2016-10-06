@@ -10,6 +10,7 @@ from random import randint
 import traceback
 from urllib.parse import urlsplit
 from zmirror.zmirror import *
+from zmirror import cfg
 
 # 如果你想视频服务器和网页服务器分开, 通过多个视频服务器来进行负载均衡,
 #   请设置在主网页服务器上设置 is_master = True ,在视频服务器上部署后设置 is_master = False
@@ -20,7 +21,7 @@ from zmirror.zmirror import *
 is_master = False
 
 # 注: 如果使用了非标准端口, 请在下面所有需要填写域名的地方后面加上端口号, 如 'videocdn1.mycdn.com:20822'
-videocdn_this_site_name = my_host_name
+videocdn_this_site_name = cfg.my_host_name
 # 如果你想视频服务器和网页服务器分开, 请注释掉上面一行, 去掉下面一行的注释, 并把域名改成这一台视频服务器的域名
 # videocdn_this_site_name = 'videocdn1.mycdn.com'  # 使用标准端口
 # videocdn_this_site_name = 'videocdn1.mycdn.com:20822'  # 使用非标准端口
@@ -39,7 +40,7 @@ videocdn_domain_list = [
 
 # get videocdn domain's root domain
 try:
-    if videocdn_this_site_name != my_host_name:
+    if videocdn_this_site_name != cfg.my_host_name:
         temp0 = videocdn_domain_list[0]
     else:
         temp0 = videocdn_this_site_name
@@ -64,16 +65,16 @@ else:
 REGEX_OF_URL = r'(https?|ftp):\/\/[^\s/$.?#].[^\s]*'
 
 regex_youtube_video_videoplayback_resolve = re.compile(
-    ('https(%|%25)3A(%|%25)2F(%|%25)2F' if my_host_scheme == 'http://' else '') +
+    ('https(%|%25)3A(%|%25)2F(%|%25)2F' if cfg.my_host_scheme == 'http://' else '') +
     r'''(?P<prefix>r\d+---sn-[a-z0-9]{8})\.googlevideo\.com(?P<percent>%|%25)2Fvideoplayback(%|%25)3F''',
     flags=re.IGNORECASE)
 
 regex_youtube_video_url_resolve = re.compile(
-    (r'https:(?P<escape_slash>\\?)/\\?/' if my_host_scheme == 'http://' else '') +
+    (r'https:(?P<escape_slash>\\?)/\\?/' if cfg.my_host_scheme == 'http://' else '') +
     r'''(?P<prefix>r\d+---sn-[a-z0-9]{8})\.googlevideo\.com''')
 
 regex_youtube_video_c_videoplayback_resolve = re.compile(
-    ('https://' if my_host_scheme == 'http://' else '') +
+    ('https://' if cfg.my_host_scheme == 'http://' else '') +
     r'''(?P<prefix>r\d+---sn-[a-z0-9]{8})\.c\.youtube\.com/videoplayback\?''',
     flags=re.IGNORECASE)
 
@@ -81,13 +82,13 @@ regex_youtube_video_c_videoplayback_resolve = re.compile(
 def custom_response_text_rewriter(raw_text, content_mime, remote_url):
     # if 'html' in content_mime or 'x-www-form-urlencoded' in content_mime:
     raw_text = regex_youtube_video_videoplayback_resolve.sub(
-        ('http\g<percent>3A\g<percent>2F\g<percent>2F' if my_host_scheme == 'http://' else '') +
+        ('http\g<percent>3A\g<percent>2F\g<percent>2F' if cfg.my_host_scheme == 'http://' else '') +
         video_cdn_domain + '\g<percent>2Fvideoplayback\g<percent>3Fewmytbserver\g<percent>3D\g<prefix>\g<percent>26', raw_text)
     raw_text = regex_youtube_video_url_resolve.sub(
-        ('http:\g<escape_slash>/\g<escape_slash>/' if my_host_scheme == 'http://' else '') + video_cdn_domain, raw_text)
+        ('http:\g<escape_slash>/\g<escape_slash>/' if cfg.my_host_scheme == 'http://' else '') + video_cdn_domain, raw_text)
 
     raw_text = regex_youtube_video_c_videoplayback_resolve.sub(
-        ('http://' if my_host_scheme == 'http://' else '') +
+        ('http://' if cfg.my_host_scheme == 'http://' else '') +
         video_cdn_domain + '/videoplayback?ewmytbserver=\g<prefix>&', raw_text)
 
     if 'javascript' in content_mime:
@@ -96,7 +97,7 @@ def custom_response_text_rewriter(raw_text, content_mime, remote_url):
                                     + videocdn_video_root_domain.replace('.', r'\\.')
                                     + '$')
 
-        _buff = re.escape(videocdn_video_root_domain) + '|' + re.escape(my_host_name_root)
+        _buff = re.escape(videocdn_video_root_domain) + '|' + re.escape(cfg.my_host_name_root)
         raw_text = raw_text.replace(r'-nocookie)?\.com\/|(m\.)?[a-z0-9\-]',
                                     r'-nocookie)?\.com\/|' + _buff + r'|(m\.)?[a-z0-9\-]')  # xp
 

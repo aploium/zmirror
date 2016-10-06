@@ -171,12 +171,12 @@ class TestFunctions(ZmirrorTestBase):
 
     def test__add_ssrf_allowed_domain(self):
         self.zmirror.add_ssrf_allowed_domain("www.example.com")
-        self.assertIn("www.example.com", self.zmirror.allowed_domains_set)
+        self.assertIn("www.example.com", self.zmirror.cfg.allowed_domains_set)
 
     def test__check_global_ua_pass(self):
         self.assertFalse(self.zmirror.check_global_ua_pass(None))
         self.assertTrue(self.zmirror.check_global_ua_pass(
-            self.zmirror.global_ua_white_name)
+            self.zmirror.cfg.global_ua_white_name)
         )
 
     def test__is_content_type_using_cdn(self):
@@ -235,22 +235,27 @@ class TestFunctions(ZmirrorTestBase):
         )
 
     def test__encoding_detect(self):
-        self.zmirror.force_decode_remote_using_encode = "utf-8"
+        self.assertEqual(
+            "UTF-8",
+            self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8"))
+        )
+
+        self.zmirror.cfg.force_decode_remote_using_encode = "utf-8"
         self.assertEqual(
             "utf-8",
             self.zmirror.encoding_detect("测试中文".encode(encoding="gbk"))
         )
 
-        self.zmirror.force_decode_remote_using_encode = None
-        self.zmirror.possible_charsets = ["gbk", "utf-8"]
+        self.zmirror.cfg.force_decode_remote_using_encode = None
+        self.zmirror.cfg.possible_charsets = ["gbk", "utf-8"]
         self.assertEqual(
             "utf-8",
             self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8"))
         )
-
-        self.zmirror.possible_charsets = None
-        self.zmirror.cchardet_available = False
-        self.assertIsNone(self.zmirror.encoding_detect("测试中文".encode(encoding="utf-8")))
+        self.assertEqual(
+            "gbk",
+            self.zmirror.encoding_detect("测试中文".encode(encoding="gbk"))
+        )
 
     def test__get_group(self):
         import re

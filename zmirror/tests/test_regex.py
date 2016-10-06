@@ -70,7 +70,7 @@ class TestRegex(ZmirrorTestBase):
     def test__regex_request_rewriter_extdomains(self):
         from zmirror.external_pkgs.ColorfulPyPrint import errprint
         g = self.zmirror.get_group
-        reg = self.zmirror.regex_request_rewriter_extdomains
+        reg = self.zmirror.regex.regex_request_rewriter_extdomains
 
         def match_test_1(slash, target_scheme_prefix, my_domain, real_domain, test_str):
             try:
@@ -163,7 +163,7 @@ class TestRegex(ZmirrorTestBase):
         """
         from zmirror.external_pkgs.ColorfulPyPrint import errprint
 
-        reg = self.zmirror.regex_basic_mirrorlization
+        reg = self.zmirror.regex.regex_basic_mirrorlization
         # 下面这一堆嵌套的 for, 好吧我也无能为力
         # 因为需要穷举所有的可能(几千种), 来测试这个正则
         for domain in list(self.C.external_domains) + [self.C.target_domain]:
@@ -230,9 +230,9 @@ class TestRegex(ZmirrorTestBase):
                 .replace("{path}", path)
                 .replace("{path_up}", path_up)
 
-                .replace("{our_scheme_esc}", slash_esc(self.zmirror.my_host_scheme))
-                .replace("{our_scheme}", self.zmirror.my_host_scheme)
-                .replace("{our_domain}", self.zmirror.my_host_name)
+                .replace("{our_scheme_esc}", slash_esc(self.zmirror.cfg.my_host_scheme))
+                .replace("{our_scheme}", self.zmirror.cfg.my_host_scheme)
+                .replace("{our_domain}", self.zmirror.cfg.my_host_name)
 
         )
 
@@ -540,7 +540,7 @@ class TestRegex(ZmirrorTestBase):
                 # ext = url_format(test_case["ext"])
 
                 self.assertEqual(
-                    main, self.zmirror.regex_adv_url_rewriter.sub(self.zmirror.regex_url_reassemble, raw),
+                    main, self.zmirror.regex.regex_adv_url_rewriter.sub(self.zmirror.regex_url_reassemble, raw),
                     msg=self.dump(msg="raw: {}\npath:{}".format(raw, path))
                 )
 
@@ -548,7 +548,7 @@ class TestRegex(ZmirrorTestBase):
             google_config = copy.deepcopy(_google_config)
             self.reload_zmirror(configs_dict=google_config)
             self.rv = self.client.get(
-                self.url("/extdomains/{domain}{path}".format(domain=self.zmirror.external_domains[0], path=path)),
+                self.url("/extdomains/{domain}{path}".format(domain=self.zmirror.cfg.external_domains[0], path=path)),
                 environ_base=env(),
                 headers=headers(),
             )  # type: Response
@@ -558,7 +558,7 @@ class TestRegex(ZmirrorTestBase):
                 ext = self._url_format(test_case["ext"])
 
                 self.assertEqual(
-                    ext, self.zmirror.regex_adv_url_rewriter.sub(self.zmirror.regex_url_reassemble, raw),
+                    ext, self.zmirror.regex.regex_adv_url_rewriter.sub(self.zmirror.regex_url_reassemble, raw),
                     msg=self.dump(msg="raw: {}\npath:{}".format(raw, path))
                 )
 
@@ -570,8 +570,8 @@ class TestRegex(ZmirrorTestBase):
             external_domains=external_domains,
         ))
         from time import process_time
-        reg_func = self.zmirror.response_text_basic_mirrorlization
-        print(self.zmirror.regex_basic_mirrorlization.pattern)
+        reg_func = self.zmirror.regex.response_text_basic_mirrorlization
+        print(self.zmirror.regex.regex_basic_mirrorlization.pattern)
 
         with open(zmirror_file("tests/sample/google_home.html"), "r", encoding="utf-8") as fp:
             text = fp.read()

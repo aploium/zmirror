@@ -1,8 +1,9 @@
 # coding=utf-8
 import os
 import unittest
-from tests import *
+from zmirror.tests import *
+
+os.environ['ZMIRROR_UNITTEST'] = "True"
 
 if __name__ == '__main__':
-    os.environ['ZMIRROR_UNITTEST'] = "True"
     unittest.main()

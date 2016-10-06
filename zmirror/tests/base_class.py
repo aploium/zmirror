@@ -56,6 +56,18 @@ class ZmirrorTestBase(unittest.TestCase):
     def reload_zmirror(self, configs_dict=None):
         self.del_temp_var()
 
+        for m in [x for x in sys.modules if x.startswith("zmirror")]:
+            # print("ref_counter {} {}".format(m, sys.getrefcount(sys.modules[m])))
+            del sys.modules[m]
+
+        # importlib.reload(importlib.import_module("config_default"))
+        # importlib.reload(importlib.import_module("config"))
+        # importlib.reload(importlib.import_module("zmirror.cfg"))
+        # importlib.reload(importlib.import_module("zmirror.utils_complex"))
+        # importlib.reload(importlib.import_module("zmirror.cache_system"))
+        # importlib.reload(importlib.import_module("zmirror.zmirror"))
+        # importlib.reload(importlib.import_module("zmirror"))
+        # importlib.reload(importlib.import_module("zmirror.cfg"))
         import config
         importlib.reload(config)
 
@@ -67,6 +79,10 @@ class ZmirrorTestBase(unittest.TestCase):
         if configs_dict is not None:
             for config_name, config_value in configs_dict.items():
                 setattr(config, config_name, config_value)
+
+        import zmirror.cfg as cfg
+
+        # print(self.C.target_domain, cfg.target_domain, cfg.allowed_domains_set)
 
         import zmirror.cache_system as cache_system
         import zmirror.zmirror as zmirror

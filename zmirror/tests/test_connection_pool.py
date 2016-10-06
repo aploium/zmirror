@@ -43,8 +43,8 @@ class TestConnectionPool(ZmirrorTestBase):
         )  # type: Response
         time_non_alive = self.zmirror.parse.remote_response.elapsed
 
-        max_fail_count = 3
-        for _ in range(10):
+        max_fail_count = 5
+        for _ in range(15):
             self.rv2 = self.client.head(
                 self.url("/"),
                 environ_base=env(),
