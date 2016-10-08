@@ -394,7 +394,3 @@ class ZmirrorThreadLocal(threading.local):
             return self.request_data.encode(encoding=self.request_data_encoding or 'utf-8')
         else:
             return self.request_data
-
-
-# ---------------- 初始化一个实例 -----------------
-parse = ZmirrorThreadLocal()
