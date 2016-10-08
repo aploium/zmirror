@@ -53,7 +53,7 @@ class TestCDN(ZmirrorTestBase):
             )  # type: Response
 
             self.assertEqual(  # 此时应出现重定向
-                self.zmirror.cfg.cdn_redirect_code_if_cannot_hard_rewrite
+                self.zmirror.cdn_redirect_code_if_cannot_hard_rewrite
                 , self.rv2.status_code, msg=self.dump()
             )
             self.assertEqual(
@@ -82,7 +82,7 @@ class TestCDN(ZmirrorTestBase):
             )  # type: Response
 
             self.assertEqual(  # 此时应出现重定向
-                self.zmirror.cfg.cdn_redirect_code_if_cannot_hard_rewrite
+                self.zmirror.cdn_redirect_code_if_cannot_hard_rewrite
                 , self.rv2.status_code, msg=self.dump())
             self.assertEqual(
                 # 查询参数会被编码进url
@@ -119,7 +119,7 @@ class TestCDN(ZmirrorTestBase):
             )  # type: Response
 
             self.assertEqual(  # 此时应出现重定向
-                self.zmirror.cfg.cdn_redirect_code_if_cannot_hard_rewrite
+                self.zmirror.cdn_redirect_code_if_cannot_hard_rewrite
                 , self.rv2.status_code, msg=self.dump())
             self.assertIn(
                 "/image/jpeg_{salt}z_.".format(salt=self.zmirror.cdn_url_query_encode_salt),
@@ -130,7 +130,7 @@ class TestCDN(ZmirrorTestBase):
             self.rv2.location,
             environ_base=env(),
             headers=headers(
-                user_agent=DEFAULT_USER_AGENT + " " + self.zmirror.cfg.spider_ua_white_list[0]
+                user_agent=DEFAULT_USER_AGENT + " " + self.zmirror.spider_ua_white_list[0]
             )
         )  # type: Response
         self.assertEqual("image/jpeg", self.rv3.content_type, msg=self.dump())
@@ -159,7 +159,7 @@ class TestCDN(ZmirrorTestBase):
         )  # type: Response
 
         self.assertEqual(  # 此时应出现重定向
-            self.zmirror.cfg.cdn_redirect_code_if_cannot_hard_rewrite
+            self.zmirror.cdn_redirect_code_if_cannot_hard_rewrite
             , self.rv2.status_code, msg=self.dump())
         self.assertEqual(
             # 查询参数会被编码进url
@@ -174,7 +174,7 @@ class TestCDN(ZmirrorTestBase):
             self.url("/image/jpeg?love=luciaz"),
             environ_base=env(),
             headers=headers(
-                user_agent=DEFAULT_USER_AGENT + " " + self.zmirror.cfg.spider_ua_white_list[0]
+                user_agent=DEFAULT_USER_AGENT + " " + self.zmirror.spider_ua_white_list[0]
             )
         )  # type: Response
 
@@ -189,7 +189,7 @@ class TestCDN(ZmirrorTestBase):
                      ),
             environ_base=env(),
             headers=headers(
-                user_agent=DEFAULT_USER_AGENT + " " + self.zmirror.cfg.spider_ua_white_list[0]
+                user_agent=DEFAULT_USER_AGENT + " " + self.zmirror.spider_ua_white_list[0]
             )
         )  # type: Response
 

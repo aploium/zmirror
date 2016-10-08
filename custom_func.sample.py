@@ -146,7 +146,7 @@ def demo__custom_identity_verify(identity_dict):
     """
     import hashlib
     import requests
-    from zmirror import cfg
+    import config
 
     if 'cc98_username' not in identity_dict or 'cc98_password' not in identity_dict:
         return False
@@ -155,8 +155,8 @@ def demo__custom_identity_verify(identity_dict):
         pass_md5 = hashlib.md5()
         pass_md5.update(identity_dict['cc98_password'].encode())
         pass_md5 = pass_md5.hexdigest()
-        if cfg.is_use_proxy:
-            proxy = cfg.requests_proxies
+        if config.is_use_proxy:
+            proxy = config.requests_proxies
         else:
             proxy = None
         r = requests.post('http://www.cc98.org/sign.asp', data={
@@ -175,14 +175,14 @@ def demo__custom_identity_verify(identity_dict):
 
 # Demo for Twitter
 def demo__handle_expand_url(mobj):
+    import config
     from zmirror.zmirror import add_ssrf_allowed_domain, get_group
-    from zmirror import cfg
 
     domain = get_group('domain', mobj)
     if not domain:
         return mobj.group()
     add_ssrf_allowed_domain(domain)
-    if 'https' in get_group('scheme', mobj) or cfg.force_https_domains == 'ALL':
+    if 'https' in get_group('scheme', mobj) or config.force_https_domains == 'ALL':
         scheme_prefix = 'https-'
     else:
         scheme_prefix = ''
