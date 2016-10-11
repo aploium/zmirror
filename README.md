@@ -17,6 +17,9 @@ an http reverse proxy designed to automatically and completely mirror a website 
 **本人拒绝为任何商业或非法目的提供任何技术支持**  
 **本项目仅为科研人员更方便地查询知识而创建, 请勿大范围传播**
 
+若想看代码, 请看 `v0.30-dev` 这个分支  
+请不要大量使用...demo服务器马上要爆炸了- -|  
+
 ## Demo
 * **Google**  
     * *网页搜索*   https://g.zmirrordemo.com  
