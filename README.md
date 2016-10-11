@@ -49,6 +49,11 @@ More screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror
 
 ## 一键部署脚本
 https://github.com/aploium/zmirror-onekey  
+一键部署脚本仍然不稳定, 如果怎么弄都失败, 请看[手动教程](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
+
+## 捐款ovo
+我只是个学生, 偶尔抽空写的这个东西, 非常欢迎捐款:heart:~    
+![alipay](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/alipay_qr.png)  
 
 ## builtin configs
 Together with the program, provided several (almost) out-of-box configs  
@@ -187,20 +192,7 @@ Or, if you are familiar with flask, you can see [flask's official deploy tutoria
   
  8. Stream content support (audio/video)  
   流媒体支持(视频/音频)  
-  
- 9. Production ready.  
-    程序已经经受住了生产环境的考验  
-    
-        使用的服务器均为 256M OpenVZ VPS
-        Google:  
-            单台服务器
-            日6kPV, 峰值每小时740PV  
-            峰值时段CPU占用小于10%  
-        Youtube:  
-            1台主服务器+8台视频服务器  
-            日1wPV, 峰值每小时754PV  
-            日发送流量178GB  
-            高峰时段1080P流畅  
+
 
 ## Issues Report
 
