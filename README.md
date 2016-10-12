@@ -22,7 +22,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
 
 
 ## Demo
-由于访问量过大, demo站已挂  
+
 * **Google**  
     * *网页搜索*   https://g.zmirrordemo.com  
     * *Scholar*   https://g.zmirrordemo.com/scholar  
@@ -34,7 +34,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
 
 * **Youtube**  
     * *PC Only*  https://ytb-pc.zmirrordemo.com  
-    * *Mobile Only* https://ytb-mobile.zmirrordemo.com  
+    * *Mobile Only* <del> https://ytb-mobile.zmirrordemo.com </del> 暂不开放  
     　　Youtube Mobile 不支持iOS
 * **Twitter**
     * *PC Only*  https://t-pc.zmirrordemo.com  
