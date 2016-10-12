@@ -20,7 +20,9 @@ an http reverse proxy designed to automatically and completely mirror a website 
 若想看代码, 请看 `v0.30-dev` 这个分支  
 请不要大量使用...demo服务器马上要爆炸了- -|  
 
+
 ## Demo
+由于访问量过大, demo站已挂  
 * **Google**  
     * *网页搜索*   https://g.zmirrordemo.com  
     * *Scholar*   https://g.zmirrordemo.com/scholar  
