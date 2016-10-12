@@ -2134,7 +2134,7 @@ def posterior_request_redirect():
             # 只缓存 GET 方法的资源
             and parse.method == 'GET'
             # 只有超过大小下限才会重定向
-            and url_to_use_cdn[parse.url_no_scheme][2] > cdn_soft_redirect_minimum_size
+            and int(url_to_use_cdn[parse.url_no_scheme][2]) > cdn_soft_redirect_minimum_size
             # 请求者的UA符合CDN提供商的爬虫, 则返回实际的资源
             and not is_ua_in_whitelist(str(request.user_agent))
             ):
