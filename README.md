@@ -33,7 +33,7 @@ an http reverse proxy designed to automatically and completely mirror a website 
     * *(PC & Mobile)*  https://g.zmirrordemo.com/wiki  
 
 * **Youtube**  
-    * *PC Only*  https://ytb-pc.zmirrordemo.com  
+    * *PC Only*  <del> https://ytb-pc.zmirrordemo.com </del> 不直接开放, 请向我发邮件索取访问密码  
     * *Mobile Only* <del> https://ytb-mobile.zmirrordemo.com </del> 暂不开放  
     　　Youtube Mobile 不支持iOS
 * **Twitter**
