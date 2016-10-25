@@ -18,3 +18,4 @@ The following people have helped zmirror with :heart: in suggestions, ideas, cod
 * aljun https://github.com/salamer  
 * licess https://github.com/licess  
 * lexil https://github.com/lexil  
+* phuslu https://github.com/phuslu  
