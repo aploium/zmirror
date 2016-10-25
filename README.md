@@ -155,6 +155,8 @@ However, due to my limited time, zmirror was only fully tested in:
 1. [部署支持HTTPS和HTTP/2的zmirror镜像](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
 2. [在一台VPS部署多个zmirror镜像](https://github.com/aploium/zmirror/wiki/%E5%9C%A8%E4%B8%80%E5%8F%B0VPS%E9%83%A8%E7%BD%B2%E5%A4%9A%E4%B8%AAzmirror%E9%95%9C%E5%83%8F)  
 
+在Nginx下部署, 请看[这里](https://github.com/aploium/zmirror/issues/36)(感谢@phuslu)     
+
 Or, if you are familiar with flask, you can see [flask's official deploy tutorial](http://flask.pocoo.org/docs/0.11/deploying/)  
 
 ### Upgrade
