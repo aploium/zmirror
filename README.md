@@ -54,10 +54,6 @@ More screenshots are here: [wiki-screenshots](https://github.com/aploium/zmirror
 https://github.com/aploium/zmirror-onekey  
 一键部署脚本仍然不稳定, 如果怎么弄都失败, 请看[手动教程](https://github.com/aploium/zmirror/wiki/%E9%83%A8%E7%BD%B2%E6%94%AF%E6%8C%81HTTPS%E5%92%8CHTTP2.0%E7%9A%84%E9%95%9C%E5%83%8F)  
 
-## 捐款ovo
-我只是个学生, 偶尔抽空写的这个东西, 非常欢迎捐款:heart:~    
-![alipay](https://raw.githubusercontent.com/aploium/zmirror/wiki-pages/img/alipay_qr.png)  
-
 ## builtin configs
 Together with the program, provided several (almost) out-of-box configs  
  
