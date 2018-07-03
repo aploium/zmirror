@@ -214,7 +214,7 @@ class TestCDN(ZmirrorTestBase):
         with self.app.test_client() as c:
             # 请求包含 https://httpbin.org/image/jpeg 的页面, 其中这张图片的链接会被重写成CDN
             self.rv2 = c.get(
-                self.url("/"),
+                self.url("/base64/PGltZyBzcmM9Imh0dHBzOi8vaHR0cGJpbi5vcmcvaW1hZ2UvanBlZyI+Cg=="),
                 environ_base=env(),
                 headers=headers()
             )  # type: Response
@@ -264,9 +264,9 @@ class TestCDN(ZmirrorTestBase):
         self.assertEqual(8090, len(self.rv.data), msg=self.dump())
 
         with self.app.test_client() as c:
-            # 请求包含 https://httpbin.org/image/jpeg 的页面, 其中这张图片的链接会被重写成CDN
+            # 请求包含 https://httpbin.org/image/png 的页面, 其中这张图片的链接会被重写成CDN
             self.rv2 = c.get(
-                self.url("/"),
+                self.url("/base64/PGltZyBzcmM9Imh0dHBzOi8vaHR0cGJpbi5vcmcvaW1hZ2UvcG5nIj4K"),
                 environ_base=env(),
                 headers=headers()
             )  # type: Response
