@@ -749,6 +749,9 @@ def encode_mirror_url(raw_url_or_path, remote_domain=None, is_scheme=None, is_es
 
     result = urljoin(our_prefix + middle_part + '/',
                      extract_url_path_and_query(_raw_url_or_path).lstrip('/'))
+    if sp.fragment:
+        result += "#"+sp.fragment
+
     if is_escape:
         result = s_esc(result)
 
