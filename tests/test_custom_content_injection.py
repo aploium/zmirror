@@ -12,7 +12,7 @@ class TestContentInjection(ZmirrorTestBase):
         my_host_name = 'b.test.com'
         my_host_scheme = 'https://'
         target_domain = 'www.kernel.org'
-        target_scheme = 'http://'
+        target_scheme = 'https://'
 
         force_https_domains = ('bugzilla.kernel.org',)
 

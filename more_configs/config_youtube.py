@@ -144,7 +144,6 @@ url_custom_redirect_regex = (
     (r'^/user/api/stats(?P<ext>.*)', r'/extdomains/https-s.youtube.com/user/api/stats\g<ext>'),
 )
 shadow_url_redirect_regex = (
-    (r'^/videoplayback(?P<ext>.*)', r'/extdomains/https-r8---sn-q4f7snss.googlevideo.com/videoplayback\g<ext>'),
     (r'^/videoplayback\?ewmytbserver=(?P<prefix>r\d+---sn-[a-z0-9]{8})&(?P<ext>.*?)',
      r'/extdomains/https-\g<prefix>.googlevideo.com/videoplayback?\g<ext>'),
 )
