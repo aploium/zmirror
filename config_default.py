@@ -709,6 +709,9 @@ text_like_mime_keywords = ('text', 'json', 'javascript', 'xml')
 #   注意: 视频在默认设置下是不包含在那个列表中的, 如果需要, 请去掉那个选项里视频mime的注释
 only_serve_static_resources = False
 
+# Remove SubResource Integrity check
+remove_integrity_check = True
+
 # #####################################################
 # ################# DEVELOPER Settings ################
 # #####################################################

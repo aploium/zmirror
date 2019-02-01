@@ -1554,6 +1554,11 @@ def response_text_rewrite(resp_text):
         # debug用代码, 对正常运行无任何作用
         infoprint('StringTrace: appears after js cookies string rewrite, code line no. ', current_line_number())
 
+    if remove_integrity_check:
+        if 'integrity' in resp_text:
+            dbgprint('Removing integrity check')
+            resp_text = re.sub('integrity="(.*?)"', '', resp_text)
+
     # resp_text = resp_text.replace('lang="zh-Hans"', '', 1)
     return resp_text
 
